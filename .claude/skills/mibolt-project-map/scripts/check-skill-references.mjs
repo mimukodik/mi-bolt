@@ -18,8 +18,9 @@
 //                 `path:N-M` anchor points at, so a reader can judge whether
 //                 the cited content still says what the skill claims. This
 //                 is informational only and never affects the exit code.
-//   --no-mise     Skip invoking `mise`. Every `mise run <task>` token is then
-//                 reported UNVERIFIED instead of being checked.
+//   --no-mise     Skip invoking `mise`. Every `mise run <task>` token and every
+//                 bare task name is then reported UNVERIFIED instead of being
+//                 checked.
 //
 // What it checks, in SKILL.md and references/*.md:
 //   (a) every relative Markdown link resolves from the file's own directory;

@@ -1,6 +1,6 @@
 ---
 name: mibolt-shop-frontend
-description: "Developing the MiBolt customer-facing Angular apps: the storefront (catalogue and filters, product page, cart, five-step checkout, demo-access gate, layouts, UI primitives, yettel design tokens), the demo-payment app and the shop MSW mock backend shop-mocks. Use for adding a filter, product-page field, checkout step or form field, route, page or primitive, for cart and checkout 409, 410 or 412 handling, payment-flow changes, or mock data and fault scenarios. Not for the admin app or for changing the OpenAPI contract."
+description: "Changing what shoppers see in the MiBolt storefront and demo-payment app: catalogue filters, product cards, product page, cart page, checkout steps and forms, shopper messages, prices, the demo-access gate, UI primitives, 409/410/412 handling, payment redirects, shop-mocks data and faults. Load it before answering or changing anything there, however small. Not for the admin app or the API contract."
 ---
 
 # MiBolt shop frontend
@@ -14,7 +14,8 @@ it.
 ## Scope and hand-offs
 
 This skill covers the storefront (`frontend/projects/storefront/`, except
-the catalogue image copy in its `public/media/`), the demo payment app (`frontend/projects/demo-payment/`), the shop mock backend
+the catalogue image copy in its `public/media/`), the demo payment app
+(`frontend/projects/demo-payment/`), the shop mock backend
 (`frontend/projects/shop-mocks/`), the unit MSW harness
 (`frontend/tests/setup-msw.ts`, `frontend/tests/msw-server.ts`,
 `frontend/tests/network-isolation.spec.ts`), and the unit specs of those three
@@ -88,7 +89,7 @@ compile time as well.
   shell, the UI primitives, the types, the utilities and the media helper.
 - `frontend/projects/storefront/src/styles.css` imports Tailwind and declares
   the one `@theme` block, so templates lay out and space with Tailwind
-  utilities (39 of the 58 storefront templates carry a `flex`, `grid` or
+  utilities (39 of the 57 component templates carry a `flex`, `grid` or
   `gap-*` class, counted 2026-09-26) and a component's `.scss` carries the
   rest. `frontend/projects/storefront/src/styles/tokens.css` names the design
   tokens, mapped row by row in `frontend/docs/design/yettel.md` §9; its
@@ -185,13 +186,25 @@ Copy these when you need a pattern:
 2. **Check the SDK.** If the field, parameter, operation or error code is not
    in `frontend/projects/shop-api/src/generated/`, the contract changes first
    in `mibolt-cross-package-changes`.
-3. **Change the layers from the data outwards**: the mock, then the codec or
+3. **Check the screen's spec for a recorded decision.**
+   `frontend/docs/spec/screens.md` is the screen spec of the planning package
+   (see the docs index in `mibolt-project-map`), and some of its per-screen
+   lines record a decision a change can collide with, such as the cart's
+   read-only quantity and "No free shipping promise or discounts"
+   (`frontend/docs/spec/screens.md:73`). Not every such decision shows in the
+   code, so read the section of the screen you are changing. Raise a
+   collision before building rather than settling it either way, because
+   whether the recorded decision or the new request stands is the owner's
+   call. Take no colour, type or size value from the spec: those come from
+   `frontend/docs/design/yettel.md` (`.claude/CLAUDE.md`, "Design
+   authority"), which `frontend/docs/spec/screens.md:7` names too.
+4. **Change the layers from the data outwards**: the mock, then the codec or
    facade, then the component, each with its spec beside it; for a bug, write
    the failing spec first. The step lists for a catalogue filter, a
    product-page field, a checkout field or step, a route or page, a UI
    primitive, and error handling are in
    [references/change-chains.md](references/change-chains.md).
-4. **Verify** as the Verify section says.
+5. **Verify** as the Verify section says.
 
 Task-specific points:
 
@@ -273,9 +286,11 @@ because they are easy to break in this area.
   because it will never be a live app! no screen reader will ever read it!".
   Both apps already carry ARIA and focus code, such as
   `frontend/projects/storefront/src/app/a11y-structure.spec.ts` and the focus
-  effect in `PaymentPage`. Neither extend that code nor remove it. The
-  template accessibility lint rules still run on every template, so a new
-  template has to lint clean against them (register entry C7).
+  effect in `PaymentPage`. Neither extend that code nor remove it as a side
+  change; it leaves with an element or a feature the task itself removes, per
+  `.claude/rules/code-standards.md` ("A cut feature leaves nothing behind").
+  The template accessibility lint rules still run on every template, so a new
+  or changed template has to lint clean against them (register entry C7).
 - **Framework questions** are answered with the instruments in
   `.claude/rules/framework-facts.md`, never by a probe. The `angular-developer`
   skill is vendored generic Angular guidance; this skill records what this
@@ -340,32 +355,16 @@ Run a focused unit test while working:
 npm --prefix frontend run ng -- test storefront --include projects/storefront/src/app/features/catalog --coverage=false --watch=false
 ```
 
-- Replace `storefront` with `demo-payment` or `shop-mocks`. Point
-  `--include` at a spec file or its folder, written from `frontend/` as
-  `projects/<project>/src/...`, or at a `'**/<name>.spec.ts'` glob, quoted
-  so the shell passes it through unexpanded.
-- **Add `--list-tests` first** to print the files the pattern selects; it
-  exits without running them (https://angular.dev/cli/test). Read the list,
-  not the exit status: a pattern that selects nothing prints no file and
-  still exits 0. The form angular.dev describes, relative to the project
-  root (`src/app/...`), is such a pattern on the installed `@angular/build`
-  22.1.8 (`frontend/package-lock.json:264-265`), which resolves `include`
-  against the project's `sourceRoot` after stripping a leading
-  `projects/<project>/src/` (`normalizePattern` in that package's
-  `src/builders/unit-test/test-discovery.js`, present once `mise run setup`
-  has installed the frontend's dependencies).
-- **Point at the spec, not at the source file.** A source file selects its
-  spec only when the two share a base name, as `cart.facade.ts` and
-  `cart.facade.spec.ts` do; otherwise the source file itself is selected as
-  the test file. `checkout.facade.ts`, whose spec is
-  `checkout-facade.spec.ts`, is such a case (measured 2026-09-26).
-- `--coverage=false` switches off the coverage the test target turns on
-  (`frontend/angular.json`, `"coverage": true`), so a partial run leaves the
-  full run's report alone: `coverage/unit/` in `frontend/` for the storefront
-  (`frontend/projects/storefront/vitest.config.ts:6`), and
-  `coverage/demo-payment/` and `coverage/shop-mocks/` for the other two.
-- `--watch=false` makes the run exit; watch is the default in a terminal.
-  `--no-coverage --no-watch` is accepted in place of the two `=false` flags.
+- Replace `storefront` with `demo-payment` or `shop-mocks`, and point
+  `--include` at the spec or its folder, written from `frontend/` as
+  `projects/<project>/src/...`, or at a quoted `'**/<name>.spec.ts'` glob.
+  Point at the spec rather than its source file: `checkout.facade.ts` does
+  not select `checkout-facade.spec.ts`. Add `--list-tests` to the first run
+  and read the files it prints, because a pattern that selects nothing still
+  exits 0. `--no-coverage --no-watch` is accepted in place of the two
+  `=false` flags. The forms `--include` accepts, the `--list-tests` dry run
+  and what each flag protects are owned by `mibolt-verification` ("From a
+  diff to green checks", step 3).
 
 Before declaring the work done, consult `mibolt-verification` for the full
 set, its prerequisites and what each command leaves behind. The ones this

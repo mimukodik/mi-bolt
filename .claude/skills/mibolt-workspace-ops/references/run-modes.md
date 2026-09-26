@@ -154,12 +154,11 @@ or the local cache and builds only when it finds none
 image").
 
 **From the main checkout, `deploy/stack.sh` refuses** (exit 2,
-`deploy/stack.sh:72-87`). Set `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME`
-and the three port variables in the environment, as `deploy/.env.example:18-23`
-lists, plus `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN` for a full stack,
-and run `deploy/compose.sh` with the same arguments `mise run stack` uses.
+`deploy/stack.sh:72-87`). SKILL.md ("Run a second stack beside the default
+one") gives the variables to export, the `deploy/compose.sh` arguments, and
+how to stop that stack without stopping the default `mi-bolt-local` one.
 `.github/workflows/smoke.yml:19-25` sets the project, the volume and the
-origins this way in CI, where the default ports are free.
+origins the same way in CI, where the default ports are free.
 
 ## Serving a built app or a dev server on a port of your own
 

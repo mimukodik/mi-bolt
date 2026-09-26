@@ -10,7 +10,7 @@ miss, not how to write the consumer code.
 
 1. Start from the finder, or from a sibling
 2. Contract-side edits every change shares
-3. A new or changed field on a shared schema
+3. A new or changed field on a schema
 4. A new shop operation
 5. A new admin operation
 6. A new enum value
@@ -32,7 +32,7 @@ need.
 | a shop operation | `--kind operation addCartItem` | a cart mutation: SDK function, facade call, shop-mocks handler, contract tests, backend controller |
 | an admin operation | `--kind operation archiveAdminProduct` | an admin products operation: admin client, admin app, backend admin controller |
 | an error code | `--kind enum PRICE_CHANGED` | a code both clients, the storefront, shop-mocks and the backend handle |
-| a field on `Product` | `--kind property releasedAt` | reaches the catalogue data, the fixture and both mock layers |
+| a field on `Product` | `--kind property releasedAt` | reaches the catalogue data, the fixture and shop-mocks; its admin hits are the `Admin*` schemas' own `releasedAt`, which move only if the admin form gets the field too |
 | a schema | `--kind schema Cart` | has a sample, `contracts/commerce/samples/Cart.json` |
 
 Read a sibling's output the way SKILL.md ("Read it this way") says: its
@@ -70,7 +70,7 @@ no consumer, and an error code is searched with the `enum` kind.
   2026-09-26). `backend/docs/decisions/0014-openapi-tags-and-admin-contract.md`
   records an additive change moving it as a semver minor.
 
-## 3. A new or changed field on a shared schema
+## 3. A new or changed field on a schema
 
 | Step | Where, and whose | What fails if it is skipped |
 |---|---|---|

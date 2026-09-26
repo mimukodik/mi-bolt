@@ -1,6 +1,6 @@
 ---
 name: mibolt-workspace-ops
-description: "Operating and changing the MiBolt workspace itself: root and per-area mise tasks, local run modes (storefront, admin and payment on MSW, db, backend, dev, stack, stop) with ports and environment variables, deploy/compose.yaml and compose.sh, the Dockerfiles and nginx config, GitHub Actions workflows and path filters, the Helm chart and tools/dev-server. Use for adding or changing a mise task, CI job or filter, compose service, port or env var, or diagnosing why the stack or a workflow does not start. Not for application code."
+description: "Changing or running MiBolt workspace wiring: root and area mise tasks, run modes, the Compose stack, ports and environment variables, Dockerfiles and nginx, CI workflows and path filters, Helm chart, tools/dev-server. Load it before answering or changing any of these, however small, or when the stack or a workflow will not start. Not for failing tests or coverage floors."
 ---
 
 # MiBolt workspace ops
@@ -18,14 +18,20 @@ the Node start wrapper included, and `frontend/package-lock.json`,
 `tools/package-lock.json` and `tools/tsconfig.json`, all as files; the build
 and serve configurations in `frontend/angular.json`, their `budgets` and
 `fileReplacements` included, the `frontend/proxy*.json` files and
-`frontend/.postcssrc.json`; `backend/gradlew`, `backend/gradlew.bat` and
-`backend/gradle/wrapper/` as files; everything under `deploy/`;
-`frontend/Dockerfile`, `backend/services/commerce/Dockerfile`,
-`frontend/nginx/` and `frontend/tests/web-image/`; `.github/`;
+`frontend/.postcssrc.json`; `backend/gradlew`, `backend/gradlew.bat`,
+`backend/gradle/wrapper/` and
+`backend/services/commerce/gradle/wrapper/gradle-wrapper.properties` as
+files, the last a tracked symlink to the properties file in
+`backend/gradle/wrapper/` (commit 30985558); everything under `deploy/`;
+`frontend/Dockerfile` and `frontend/.dockerignore`,
+`backend/services/commerce/Dockerfile` and
+`backend/services/commerce/Dockerfile.dockerignore`; `frontend/nginx/`,
+`frontend/tests/web-image/` and `frontend/tests/scripts/`; `.github/`;
 `tools/dev-server/`, `tools/install-spring-tools-mcp.sh`,
 `frontend/scripts/serve-static.mjs` and `frontend/scripts/proxy-timeout.mjs`;
 `backend/docs/06-uzembe-helyezes.md`, which builds and runs the backend image
-by hand; `.editorconfig`, `.gitattributes` and `.gitignore` as files.
+by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
+`backend/.gitattributes` and `backend/.gitignore` as files.
 
 **Outside, and where it goes:**
 
@@ -135,9 +141,15 @@ by hand; `.editorconfig`, `.gitattributes` and `.gitignore` as files.
    (https://mise.jdx.dev/tasks/task-configuration.html, "depends"). A step that
    has no task of its own goes under `run` and runs from the root, the way
    `claude:memory` runs `npm --prefix tools run` (`mise.toml:88-90`). A task
-   that runs the contract lint and the frontend contract suite, for example,
-   can depend on `//contracts:check`, which `mise run //contracts:check` runs
-   alone, and run `npm --prefix frontend run test:contract`.
+   that runs the contract checks and the frontend contract suite, for
+   example, can depend on `//contracts:check`, which
+   `mise run //contracts:check` runs alone, and run
+   `npm --prefix frontend run test:contract`. That dependency is the OpenAPI
+   lint, the sample validation and the PlantUML check together
+   (`contracts/mise.toml:14-19`). For the lint alone, move the `vacuum` line
+   into a task of its own in `contracts/mise.toml`, list that task under
+   `check`'s `depends`, and depend on it from the root, because `vacuum` is
+   pinned in that file and nowhere else (see "Pins" above).
 3. Name it for what it acts on, prefixed by its owner, the way
    `mise run contracts:check` and `mise run api:drift` are named
    (`.claude/rules/code-standards.md:26`).

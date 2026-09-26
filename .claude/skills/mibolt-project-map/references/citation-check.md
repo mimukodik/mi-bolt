@@ -52,17 +52,17 @@ move with every edit:
 ```text
 $ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-project-map
 ...
-ANCHOR SKILL.md:171 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
+ANCHOR SKILL.md:173 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
   50: mibolt.checkout.free-shipping-threshold-huf=30000
 ...
-mibolt-project-map: 383 checked, 0 FAIL, 0 UNVERIFIED
+mibolt-project-map: 384 checked, 0 FAIL, 0 UNVERIFIED
 
 $ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --no-mise .claude/skills/mibolt-project-map
-UNVERIFIED SKILL.md:86 mise mise run api:generate — mise task check skipped (--no-mise)
+UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
 ...
 UNVERIFIED references/citation-check.md:30 mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 383 checked, 0 FAIL, 11 UNVERIFIED
+mibolt-project-map: 384 checked, 0 FAIL, 11 UNVERIFIED
 ```
 
 ## Write citations the checker can read

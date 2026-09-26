@@ -38,8 +38,7 @@ them (quickstart source, section 8).
   `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java:3-13`.
 - **`SystemPrintln`** (`backend/config/pmd/ruleset.xml:39`) rejects
   `System.out` and `System.err` printing. Log through the class's SLF4J logger
-  instead (section 5). PMD's console message for it is
-  `Usage of System.out/err` (the rule's source, section 8).
+  instead (section 5).
 - **`AvoidReassigningParameters`** (`backend/config/pmd/ruleset.xml:40`)
   rejects an assignment to a method or constructor parameter. Copy it to a
   local and change the local.
@@ -156,6 +155,11 @@ Hungarian; the section titles are given so the lines can be found.
   hold `long` fields named `*Huf`, the mappers narrow to `int` with
   `Math.toIntExact` where they build the generated `Money`
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderModels.java:57`),
+  `CartService` narrows the old and the new unit price of a price-change
+  notice the same way
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:231`)
+  into the `Integer` `from` and `to` of `CartData.NoticeParams`
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartData.java:42`),
   and main code has no `double`, `float` or `BigDecimal`.
 - **No test starts, reaches or depends on the Docker PostgreSQL container**
   (§7.0, `backend/docs/02-backend.md:296-324`, repeated in §9). Review-only:

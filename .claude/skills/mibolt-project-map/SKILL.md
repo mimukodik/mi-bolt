@@ -1,6 +1,6 @@
 ---
 name: mibolt-project-map
-description: "Orientation map of the MiBolt monorepo: the Angular storefront, admin and demo-payment apps and shared libraries under frontend/, the Spring Boot commerce backend, the OpenAPI contract, catalogue data, tools, deploy and CI. Use when it is unclear where something lives or which area owns a screen, route, endpoint or file, when choosing which MiBolt skill fits a task, or when checking that the MiBolt skills still match the repository. Not for making the change itself."
+description: "MiBolt monorepo orientation: what an app, library or directory is for and what consumes it, where a cross-area value is set, which MiBolt skill a file, route or task belongs to. Load it before answering a question that spans areas, names none, or comes from a newcomer. Not for changing code, or finding it inside a named app."
 ---
 
 # MiBolt project map
@@ -23,9 +23,10 @@ whether the MiBolt skills' citations still resolve.
 - Committing: `git-commit`. Running a whole task through spawns, gates, commit
   and pull request: `task-execute-workflow`. Writing to Linear:
   `linear-conventions`.
-- Generic Angular API guidance: `angular-developer`. The local conventions in
-  the MiBolt skills and in `CLAUDE.md` win over it, and a framework fact is
-  looked up the way `.claude/rules/framework-facts.md` says.
+- Generic Angular API guidance: `angular-developer`, vendored unchanged from
+  upstream; the MiBolt skills and `CLAUDE.md` record what this repository
+  enforces and does, and a framework fact is looked up the way
+  `.claude/rules/framework-facts.md` says.
 
 ## Areas, stack and connections
 
@@ -89,8 +90,9 @@ on 2026-09-26: re-measure it before relying on it.
   and `@mi-bolt/mocks/*` is `frontend/projects/shop-mocks/src/`, which the
   storefront and the demo-payment app start in the browser
   (`frontend/projects/storefront/src/core/bootstrap-demo.ts:22`,
-  `frontend/projects/demo-payment/src/main.ts:38`) and whose handlers the Node
-  contract suite imports by relative path
+  `frontend/projects/demo-payment/src/main.ts:38`), which the storefront's
+  unit specs import, and whose handlers the Node contract suite imports by
+  relative path
   (`frontend/tests/contract/operation-matrix.spec.ts:36-56`). The admin app
   uses its own client and mocks instead; the lint rule that keeps it off the
   shop SDK and mocks is `mibolt-frontend-code-standards`'s.
@@ -134,12 +136,12 @@ on 2026-09-26: re-measure it before relying on it.
 | an admin screen, the product form, the product list filters, admin users, media upload, the admin session, the admin's own mocks | `mibolt-admin-frontend` |
 | an ESLint, Prettier or typecheck error under `frontend/`, whether a cast is allowed, `strict-boolean-expressions`, TypeScript naming or type guards | `mibolt-frontend-code-standards` |
 | a PMD finding, or Java style, layering, logging or null handling under `backend/` | `mibolt-backend-code-standards` |
-| an endpoint's implementation, a business rule, fee or threshold, an error code in the service, a Liquibase migration, catalogue seeding, backend configuration | `mibolt-commerce-backend` |
+| an endpoint's implementation, a business rule, fee or threshold, an error code in the service, a Liquibase migration, the startup catalogue loader, backend configuration | `mibolt-commerce-backend` |
 | `contracts/commerce/openapi.yaml`, a new or changed endpoint, field, enum or error code, `mise run api:generate`, a red `mise run api:drift`, `frontend/projects/core-api/`, the contract tests, `data/catalog/` | `mibolt-cross-package-changes` |
-| which checks a change needs, a red CI job, the coverage floors, a focused test run, whether a browser pass is required | `mibolt-verification` |
+| which checks a change needs, a red CI job other than an end-to-end one, the coverage floors, a focused test run, whether a browser pass is required | `mibolt-verification` |
 | a mise task, run mode, port or environment variable, compose, a Dockerfile, nginx, a workflow or path filter, the Helm chart, `tools/dev-server/`, a second stack beside the first | `mibolt-workspace-ops` |
-| writing or repairing a Playwright spec | `playwright-tests` |
-| an Angular API question no MiBolt skill answers | `angular-developer` |
+| writing, repairing or planning a Playwright spec, or a red end-to-end run | `playwright-tests` |
+| generic Angular guidance no MiBolt skill gives (a fact about how Angular behaves comes from the instruments in `.claude/rules/framework-facts.md`) | `angular-developer` |
 | writing to Linear: a comment, a sub-issue, an attachment | `linear-conventions` |
 | making a commit | `git-commit` |
 | running a whole task end to end | `task-execute-workflow` |
@@ -179,7 +181,9 @@ options come back and never invents a free-shipping default
 (`frontend/projects/storefront/src/app/features/checkout/delivery-step.ts:58-61`),
 while the shop mocks keep their own copy of the value
 (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:64`): both are
-`mibolt-shop-frontend`'s. Changing the value means changing both copies.
+`mibolt-shop-frontend`'s. Changing the value is `mibolt-commerce-backend`'s
+("A fee, threshold or other configuration value"), which lists every copy
+outside the backend, the shop mocks' among them.
 Showing the threshold itself on the checkout page changes the response shape:
 `mibolt-cross-package-changes` for the contract and the regenerated clients,
 then `mibolt-commerce-backend`, then `mibolt-shop-frontend` for the page and

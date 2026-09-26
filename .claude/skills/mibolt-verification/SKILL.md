@@ -1,6 +1,6 @@
 ---
 name: mibolt-verification
-description: "Choosing and running the right checks for a MiBolt change: which frontend, backend, contract, deploy and tools checks cover which changed paths, the exact mise, npm --prefix frontend and backend/gradlew commands with prerequisites, focused test runs, what each check writes or starts, how CI jobs map to local commands, the coverage floors, and when a real-browser pass is required. Use before committing, when a CI job or local check fails, or when asked how to test something here. Not for writing Playwright specs."
+description: "Choosing and running MiBolt checks: which local checks and CI jobs a changed path triggers, commands and prerequisites, focused test runs, what each check writes or starts, coverage floors, when a browser pass is due. Load it before committing, answering how to test something, or diagnosing a failing test run, coverage floor or CI job. Not for Playwright specs."
 ---
 
 # MiBolt verification
@@ -8,10 +8,14 @@ description: "Choosing and running the right checks for a MiBolt change: which f
 Find out which checks a change needs, run them, and read each one's exit
 status. Invoke every command from the repository root, except an `npx`
 command such as `npx eslint` or `npx prettier --check`, which runs from
-`frontend/` (`.claude/rules/session-lifecycle.md`, "Tools and startup").
-Paths are repository-relative, except directories that exist only after an
-install or a run (`node_modules/`, `coverage/`, `dist/`, Gradle's `build/`),
-which are named relative to the area directory that holds them.
+`frontend/` (`.claude/rules/session-lifecycle.md`, "Tools and startup") and
+so takes its file arguments relative to `frontend/`:
+`projects/storefront/src/main.ts`, not
+`frontend/projects/storefront/src/main.ts`. The changed-paths script in step 1
+prints them in that form. Paths this skill cites are repository-relative,
+except directories that exist only after an install or a run
+(`node_modules/`, `coverage/`, `dist/`, Gradle's `build/`), which are named
+relative to the area directory that holds them.
 
 ## Scope and hand-offs
 
@@ -46,11 +50,17 @@ Everything else goes elsewhere:
   core-api and shop-mocks (`frontend/angular.json:110-127`,
   `frontend/angular.json:209-225`, `frontend/angular.json:359-383`,
   `frontend/angular.json:411-428`, `frontend/angular.json:471-490`). The
-  generated `shop-api` library has none. Every target sets `coverage: true` and the same aggregate floor:
-  statements 80, branches 75, functions 80, lines 80, `perFile: false`. Each
-  project writes its own report inside `frontend/`: `coverage/unit/` for the
-  storefront (`frontend/projects/storefront/vitest.config.ts:6`),
-  `coverage/<project>/` for the other four.
+  generated `shop-api` library has none. Every target sets `coverage: true`
+  and the same aggregate floor: statements 80, branches 75, functions 80,
+  lines 80, `perFile: false`. Each project writes its own report inside
+  `frontend/`: `coverage/unit/` for the storefront
+  (`frontend/projects/storefront/vitest.config.ts:6`), `coverage/<project>/`
+  for the other four. The builder hands `coverageInclude`, which names every
+  source file of the project, to Vitest's `coverage.include`
+  (`src/builders/unit-test/runners/vitest/plugins.js` of `@angular/build`),
+  and Vitest then reports every file it names, loaded by a test or not
+  (https://vitest.dev/guide/coverage). So a source file no test loads,
+  typically a new one with no spec, lowers its project's aggregate.
 - **Contract suite.** `test:contract` runs Vitest in Node over
   `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:16-22`) and
   collects no coverage. `ng test` discovers no spec under `frontend/tests/`
@@ -220,10 +230,11 @@ what `//frontend:test` and `//frontend:build` run), and
 2. **Pick the local checks.** Look the changed paths up in
    [references/command-matrix.md](references/command-matrix.md). The floor is
    the gate list the orchestrator runs before every commit
-   (`.claude/rules/code-standards.md:100`). Its frontend build is `build`,
-   which builds the storefront alone, so an admin or demo-payment change also
-   needs that app's build, dist check and boot check, which CI's `build` job
-   runs. What each command needs and what it writes or starts is in
+   (`.claude/rules/code-standards.md:100`); in a terminal its unit run takes
+   `-- --no-watch`, as step 4 says. Its frontend build is `build`, which
+   builds the storefront alone, so an admin or demo-payment change also needs
+   that app's build, dist check and boot check, which CI's `build` job runs.
+   What each command needs and what it writes or starts is in
    [references/commands.md](references/commands.md).
 
 3. **Iterate with focused runs.** They are faster, and the frontend ones write
@@ -312,9 +323,12 @@ One line each; the file named is the one that binds.
 
 ## What a check writes or starts
 
-- **Coverage reports.** Every full unit run overwrites `coverage/<dir>/` in
-  `frontend/`, one directory per project, so two runs in one checkout
-  overwrite each other's evidence (`.claude/rules/parallel-spawns.md`).
+- **Coverage reports.** `npm --prefix frontend run test` with no project name
+  runs all five projects (https://angular.dev/cli/test) and rewrites all five
+  reports in `frontend/`: `coverage/unit/` for the storefront and
+  `coverage/<project>/` for the other four, whichever project the change
+  touched. Two runs in one checkout overwrite each other's evidence
+  (`.claude/rules/parallel-spawns.md`).
 - **Build output and port 4299.** Every build writes `dist/<app>/` in
   `frontend/`. A `check:*-dist` script reads whatever the last build there
   left, so run the matching build first in the same checkout; with no dist at

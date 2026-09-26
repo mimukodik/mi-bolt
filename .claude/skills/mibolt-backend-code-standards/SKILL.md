@@ -1,6 +1,6 @@
 ---
 name: mibolt-backend-code-standards
-description: "Code rules for the Java and Gradle code under backend/ in MiBolt and where each is enforced: the PMD ruleset, the documented controller-service-repository layering (review-only), package and class naming, English error text, null handling, logging, formatting, test rules and the forbidden-pattern list. Use when writing or reviewing backend Java, or fixing a PMD or compile error. Not for what an endpoint or business rule does."
+description: "Fixing PMD violations or compile errors in MiBolt backend Java, reviewing Java diffs, or judging whether a Java pattern is allowed: the PMD ruleset, layering, naming, English error text, nulls, logging, formatting, test code, forbidden patterns. Load it before answering or fixing, since the project adds rules to PMD's quickstart. Not for what an endpoint or business rule does."
 ---
 
 # MiBolt backend code standards
@@ -85,28 +85,32 @@ google-java-format, Error Prone, NullAway, JSpecify or Lombok appears in any
 
 **Fixing a PMD finding:**
 
-1. Reproduce it with `mise run //backend:lint`. The console names the file,
-   the line and the rule of each violation
-   (`backend/services/commerce/build.gradle:224`); two such lines are quoted at
-   `backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:144-145`.
+1. Reproduce it with `mise run //backend:lint`. The console prints each
+   violation as file, line, rule and PMD's message
+   (`backend/services/commerce/build.gradle:224`), as the two lines quoted at
+   `backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:144-145` show;
+   `SystemPrintln`'s message is `Usage of System.out/err` (source: the
+   reference, section 8).
 2. Identify the rule. The project's own rules are the first six rules of
    section 5. Any other name is a quickstart rule: read its page in the PMD
    7.24.0 rule index, https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java.html,
    rather than recalling it, because the ruleset is pinned to that version.
-3. Fix the code. The backend has no `// NOPMD` and no `@SuppressWarnings`
-   (observed; no document forbids them), so do not add the first one: change
-   a rule that is wrong for this codebase in the ruleset through a decision
+3. Fix the code, and add no `// NOPMD` and no `@SuppressWarnings`: the
+   backend has neither (observed; no document forbids them), and a rule that
+   is wrong for this codebase is changed in the ruleset through a decision
    (section 6) instead.
 4. Rerun `mise run //backend:lint` until it exits 0. Which other checks the
    change needs is `mibolt-verification`'s to say.
 
-**Fixing a compile error:** the types under `com.example.mi_bolt_backend.api`
-are generated from the contract before every compile
-(`backend/services/commerce/build.gradle:137-139`) and are never edited. When
-hand-written code no longer matches them after a contract change, the change
-and its consumers belong to `mibolt-cross-package-changes`; when hand-written
-code simply uses them wrongly, fix that code. Fix any compile error without
-breaking a rule in section 5.
+**Fixing a compile error:** the main-code types under
+`com.example.mi_bolt_backend.api` are generated from the contract before every
+compile (`backend/services/commerce/build.gradle:137-139`) and are never
+edited; the two deserialisation tests that share the `api.model` package under
+`src/test` are hand-written. When hand-written code no longer matches the
+generated types after a contract change, the change and its consumers belong
+to `mibolt-cross-package-changes`; when hand-written code simply uses them
+wrongly, fix that code. Fix any compile error without breaking a rule in
+section 5.
 
 **Reviewing a Java diff:**
 
@@ -174,9 +178,11 @@ breaking a rule in section 5.
   columns. In Java it is a `long`: entity fields are named `*Huf`
   (`ShopOrder.totalHuf`), while record components and the checkout fee
   settings are not (`CheckoutData.Summary.subtotal`,
-  `CheckoutService.homeDeliveryFee`). A mapper narrows it with
-  `Math.toIntExact` where it builds the generated `Money`, and main code has
-  no `double`, `float` or `BigDecimal`.
+  `CheckoutService.homeDeliveryFee`). It is narrowed with `Math.toIntExact`
+  where a mapper builds the generated `Money`, and where `CartService` puts an
+  old and a new price into the `Integer` `from` and `to` of a price-change
+  notice (`CartData.NoticeParams`). Main code has no `double`, `float` or
+  `BigDecimal`.
 - **No test starts, reaches or depends on the Docker PostgreSQL container.**
   Review-only, `backend/docs/02-backend.md:296-324`. Give every Spring-context
   test `@IntegrationTest`, never a bare `@SpringBootTest`. `@IntegrationTest`
@@ -238,9 +244,9 @@ line, with its enforcement:
   `mibolt-cross-package-changes`.
 - A business rule in the controller layer (`:446`). Review-only.
 - User-facing Hungarian text in an error response (`:447`). Review-only.
-- Price, stock or amount taken from a request body (`:448`). Review-only. The
-  admin catalogue write API is the one exception, decision 0020, which belongs
-  to `mibolt-commerce-backend`.
+- Accepting a price, stock level or amount from a request body (`:448`).
+  Review-only. The admin catalogue write API is the one exception, decision
+  0020, which belongs to `mibolt-commerce-backend`.
 - An endpoint, field or status code the contract does not have (`:449`).
   Review, plus the API tests, which validate every response they exercise
   against the contract (§7.4, `backend/docs/02-backend.md:397-401`). A
@@ -276,7 +282,15 @@ line, with its enforcement:
   (`backend/mise.toml:5-6`). It needs the Java 21 toolchain the root
   `mise.toml` pins, writes its output into the service's ignored `build/`
   directory, and exits non-zero on any violation (`ignoreFailures = false`,
-  `backend/services/commerce/build.gradle:225`). Done means exit 0.
+  `backend/services/commerce/build.gradle:225`). Done means exit 0. PMD runs
+  only in `pmdMain` and `pmdTest`, and those run only when a command names
+  them, as this task, the next command and CI's `Lint (PMD)` job
+  (`.github/workflows/backend.yml:97-119`) do, or through `check`, which
+  `build` depends on (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html,
+  https://docs.gradle.org/9.7.1/userguide/java_plugin.html). Compiling,
+  `mise run //backend:test` and `bootRun` never run them, so a violation still
+  compiles and runs locally and first fails at this lint, the full build or
+  CI.
 - `backend/gradlew -p backend :services:commerce:pmdMain :services:commerce:pmdTest`:
   the same two tasks without mise, as `backend/README.md:99` gives them.
 - `backend/gradlew -p backend :services:commerce:build`: the full gate, which

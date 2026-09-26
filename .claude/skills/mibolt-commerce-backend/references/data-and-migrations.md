@@ -174,10 +174,13 @@ FAIL changes/0012-product-subtitle.yaml is not included in the master changelog
 FAIL applied changeset modified: backend/services/commerce/src/main/resources/db/changelog/changes/0003-cart.yaml; add a new changeset instead (backend/docs/04-adatbazis.md §5)
 ```
 
-For the first, append the printed include block. For the second, reverse the
-edit in the applied changeset by hand, since
+For the first, append the printed include block. The second,
+`applied changeset modified`, is also what the script prints for an applied
+changeset that was deleted or renamed. Either way, put the file back by hand as
+it was at the merge base, its content, name and place, since
 `.claude/rules/session-lifecycle.md` ("Nothing is undone with git") rules out
-a git restore, and add the change as a new changeset.
+a git restore; then add the intended schema change, if any, as a new
+changeset.
 
 ## Schema validation at start, and H2 against PostgreSQL
 

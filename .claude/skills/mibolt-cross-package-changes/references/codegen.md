@@ -45,7 +45,8 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
 - `ignoreUnusedModels: true`: "ignore model files that are not referenced by
   any operation". A schema reachable only from admin operations is not
   generated into the shop SDK, and the reverse: on 2026-09-26 the shop SDK had
-  no `admin-*` model and the admin client no cart, checkout or order model.
+  no `admin-*` model and the admin client no cart, checkout, order or
+  catalogue model (`Product`, `CatalogItem`).
 - `enumStyle: "alias"` and `enumArray: true`: an enum becomes a union type,
   plus "a sibling `.ts` file which exports an array" of its values. A new enum
   value therefore changes two files per client, for example

@@ -1,15 +1,13 @@
 ---
 name: mibolt-commerce-backend
 description: >-
-  Developing the MiBolt commerce backend (backend/services/commerce, Spring
-  Boot 4, Java 21): controllers implementing generated interfaces, services
-  holding the numbered business invariants for catalogue, cart, checkout,
-  payment intents and orders, Problem JSON errors via ErrorCode and
-  ProblemAdvice, If-Match versions, idempotency keys, demo-access and session
-  cookies, admin security, Liquibase migrations, catalogue seeding and
-  configuration. Use for implementing an endpoint, business rule, fee or
-  threshold, error code or migration. Not for editing openapi.yaml or for Java
-  style and PMD rules.
+  Changing the MiBolt Spring Boot backend, backend/services/commerce: cart,
+  checkout, payment and order rules, fees and thresholds in
+  application.properties, endpoint behaviour, ErrorCode and Problem JSON,
+  If-Match checks, idempotency, sessions and admin security, Liquibase
+  migrations and database columns. Load it before answering or changing
+  anything there, however small. Not for the API contract, generated clients,
+  or PMD and Java style.
 ---
 
 # MiBolt commerce backend
@@ -25,10 +23,12 @@ English index into them.
 
 Inside: what the service does and how each subsystem is changed, including
 its test harness, its decision records, `backend/settings.gradle`, and the
-plugin and toolchain block at `backend/services/commerce/build.gradle:1-17`.
-The repositories and dependencies blocks (`:19-37`) are described in section
-2; a plugin or dependency version upgrade is out of scope for this skill.
-Outside, and where each case goes:
+plugin, toolchain, repositories and dependencies blocks at
+`backend/services/commerce/build.gradle:1-37`, which section 2 describes.
+Choosing or moving a plugin or dependency version is not inside, and no MiBolt
+skill carries it
+(`.claude/skills/mibolt-project-map/references/coverage-register.md`, "How to
+read a row"). Outside, and where each case goes:
 
 - **The contract and everything generated from it**:
   `contracts/commerce/openapi.yaml`, its samples,
@@ -247,8 +247,9 @@ A stored value adds a migration.
    or add one with a constructor `@Value` in
    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:59-85`.
 2. Use it in `buildOptions` (`:225-259`).
-3. Update the tests that assert the old value. The `test` profile does not
-   override `mibolt.checkout.*`, so
+3. Update the tests that assert the old value, and add an API case whose
+   outcome differs between the old and the new value where none does yet.
+   The `test` profile does not override `mibolt.checkout.*`, so
    `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutApiTest.java:78-122`
    sees the real value, while
    `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutServiceTest.java:45-50`
@@ -259,13 +260,17 @@ A stored value adds a migration.
    `backend/docs/decisions/0010-checkout-draft-options-and-fees.md:88-99`, or
    record a new decision when the change is one (section 5).
 5. The value has copies outside the backend: the storefront's mock
-   (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:59-65`),
+   (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:59-65`) and
+   its spec, `frontend/projects/shop-mocks/src/checkout/checkout-mock.spec.ts`,
    which `mibolt-shop-frontend` keeps in step;
-   `frontend/docs/spec/screens.md:81`; and the Playwright plans under
-   `frontend/specs/` and specs under `frontend/e2e/`, whose product choice
-   depends on the cash-on-delivery ceiling and whose changes the
-   `playwright-tests` skill owns. List them with
-   `git grep -n -e '<property key>' -e '<mock constant>' -- ':!.claude'`.
+   `frontend/docs/spec/screens.md:81` and
+   `frontend/docs/spec/components.md:589`; and the Playwright plans under
+   `frontend/specs/` and specs under `frontend/e2e/`, which pick products
+   against the cash-on-delivery ceiling, often through a literal such as
+   `300_000`, and whose changes the `playwright-tests` skill owns. Several
+   copies carry only the number, so list them by name and by value,
+   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':!.claude'`,
+   and set aside the hits where the number is a price rather than this value.
 
 **A migration.**
 
@@ -276,8 +281,11 @@ A stored value adds a migration.
    rule or section it serves, portable types, named constraints, and money
    as `bigint` `*_huf`.
 3. Append the printed include to the master changelog.
-4. Change the entity and repository in the same change: the schema is
-   validated against the mappings at start.
+4. Change the entity and repository in the same change. The start validates
+   each mapped column against the schema, not the reverse: a mapping with no
+   matching column, or a column of another type, stops the start, while a
+   column nothing maps passes unnoticed, so nothing at start reports a
+   forgotten mapping.
 5. Never edit a changeset that has run; add a new one. The stable database
    has already recorded it, and Liquibase halts there on a changed checksum.
 6. Run the script again with `--base` and expect exit 0, then the integration
@@ -417,8 +425,11 @@ Done means:
 - **A migration**: the script exits 0 with `--base`, and `integrationTest` is
   green, which proves the changelog runs and the mappings validate on H2.
 - **An error code**: `ErrorCodeTest` and the new API test green.
-- **A configuration value**: the tests asserting the old value updated and
-  green, and decision 0010 or a new record updated.
+- **A configuration value**: an API case whose outcome depends on the new
+  value (for a threshold or ceiling, a cart from the test catalogue,
+  `backend/services/commerce/src/test/resources/catalog/catalog.json`, priced
+  between the old and the new value), the tests asserting the old value
+  updated, all green; and decision 0010 or a new record updated.
 - **Anything the UI displays**: also a real-browser pass on the backend-backed
   build, per `.claude/rules/browser-verification.md`.
 

@@ -1,6 +1,6 @@
 ---
 name: mibolt-admin-frontend
-description: "Developing the MiBolt admin back-office Angular app (frontend/projects/admin): sign-in and AdminSession, guards and the 401 and If-Match interceptors, the product list with URL-driven filters, product create and edit with Signal Forms, admin users, media upload, Angular Material and Tailwind styling, and its own in-page MSW mocks. Use for an admin screen, form field, list filter, session or mock change. Not for the storefront, the backend admin endpoints, or regenerating the admin client."
+description: "Changing the MiBolt admin back-office app, frontend/projects/admin: the dashboard, product list filters, the product edit form and its validation, unsaved-changes warnings, sign-in and the redirect after a 401, If-Match save conflicts, admin users, image upload, Material styling, its own mocks. Load it before answering or changing anything there, however small. Not for the storefront or the API contract."
 ---
 
 # MiBolt admin frontend
@@ -47,7 +47,10 @@ done; it owns the full check matrix, which this skill does not repeat.
   restricted to the `AdminAuth`, `AdminUsers`, `AdminProducts` and `AdminMedia` tags and without an
   `If-Match` parameter (`frontend/ng-openapi-gen.admin.json:12-13`). Import it by relative path;
   there is no alias. Call `api.invoke(fn, params, context)`, or `invoke$Response` when a response
-  header such as `ETag` matters.
+  header such as `ETag` matters. Its product schemas are its own: the edit page reads
+  `AdminProduct` and writes `AdminProductInput`, objects in `contracts/commerce/openapi.yaml`
+  separate from the shop's `Product`, so a field for the admin form goes on those two and reaches
+  the shop only if `Product` gets it as well.
 - **Its own mocks.** On the `development` configuration every API call is answered inside the page
   by `frontend/projects/admin/src/mocks/`, and the unit specs run on the same handlers. The
   `local-backend` configuration proxies `/api` to the Spring backend on port 8080 instead
@@ -159,6 +162,15 @@ itself, and the interceptor must not also navigate
 (`frontend/projects/admin/src/app/core/auth/admin-session.ts:65-70`). Keep every post-login target
 behind `isSafeTarget`.
 
+**Warn before leaving the product editor.** No `canDeactivate` guard exists yet. Put one, a
+`CanDeactivateFn` (https://angular.dev/api/router/CanDeactivateFn), on both `uj` and `:productId`
+in `frontend/projects/admin/src/app/features/products/products.routes.ts:11-22`, so create and
+edit are both covered, and ask through `openConfirm`
+(`frontend/projects/admin/src/app/shared/confirm-dialog/confirm-dialog.ts:55`), the admin's one
+confirmation dialog. Read [references/product-form.md](references/product-form.md), section 1,
+first: the form's `dirty()` misses row edits, and a successful create navigates away without
+resetting the form.
+
 **Handle a new error code.** Read it inside the store with `problemOf(error)?.code`, add a kind to
 the store's result union, give the page a branch for that kind, and put any field-level text in
 `SERVER_FIELD_MESSAGES` (`frontend/projects/admin/src/app/shared/forms/messages.ts:26-43`). The code
@@ -203,7 +215,7 @@ Each line names a rule and where it is written or enforced; the owner carries th
   ([references/product-form.md](references/product-form.md), section 8).
 - **Framework questions** are answered through the instruments in
   `.claude/rules/framework-facts.md`, with the URL beside the claim. The `angular-developer` skill
-  is generic guidance; where it and this skill differ, the admin's conventions win.
+  is vendored generic Angular guidance; this skill records what this repository enforces and does.
 - **The design reference is an open question.** `.claude/CLAUDE.md` ("Design authority") names
   `frontend/docs/design/yettel.md` as the reference for every rendered surface. That document does
   not mention the admin, while `frontend/projects/admin/README.md:5` and
@@ -262,9 +274,10 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   Never write the path from the project root: https://angular.dev/cli/test documents `--include`
   as relative to the project root, but the installed `@angular/build` 22.1.8 strips a leading
   `projects/admin/src/` and resolves the rest against the project's source root
-  (`test-discovery.js`, `findTests`), so a `src/app/...` path discovers nothing and the run still
-  exits 0. Because an empty selection passes, run a new pattern with `--list-tests` first: it
-  prints the spec files the pattern selects and exits without building or running them. Pass
+  (`normalizePattern` in `test-discovery.js`), so a `src/app/...` path selects no spec, and a run
+  then fails with "No tests found matching the following patterns". Run a new pattern with
+  `--list-tests` first: it prints the spec files the pattern selects without building or running
+  anything, and exits 0 even when it prints none, so read the list rather than the exit status. Pass
   `--coverage=false`: the admin's `test` target turns coverage on (`frontend/angular.json:365`),
   and its thresholds are set for the whole project (`frontend/angular.json:374-380`), which a
   focused run does not exercise.
@@ -272,12 +285,13 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   coverage report that every agent in the checkout shares
   (`.claude/rules/parallel-spawns.md`, "What a batch shares"). It is the orchestrator's before a
   commit.
-- **Build checks** after a change to `frontend/projects/admin/src/main.ts`, the environments, the
-  mock wiring or the admin's block in `frontend/angular.json`: `npm --prefix frontend run build:admin`
-  writes the production build, and `npm --prefix frontend run check:admin-dist` then reads it and
-  exits 2 when there is none. `npm --prefix frontend run check:admin-boot` starts `ng serve admin`
-  on port 4299 and checks that the mock worker is served under `/admin/`; `check:payment-boot` uses
-  the same port, so the two never run at once (`frontend/scripts/check-app-boot.mjs:17-19`).
+- **Build checks.** The gate's `npm --prefix frontend run build` builds the storefront alone
+  (`frontend/package.json:12`), so every admin change also runs the admin's own, as
+  `mibolt-verification` lists them: `npm --prefix frontend run build:admin` writes the production
+  build, `npm --prefix frontend run check:admin-dist` then reads it and exits 2 when there is none,
+  and `npm --prefix frontend run check:admin-boot` starts `ng serve admin` on port 4299 and checks
+  that the mock worker is served under `/admin/`; `check:payment-boot` uses the same port, so the
+  two never run at once (`frontend/scripts/check-app-boot.mjs:17-19`).
 - **Lint and format** of the changed files: the commands are `mibolt-frontend-code-standards`'s.
 - **The browser pass** is mandatory for anything a person sees, per
   `.claude/rules/browser-verification.md`. The orchestrator serves the admin with `mise run admin`
@@ -324,6 +338,8 @@ Update this skill in the same change when one of these moves:
 
 - `frontend/projects/admin/src/app/app.config.ts` (providers, interceptor order) or
   `frontend/projects/admin/src/app/app.routes.ts` (routes, guards, a new screen);
+- `frontend/projects/admin/src/app/features/products/products.routes.ts`, when it gains the
+  leave-page guard that "Typical work" says does not exist yet;
 - a store under `frontend/projects/admin/src/app/features/`: its result union or its provider
   scope;
 - `frontend/projects/admin/src/app/shared/forms/`: the submit, message or server-error helpers;

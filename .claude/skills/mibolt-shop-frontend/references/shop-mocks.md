@@ -147,8 +147,10 @@ snapshot, kept in `sessionStorage` under `mi-bolt.snapshot.<scenario>`.
   ordering.
 - The service-worker script is resolved against `document.baseURI`, so it
   works under the payment app's `/demo-fizetes/` base. The script itself is
-  `frontend/projects/storefront/public/mockServiceWorker.js`; the payment
-  app's development build copies it from there (`frontend/angular.json`).
+  `frontend/projects/storefront/public/mockServiceWorker.js`; the development
+  builds of the payment app and of the admin both copy it from there
+  (`frontend/angular.json:186-187`, `frontend/angular.json:310-311`), so
+  moving or replacing it reaches the admin too.
 - The production configurations of both apps replace
   `frontend/projects/shop-mocks/src/browser.ts` with
   `frontend/projects/shop-mocks/src/browser.production.ts`, whose

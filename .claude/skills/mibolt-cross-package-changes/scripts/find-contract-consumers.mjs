@@ -43,8 +43,8 @@ const VALID_KINDS = ['schema', 'property', 'enum', 'operation'];
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 // Text-parsing regexes for deriving an operation's METHOD and path from the
-// contract file (F6: the operation kind's blind spot for a URL that names no
-// operationId). These match the contract's own indentation, not a YAML parse.
+// contract file, so the operation kind also finds a URL that names no
+// operationId. These match the contract's own indentation, not a YAML parse.
 const OPERATION_ID_RE = /^\s*operationId:\s*(\S+)\s*$/;
 const METHOD_RE = /^ {4}(get|put|post|delete|patch|head|options|trace):\s*$/;
 const PATH_RE = /^ {2}(\/\S*):\s*$/;
@@ -208,13 +208,13 @@ function gitGrepWord(repoRoot, pattern, pathspecs) {
   return parseGrepOutput(output);
 }
 
-// POSIX ERE search (F6's path search, F7's models/<kebab> search).
+// POSIX ERE search (the operation path search and the schema models/<kebab> search).
 function gitGrepEre(repoRoot, pattern, pathspecs) {
   const output = runGit(repoRoot, ['grep', '-n', '-I', '-E', '-e', pattern, '--', ...pathspecs]);
   return parseGrepOutput(output);
 }
 
-// Files whose content contains a literal string (F7's barrel-import pass).
+// Files whose content contains a literal string (the schema kind's barrel-import pass).
 function gitGrepFilesContaining(repoRoot, literal, pathspecs) {
   const output = runGit(repoRoot, ['grep', '-l', '-I', '-F', '-e', literal, '--', ...pathspecs]);
   return output.split('\n').filter((line) => line !== '');
@@ -238,7 +238,7 @@ function checkBucketRoots(repoRoot) {
   }
 }
 
-// Every operation's {name, method, path}, derived by text parsing (F6):
+// Every operation's {name, method, path}, derived by text parsing:
 // walking upward from each operationId line, the nearest method line above
 // it gives the method, and continuing upward from there, the nearest path
 // line gives the path.
@@ -296,9 +296,9 @@ function deriveOperationPath(repoRoot, name) {
 }
 
 // POSIX ERE for `git grep -E` matching the operation's path in source, each
-// {param} segment generalised. Narrow variant (orchestrator's call, F6): the
-// path must be directly preceded by a quote, a backtick, or the server
-// prefix, not by any non-identifier character or start of line.
+// {param} segment generalised. The path must be directly preceded by a quote,
+// a backtick, or the server prefix, not by any non-identifier character or
+// start of line, which keeps most prose out (SKILL.md, "Read it this way").
 function buildPathPattern(path, serverPrefix) {
   const segments = path.split('/').filter((segment) => segment !== '');
   const parts = segments.map((segment) =>
@@ -337,10 +337,10 @@ function gatherHits(repoRoot, kind, name, operationInfo) {
     ]));
     const kebab = toKebabCase(name);
     // ERE, not -w -F: a word boundary treats "-" as a boundary, so
-    // models/cart would also match models/cart-item (F7).
+    // models/cart would also match models/cart-item.
     hits.push(...gitGrepEre(repoRoot, `models/${kebab}['"]`, WHOLE_REPO_PATHSPECS));
     hits.push(...gitGrepWord(repoRoot, `api.model.${name};`, WHOLE_REPO_PATHSPECS));
-    // Barrel pass (F7): a file that imports the models barrel names no
+    // Barrel pass: a file that imports the models barrel names no
     // per-model path, so it is invisible to the search above.
     const barrelFiles = gitGrepFilesContaining(
       repoRoot,
@@ -356,7 +356,7 @@ function gatherHits(repoRoot, kind, name, operationInfo) {
     nameHits.push(...gitLsFiles(repoRoot, [`*/fn/*/${kebab}.ts`]));
     hits.push(...nameHits);
 
-    // Path search (F6): the shop mocks, admin mocks, contract suite's own
+    // Path search: the shop mocks, admin mocks, contract suite's own
     // handlers and backend API tests address an operation by method and URL,
     // rarely by name, so the name search alone misses them.
     const pattern = buildPathPattern(operationInfo.target.path, operationInfo.serverPrefix);
@@ -420,7 +420,7 @@ function report(buckets, kind, operationInfo) {
     const { target, operations, serverPrefix } = operationInfo;
     lines.push(
       `operation: ${target.method.toUpperCase()} ${target.path} ` +
-        `(path also searched, each {param} generalised, optionally behind ${serverPrefix})`,
+        `(path also searched, each {param} generalised, directly behind a quote, a backtick or ${serverPrefix})`,
     );
     const shared = operations.filter((op) => op.path === target.path && op.name !== target.name);
     if (shared.length > 0) {

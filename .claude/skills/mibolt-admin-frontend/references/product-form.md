@@ -38,6 +38,19 @@ a new list filter and a new list column. Every path is relative to the repositor
 - The slug turns read-only once the product exists, because the backend rejects a changed slug
   with `SLUG_IMMUTABLE`
   (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:108-109`).
+- The form's `dirty()` is set only when a bound control writes a value or `markAsDirty()` is
+  called (https://angular.dev/api/forms/signals/FieldState; in the installed `@angular/forms`
+  22.1.6 a bound control writes `controlValue`, which marks the field dirty, and a write to
+  `value` does not), and every `form().reset(...)` clears it. The cards with rows (highlights,
+  colours, variants and spec groups) add and remove rows, and all but the variants card also move
+  them, through `value.update(...)`, for example
+  `frontend/projects/admin/src/app/features/products/edit/sections/colors-section.ts:100-122`, and
+  the slug button and the swatch picker write through `value.set(...)`
+  (`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts:63-66`,
+  `frontend/projects/admin/src/app/features/products/edit/sections/colors-section.ts:92-98`), so
+  none of these marks the form dirty. A create navigates to `/termekek/<id>` without a reset
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:172-173`).
+  Anything that reads `dirty()`, a leave-page warning above all, accounts for both.
 
 ## 2. Model, mapper and schema
 

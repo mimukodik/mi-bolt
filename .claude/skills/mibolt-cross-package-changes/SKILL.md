@@ -1,14 +1,12 @@
 ---
 name: mibolt-cross-package-changes
 description: >-
-  Changes that fan out to several MiBolt consumers: the OpenAPI contract
-  contracts/commerce/openapi.yaml with its samples and kommunikacio.md,
-  regenerating the shop SDK, the admin client and the backend interfaces
-  (api:generate, api:drift), ProblemCode and If-Match protocol changes, the
-  shared core-api library, the frontend contract tests, and the catalogue data
-  with its generated fixture. Use when adding or changing an endpoint, field,
-  enum or error code, when api:drift or a contract test fails, or when
-  catalogue data changes. Not for work inside one app.
+  Changing the MiBolt API contract, contracts/commerce/openapi.yaml, or what
+  several packages share: new or changed endpoints, schema fields, enum values
+  or error codes, regenerating clients, api:drift or contract-test failures,
+  core-api, catalogue data. Load it before answering or changing anything that
+  crosses the API, even when only one side is named. Not for using data the API
+  already returns.
 ---
 
 # MiBolt cross-package changes
@@ -168,7 +166,7 @@ data and fixture, docs, other. An excerpt of a real run of
 kept and most hit lines cut, so the counts are the full run's:
 
 ```text
-operation: GET /cart (path also searched, each {param} generalised, optionally behind /api/v1)
+operation: GET /cart (path also searched, each {param} generalised, directly behind a quote, a backtick or /api/v1)
 1. contract (2)
   contracts/commerce/kommunikacio.md:60: [path] (below). The `/cart*`, `/checkout*`, `/payment-intents*` and
   contracts/commerce/openapi.yaml:338:       operationId: getCart
@@ -259,7 +257,8 @@ Read it this way:
 
 | Change | What moves besides the contract and the regenerated clients | Chain |
 |---|---|---|
-| a field on a shared schema | examples and samples, contract-suite fixtures, both mock layers, the backend mapper, the fixture for `Product` | section 3 |
+| a field on a schema | examples and samples, the contract-suite fixtures when a shop operation returns the schema, the backend mapper and a migration when the field is stored, and the mocks of each client whose generated `models/` holds the schema: `Product` is in the shop SDK only and also moves the catalogue fixture, the `Admin*` schemas are in the admin client only | section 3 |
+| a field on the admin product form | both `AdminProductInput`, the write, where a limit such as `maxLength` goes, and `AdminProduct`, the read the form loads, since each is `additionalProperties: false`, then what the row above lists for an `Admin*` schema; `Product` and the shop side change only if the storefront shows the field too | section 3 |
 | a new shop operation | the counts and lists in the contract suite, a shop-mocks handler, a backend controller method | section 4 |
 | a new admin operation | the `sdk-split` counts, an admin mocks handler, a backend controller method | section 5 |
 | a new enum value | every consumer that must cover all values, backend string constants, and the discriminator guard for four of them | section 6 |
@@ -317,7 +316,7 @@ One line each; the source named owns the rule.
 | moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts:123-127`, and for an admin operation `frontend/tests/contract/sdk-split.spec.ts:141`; for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts:35`) and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts:88-108`) | `npm --prefix frontend run test:contract` |
 | a shop-mocks handler for a new shop operation | `operation-matrix` parity, "MSW handlers missing for" (`frontend/tests/contract/operation-matrix.spec.ts:135-145`) | `npm --prefix frontend run test:contract` |
 | updating the replacement for an edited discriminator block | `prepareOpenApiSpec`'s exactly-once guard (`backend/services/commerce/build.gradle:73-80`) | every backend compile |
-| matching the `ErrorCode` and `ProblemCode` names | `ErrorCodeTest`, which pins the two enums to the same names in both directions and the number of `ErrorCode` constants to 26 (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java:28-53`); nothing fails at compile time, and at run time an `ErrorCode` with no `ProblemCode` would throw `IllegalArgumentException` in the strict `valueOf` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:366`, https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Enum.html) | the backend unit tests, `backend/gradlew -p backend :services:commerce:test`, and every backend build |
+| matching the `ErrorCode` and `ProblemCode` names | `ErrorCodeTest`, which pins the two enums to the same names in both directions and pins the number of `ErrorCode` constants, so a new code also means raising that count (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java:28-53`); nothing fails at compile time, and at run time an `ErrorCode` with no `ProblemCode` would throw `IllegalArgumentException` in the strict `valueOf` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:366`, https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Enum.html) | the backend unit tests, `backend/gradlew -p backend :services:commerce:test`, and every backend build |
 | a backend controller method for a new operation | nothing at compile time: the generated interface supplies a default method ([references/codegen.md](references/codegen.md), section 4) | a backend API test for the operation, or the app on the real backend |
 | following a generated model change in shop-mocks | its code stops type-checking: 14 files under `frontend/projects/shop-mocks/src/` import generated models, 10 through `@mi-bolt/api/models/*` and 4 through the `@mi-bolt/api/models` barrel | every command that compiles shop-mocks; `mibolt-verification` names them |
 | an admin mocks handler for a new admin operation | nothing: no contract test covers the admin mocks | the admin app in a browser |
@@ -333,7 +332,7 @@ the full set for a change and how CI maps onto them.
 
 | Command | What it proves | Side effects |
 |---|---|---|
-| `node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
+| `node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
 | `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`); `-checkonly` is PlantUML's legacy spelling, no longer documented: the current CLI lists `--check-syntax`, "Check diagram syntax without generating images" (https://plantuml.com/command-line), and keeps legacy options for a transition period (https://github.com/plantuml/plantuml/issues/2377) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
 | `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:16-22`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
 | `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites both client directories: a shared resource, as in the fan-out order |
@@ -356,10 +355,11 @@ https://openapi-generator.tech/docs/generators/spring.
 - [references/contract-change-chain.md](references/contract-change-chain.md):
   read before editing `contracts/commerce/openapi.yaml`, and when the finder
   exits 1 for a name that is not in the contract yet.
-- [references/codegen.md](references/codegen.md): read when regeneration or
-  `api:drift` misbehaves, when a model is missing from one client, when the
-  backend build fails in `prepareOpenApiSpec`, or before changing a generator
-  configuration or the backend generation block.
+- [references/codegen.md](references/codegen.md): read when `api:drift` is
+  red, locally or in CI (section 5 has the causes, including a rebase that
+  changed the lockfile), when regeneration misbehaves, when a model is missing
+  from one client, when the backend build fails in `prepareOpenApiSpec`, or
+  before changing a generator configuration or the backend generation block.
 - [references/catalog-data.md](references/catalog-data.md): read when anything
   under `data/catalog/` changes, before running the importer, or when a
   catalogue consumer disagrees with the data.

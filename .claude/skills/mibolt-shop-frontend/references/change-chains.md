@@ -198,9 +198,13 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
   and has no quantity control
   (`frontend/projects/storefront/src/app/features/cart/cart-line.ts:11-13`),
   so the product page is the only place a shopper meets the quantity limit.
-  The cart page's sentences are `describeCartError`, and `describeNotice` for
-  the `QUANTITY_REDUCED`, `ITEM_REMOVED` and `PRICE_CHANGED` notices, in
-  `frontend/projects/storefront/src/app/features/cart/cart-page.ts`. A
+  The cart page builds its sentences in
+  `frontend/projects/storefront/src/app/features/cart/cart-page.ts`:
+  `describeCartError` for a failed load or an expired cart, `describeNotice`
+  for the `QUANTITY_REDUCED`, `ITEM_REMOVED` and `PRICE_CHANGED` notices,
+  `statusMessage` for the banners after a failed change, a conflict or an
+  expiry, and the `transientStatus` writes in the page's handlers for the
+  progress, success and changed-cart lines. A
   Problem's `title` and `detail` are English developer text and are never
   shown (`contracts/commerce/kommunikacio.md` §6).
 - **Prices.** `PriceBlock.formatHuf`
