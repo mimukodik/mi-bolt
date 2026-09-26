@@ -19,7 +19,9 @@ Prerequisites:
     - A git checkout (this script must run inside one).
     - Python 3.12 with PyYAML 6.0.2 (see the command below).
 
-Command (path relative to this skill's directory; from the repository root):
+Command (from any directory inside the checkout; the script path below is
+    relative to this skill's directory, so give it as seen from the directory
+    the command runs in):
     uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \
         scripts/checks-for-changed-paths.py \
         [--base <git-ref>] [--paths <path> ...] [--json]

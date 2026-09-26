@@ -43,7 +43,8 @@ import path, { join } from 'node:path';
 
 // The skills root is the parent of this skill's own directory, so this
 // script keeps working when the directory that holds the MiBolt skills
-// moves.
+// moves elsewhere inside the repository. A copy run from outside the
+// repository exits 2 on its first search: git refuses a pathspec outside it.
 const SKILLS_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 const VALID_KINDS = ['schema', 'property', 'enum', 'operation'];
