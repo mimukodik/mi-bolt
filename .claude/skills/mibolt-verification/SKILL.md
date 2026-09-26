@@ -126,10 +126,10 @@ quality gates") says why each gate exists.
   (`backend/services/commerce/build.gradle:160-162`,
   `backend/services/commerce/build.gradle:216-218`); the verification joins
   `check` only because it is wired there
-  (https://docs.gradle.org/current/userguide/jacoco_plugin.html). The PMD
+  (https://docs.gradle.org/9.7.1/userguide/jacoco_plugin.html). The PMD
   plugin makes `check` depend on `pmdMain` and `pmdTest`
-  (https://docs.gradle.org/current/userguide/pmd_plugin.html), and `build`
-  depends on `check` (https://docs.gradle.org/current/userguide/java_plugin.html).
+  (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html), and `build`
+  depends on `check` (https://docs.gradle.org/9.7.1/userguide/java_plugin.html).
   So `build` runs the unit and integration tests, PMD and the coverage gate,
   then assembles the jar.
 - The coverage floor is a JaCoCo line ratio of 0.90 over the bundle and 0.80
@@ -251,7 +251,7 @@ canonical examples are the gate list under "Gates before a commit" below,
      `backend/gradlew -p backend :services:commerce:test --tests CartServiceTest`.
      A class annotated `@IntegrationTest` runs only under `integrationTest`:
      `backend/gradlew -p backend :services:commerce:integrationTest --tests CartApiTest`
-     (https://docs.gradle.org/current/userguide/java_testing.html). A focused
+     (https://docs.gradle.org/9.7.1/userguide/java_testing.html). A focused
      Gradle run does not check the coverage floor; only `check` does.
 
 4. **Run the gates before the commit.** Run each command under "Gates before
@@ -273,18 +273,18 @@ canonical examples are the gate list under "Gates before a commit" below,
 
 ## Rules that apply here
 
-How Angular, the Angular CLI, the `@angular/build` builders, Vitest, MSW,
-Playwright, typescript-eslint and Prettier behave is read from their
-documentation, with the URL beside the claim, and not found out by a
-throwaway experiment; running this repository's own checks is measurement,
-not an experiment (`mibolt-frontend-code-standards`, "Framework questions").
-The backend's build tools are read the same way: Gradle and its JaCoCo and
-PMD plugins at https://docs.gradle.org, as the Gradle claims in this skill
-are; JaCoCo itself at https://www.jacoco.org/jacoco/trunk/doc/; and PMD at
-https://docs.pmd-code.org/pmd-doc-7.24.0/, the release the build pins. An
-experiment on any of them answers one narrow question at the cost of a build
-and leaves a belief with no source behind it; running a Gradle task here and
-reading `backend/services/commerce/build.gradle` is measurement, not an
+How Vitest, Playwright and the other tools that
+`mibolt-frontend-code-standards` ("Framework questions") names behave is read
+from their documentation, with the URL beside the claim, and not found out by
+a throwaway experiment. The backend's build tools are read the same way:
+Gradle and its JaCoCo and PMD plugins at
+https://docs.gradle.org/9.7.1/userguide/, the release the Gradle wrapper pins;
+PMD at https://docs.pmd-code.org/pmd-doc-7.24.0/, the release the build pins;
+and JaCoCo at https://www.jacoco.org/jacoco/trunk/doc/, which documents
+JaCoCo's development build rather than the version Gradle applies here. An
+experiment answers one narrow question at the cost of a build and leaves a
+belief with no source behind it; running this repository's own checks, a
+Gradle task among them, and reading its build files is measurement, not an
 experiment.
 
 ### Browser pass
@@ -391,8 +391,8 @@ change's own, whatever the branch diff says.
   runs all five projects (https://angular.dev/cli/test) and rewrites all five
   reports in `frontend/`: `coverage/unit/` for the storefront and
   `coverage/<project>/` for the other four, whichever project the change
-  touched. A second run in the same checkout overwrites the first run's
-  reports, so the reports on disk are always the last run's.
+  touched. A later run in the same checkout overwrites them, so after runs in
+  sequence they are the last run's; runs that overlap can leave a mix of both.
 - **Build output and port 4299.** Every build writes `dist/<app>/` in
   `frontend/`. A `check:*-dist` script reads whatever the last build there
   left, so run the matching build first in the same checkout; with no dist at
@@ -450,7 +450,8 @@ files; the `test` targets of `frontend/angular.json`, a project's
 `vitest.config.ts` or `frontend/vitest.contract.config.ts`;
 `frontend/playwright.config.ts` and `frontend/e2e/coverage-thresholds.json`; `frontend/eslint.config.mjs` and
 `frontend/README.md`; the test, JaCoCo and PMD blocks of
-`backend/services/commerce/build.gradle`,
+`backend/services/commerce/build.gradle`, the Gradle version in
+`backend/gradle/wrapper/gradle-wrapper.properties`,
 `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java`,
 `backend/services/commerce/src/test/resources/application-test.properties`
 and `backend/services/commerce/scripts/smoke.sh`; `.github/workflows/*.yml` or
