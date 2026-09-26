@@ -343,9 +343,10 @@ Owned by this skill:
     (several later records omit Options or Date and status);
   - a departure from a requirement document also corrects that document
     (`backend/docs/02-backend.md:431-434`);
-  - a defect in the contract is not fixed from the implementation side
-    (`backend/docs/02-backend.md:436-438`), because a contract change reaches
-    the frontends as well; it goes to `mibolt-cross-package-changes`;
+  - a defect in the contract is not fixed from the implementation side on its
+    own initiative (`backend/docs/02-backend.md:436-438`): a contract change
+    reaches the frontends as well, so ask the user whether it changes, and the
+    change itself goes to `mibolt-cross-package-changes`;
   - an earlier record is amended with a dated section, not rewritten, as in
     `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md:143`.
 
