@@ -12,8 +12,8 @@
  *
  * Prerequisites: a git checkout of this repo; git; Node 26.
  *
- * Command (run from the repo root):
- *   node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs \
+ * Command (path relative to this skill's directory; run from the repo root):
+ *   node scripts/find-contract-consumers.mjs \
  *     --kind schema|property|enum|operation <Name>
  *
  * Exit codes:
@@ -26,9 +26,10 @@
  *
  * Read-only guarantee: this script only runs `git grep` and `git ls-files`,
  * via execFileSync with argument arrays (never a shell string), plus plain
- * file reads with node:fs. No writes, no network. `.claude/` is excluded
- * from every repo-wide search, so a sibling skill's draft text is never
- * counted as a consumer.
+ * file reads with node:fs. No writes, no network. The skills root (the
+ * directory that holds the MiBolt skills; the parent of this skill's
+ * directory) is excluded from every repo-wide search, so a sibling skill's
+ * draft text is never counted as a consumer.
  *
  * Hits are candidates, not confirmed consumers: a word match such as
  * `getCart` also matches unrelated code such as an entity getter
@@ -37,7 +38,12 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import path, { join } from 'node:path';
+
+// The skills root is the parent of this skill's own directory, so this
+// script keeps working when the directory that holds the MiBolt skills
+// moves.
+const SKILLS_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 const VALID_KINDS = ['schema', 'property', 'enum', 'operation'];
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -324,9 +330,7 @@ function checkMembership(repoRoot, kind, name) {
   return new RegExp(`\\b${escaped}\\b`).test(content);
 }
 
-const WHOLE_REPO_PATHSPECS = ['.', ':!.claude'];
-
-function gatherHits(repoRoot, kind, name, operationInfo) {
+function gatherHits(repoRoot, kind, name, operationInfo, wholeRepoPathspecs) {
   const hits = [];
 
   if (kind === 'schema') {
@@ -338,20 +342,20 @@ function gatherHits(repoRoot, kind, name, operationInfo) {
     const kebab = toKebabCase(name);
     // ERE, not -w -F: a word boundary treats "-" as a boundary, so
     // models/cart would also match models/cart-item.
-    hits.push(...gitGrepEre(repoRoot, `models/${kebab}['"]`, WHOLE_REPO_PATHSPECS));
-    hits.push(...gitGrepWord(repoRoot, `api.model.${name};`, WHOLE_REPO_PATHSPECS));
+    hits.push(...gitGrepEre(repoRoot, `models/${kebab}['"]`, wholeRepoPathspecs));
+    hits.push(...gitGrepWord(repoRoot, `api.model.${name};`, wholeRepoPathspecs));
     // Barrel pass: a file that imports the models barrel names no
     // per-model path, so it is invisible to the search above.
     const barrelFiles = gitGrepFilesContaining(
       repoRoot,
       "from '@mi-bolt/api/models'",
-      WHOLE_REPO_PATHSPECS,
+      wholeRepoPathspecs,
     );
     if (barrelFiles.length > 0) {
       hits.push(...gitGrepWord(repoRoot, name, barrelFiles));
     }
   } else if (kind === 'operation') {
-    const nameHits = gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS);
+    const nameHits = gitGrepWord(repoRoot, name, wholeRepoPathspecs);
     const kebab = toKebabCase(name);
     nameHits.push(...gitLsFiles(repoRoot, [`*/fn/*/${kebab}.ts`]));
     hits.push(...nameHits);
@@ -360,7 +364,7 @@ function gatherHits(repoRoot, kind, name, operationInfo) {
     // handlers and backend API tests address an operation by method and URL,
     // rarely by name, so the name search alone misses them.
     const pattern = buildPathPattern(operationInfo.target.path, operationInfo.serverPrefix);
-    const pathHits = gitGrepEre(repoRoot, pattern, WHOLE_REPO_PATHSPECS);
+    const pathHits = gitGrepEre(repoRoot, pattern, wholeRepoPathspecs);
     const nameKeys = new Set(nameHits.map((hit) => `${hit.file}:${hit.line}`));
     for (const hit of pathHits) {
       const key = `${hit.file}:${hit.line}`;
@@ -370,15 +374,15 @@ function gatherHits(repoRoot, kind, name, operationInfo) {
     }
   } else if (kind === 'property') {
     const pascal = toPascalCase(name);
-    hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
-    hits.push(...gitGrepWord(repoRoot, `get${pascal}`, WHOLE_REPO_PATHSPECS));
-    hits.push(...gitGrepWord(repoRoot, `set${pascal}`, WHOLE_REPO_PATHSPECS));
+    hits.push(...gitGrepWord(repoRoot, name, wholeRepoPathspecs));
+    hits.push(...gitGrepWord(repoRoot, `get${pascal}`, wholeRepoPathspecs));
+    hits.push(...gitGrepWord(repoRoot, `set${pascal}`, wholeRepoPathspecs));
   } else if (kind === 'enum') {
-    hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
+    hits.push(...gitGrepWord(repoRoot, name, wholeRepoPathspecs));
     const upper = name.toUpperCase();
     const lower = name.toLowerCase();
-    if (upper !== name) hits.push(...gitGrepWord(repoRoot, upper, WHOLE_REPO_PATHSPECS));
-    if (lower !== name) hits.push(...gitGrepWord(repoRoot, lower, WHOLE_REPO_PATHSPECS));
+    if (upper !== name) hits.push(...gitGrepWord(repoRoot, upper, wholeRepoPathspecs));
+    if (lower !== name) hits.push(...gitGrepWord(repoRoot, lower, wholeRepoPathspecs));
   }
 
   const seen = new Set();
@@ -392,19 +396,19 @@ function gatherHits(repoRoot, kind, name, operationInfo) {
   return deduped;
 }
 
-function classify(file) {
-  if (file.startsWith('.claude/')) return null;
+function classify(file, skillsDirPrefix) {
+  if (file.startsWith(`${skillsDirPrefix}/`)) return null;
   for (const [id, test] of PATH_CLASSIFIERS) {
     if (test(file)) return id;
   }
   return 16;
 }
 
-function bucketHits(hits) {
+function bucketHits(hits, skillsDirPrefix) {
   const buckets = new Map();
   for (let id = 1; id <= 16; id++) buckets.set(id, []);
   for (const hit of hits) {
-    const id = classify(hit.file);
+    const id = classify(hit.file, skillsDirPrefix);
     if (id === null) continue;
     buckets.get(id).push(hit);
   }
@@ -478,6 +482,12 @@ function main() {
     fatal(`not a git checkout: ${repoRoot} has no .git; run this from the repo root`);
   }
 
+  // The top-level directory that holds the skills root, so a repo-wide
+  // search excludes a sibling skill's own draft text wherever that directory
+  // sits.
+  const skillsDirPrefix = path.relative(repoRoot, SKILLS_ROOT).split(path.sep)[0];
+  const wholeRepoPathspecs = ['.', `:!${skillsDirPrefix}`];
+
   checkBucketRoots(repoRoot);
 
   if (!checkMembership(repoRoot, kind, name)) {
@@ -490,8 +500,8 @@ function main() {
 
   const operationInfo = kind === 'operation' ? deriveOperationPath(repoRoot, name) : null;
 
-  const hits = gatherHits(repoRoot, kind, name, operationInfo);
-  const buckets = bucketHits(hits);
+  const hits = gatherHits(repoRoot, kind, name, operationInfo, wholeRepoPathspecs);
+  const buckets = bucketHits(hits, skillsDirPrefix);
   report(buckets, kind, operationInfo);
   process.exitCode = 0;
 }

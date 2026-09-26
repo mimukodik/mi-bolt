@@ -22,9 +22,9 @@ Prerequisites:
   - git 2.30 or later, for `git diff --merge-base`.
   - Run from inside a git checkout of this repository.
 
-Command (from the repository root):
+Command (path relative to this skill's directory; from the repository root):
   uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \\
-    .claude/skills/mibolt-commerce-backend/scripts/check-liquibase-changelog.py \\
+    scripts/check-liquibase-changelog.py \\
     [--base <git-ref>]
 
 Exit codes:

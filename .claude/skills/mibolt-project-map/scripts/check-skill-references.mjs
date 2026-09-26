@@ -6,14 +6,19 @@
 // resolves against the current repository, so a skill does not go stale
 // silently as the repo moves.
 //
-// Command (run from anywhere; the repo root is found via git):
-//   node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs \
-//     [--show-anchors] [--no-mise] [<skill-dir> ...]
+// Command (path relative to the `mibolt-project-map` skill directory; run
+// from anywhere in the repository):
+//   node scripts/check-skill-references.mjs \
+//     [--show-anchors] [--no-mise] [<skill name or directory> ...]
 //
 // Arguments:
-//   <skill-dir>   Zero or more paths to a `.claude/skills/mibolt-*`
-//                 directory. With none given, every `.claude/skills/mibolt-*`
-//                 directory in the repo is checked.
+//   <skill name or directory>  Zero or more of: a skill name matching
+//                 `^mibolt-[a-z0-9-]+$`, resolved in the skills root (the
+//                 directory that holds the MiBolt skills; the parent of
+//                 this skill's directory); or a path to a `mibolt-*` skill
+//                 directory there, as before. An unknown skill name is a
+//                 usage error. With none given, every `mibolt-*` directory
+//                 in the skills root is checked.
 //   --show-anchors  Also print the current text of every line a `path:N` or
 //                 `path:N-M` anchor points at, so a reader can judge whether
 //                 the cited content still says what the skill claims. This
@@ -24,19 +29,30 @@
 //
 // What it checks, in SKILL.md and references/*.md:
 //   (a) every relative Markdown link resolves from the file's own directory;
-//   (b) every backticked token whose first path segment is a top-level entry
-//       of `git ls-files`: a token with a colon, no slash and no line anchor,
-//       such as `backend:docker`, is a mise task name and must appear in
-//       `mise tasks --all --json` as `//:<token>` or `//<area>:<task>`; any
-//       other token is a path, whose optional `:N` or `:N-M[,N-M...]` anchor
-//       is stripped, and the path must exist on disk and be one a fresh
-//       checkout holds (tracked, untracked but not ignored, or a directory
-//       above one), so a gitignored output fails whether or not it was built
-//       here; with an anchor, the path must be a file (an anchor on a
-//       directory is reported FAIL, reason "line anchor on a directory") and
-//       every upper line number must not exceed its line count; a token
-//       containing `*` is a glob and must
-//       match at least one such file or directory;
+//   (b) a backticked token is tried, in order, as: a skill-relative path
+//       (its first segment is `scripts`, `references`, `assets` or `agents`,
+//       or the token is exactly `SKILL.md`), resolved against the root
+//       directory of the skill whose file contains it and never against the
+//       repository root; then a skill-name-prefixed path (its first segment
+//       matches `mibolt-<name>`), resolved against the skills root, a first
+//       segment that matches the pattern but names no directory there
+//       reported FAIL, reason "no such skill"; a token resolved either way
+//       must exist there, held to the same anchor and fresh-checkout rules
+//       below. Otherwise, a token whose first path segment is a top-level
+//       entry of `git ls-files`: a token with a colon, no slash and no line
+//       anchor, such as `backend:docker`, is a mise task name and must
+//       appear in `mise tasks --all --json` as `//:<token>` or
+//       `//<area>:<task>`; any other token is a path, whose optional `:N` or
+//       `:N-M[,N-M...]` anchor is stripped, and the path must exist on disk
+//       and be one a fresh checkout holds (tracked, untracked but not
+//       ignored, or a directory above one), so a gitignored output fails
+//       whether or not it was built here; with an anchor, the path must be a
+//       file (an anchor on a directory is reported FAIL, reason "line anchor
+//       on a directory") and every upper line number must not exceed its
+//       line count; a token containing `*` is a glob and must
+//       match at least one such file or directory. A token whose first
+//       segment matches neither a skill-relative segment, a skill name, nor
+//       a top-level repository entry is not checked at all;
 //   (c) commands: `mise run <task>` against `mise tasks --all --json`;
 //       `npm --prefix frontend run <s>` / `npm --prefix tools run <s>`
 //       against that package.json's "scripts"; `backend/gradlew -p backend
@@ -47,8 +63,10 @@
 //       three has it, since Gradle tasks cannot be listed statically, and
 //       never reported as a positive pass);
 //   ... `node [options] <path>` and `uv run ... python [options] <path>`,
-//       taking the first word that is not an option, resolved from the
-//       repository root and held to the same fresh-checkout test as (b);
+//       taking the first word that is not an option, resolved the same way
+//       (b) resolves a path token — skill-relative, then skill-name-prefixed,
+//       then the repository root as a last resort — and held to the same
+//       fresh-checkout test;
 //   (d) hygiene: `/Users/`, `/home/`, `~/`, `/tmp/` (also after `/private`
 //       or `/var`), `/var/folders/` (also after `/private`) and `file://` are
 //       reported as FAIL wherever a path starts with them: at the start of a
@@ -70,13 +88,17 @@
 //       (any file, not only `.md`) the way (b) resolves a path token
 //       (repo-relative), and when that does not exist, relative to the skill
 //       directory (so `SKILL.md` and `references/x.md` resolve inside the
-//       skill); or, when it is a skill name `mibolt-<name>`, as that skill's
-//       SKILL.md plus all its references/*.md, concatenated. Four cases:
+//       skill), and when that does not exist either and the target's first
+//       segment matches `mibolt-<name>` and names a directory in the skills
+//       root, relative to the skills root; or, when the whole target is a
+//       skill name `mibolt-<name>`, as that skill's SKILL.md plus all its
+//       references/*.md, concatenated. Four cases:
 //       - the target resolves to a directory: reported UNVERIFIED, reason
 //         "section target is a directory"; the name is not checked.
-//       - the target is a `mibolt-<name>` skill name with no such skill
-//         (no `.claude/skills/<name>/SKILL.md`): reported FAIL, reason
-//         "no such skill".
+//       - the target is a `mibolt-<name>` skill name with no such skill, or
+//         a path whose first segment matches `mibolt-<name>` and names no
+//         such skill (no directory of that name in the skills root holding
+//         a `SKILL.md`): reported FAIL, reason "no such skill".
 //       - the target is a path that resolves neither repo-relative nor
 //         skill-relative: skipped entirely (no report line, no contribution
 //         to "checked") when it holds no whitespace and its first path
@@ -92,17 +114,47 @@
 //         `section name not found in <target>`.
 //       Every case above except the two silent skips counts toward
 //       "checked", whether it reports FAIL, UNVERIFIED, or nothing (a pass).
+//   (f) neutral wording: every line of SKILL.md and each references/*.md,
+//       fenced code blocks included, is scanned for a harness-specific name
+//       or path. This skill's own agents/openai.yaml and its scripts/*.mjs
+//       and scripts/*.py are not scanned. Each match is reported FAIL,
+//       reason "harness-specific name or path"; on one line, each distinct
+//       match is reported once per pattern below. There is no exemption
+//       marker and no opt-out flag. The patterns (case-insensitive unless
+//       marked; this file's own source spells the first pattern below split
+//       across a string concatenation, so it does not itself contain the
+//       literal path component it detects):
+//         - a dot immediately followed by the six letters of that former
+//           hidden-config directory's name, as a path component;
+//         - the whole words `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`;
+//         - the `.agents/` path component;
+//         - the whole words claude, codex, anthropic, openai, gemini,
+//           copilot, opus, sonnet, haiku;
+//         - the whole words orchestrator, orchestrators, subagent,
+//           subagents, sub-agent, sub-agents, spawn, spawns, spawned,
+//           spawning;
+//         - an agent name matching
+//           `\b[a-z]+(-[a-z]+)*-(opus|sonnet|haiku)(-xhigh)?\b` or
+//           `\bplaywright-test-[a-z]+\b`;
+//         - `mcp__`, the case-sensitive whole word `MCP`, `chrome-devtools`;
+//         - the harness tool names AskUserQuestion, TaskCreate, TaskUpdate,
+//           SendMessage, TodoWrite, "Skill tool", "Agent tool";
+//         - the non-MiBolt skill and tooling names, whole words:
+//           model-routing, git-commit, playwright-tests,
+//           task-execute-workflow, linear-conventions, memory-review,
+//           angular-developer, angular-new-app, skill-creator, coder-agent,
+//           agent-memory, retrospective.
 //
 // Output (to stdout): one line per finding,
 //   `FAIL|UNVERIFIED <skill-relative-file>:<line> <kind> <token> — <reason>`
-// (for kind `section`, `<token>` is `<target> "<name>"`), followed by one
-// summary line per skill,
+// (for kind `section`, `<token>` is `<target> "<name>"`; for kind `neutral`,
+// `<token>` is the matched text), followed by one summary line per skill,
 //   `<skill>: <n> checked, <f> FAIL, <u> UNVERIFIED`
 // "checked" counts every individual (a)/(b)/(c)/(e) check plus every hygiene
-// match found (a hygiene match is itself the unit of a hygiene check, since
-// there is no separate notion of a hygiene check that passed); the two
-// silent-skip cases in (e) count toward neither "checked", FAIL nor
-// UNVERIFIED.
+// match and every neutral-wording (f) match found (each match is itself the
+// unit of that check, since there is no separate notion of a hygiene or
+// neutral-wording check that passed); the two silent-skip cases in (e) count
+// toward neither "checked", FAIL nor UNVERIFIED.
 //
 // Diagnostics and usage/prerequisite errors go to stderr.
 //
@@ -122,6 +174,20 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
+
+// The skills root is the parent of this skill's own directory, so this
+// checker keeps working when the directory that holds the MiBolt skills
+// moves.
+const SKILLS_ROOT = path.resolve(import.meta.dirname, '..', '..');
+
+// A token's first path segment (split on `/`) that names one of these, or a
+// token that is exactly `SKILL.md`, resolves against the skill whose file
+// contains it, never against the repository root (check (b) rule 1).
+const SKILL_RELATIVE_SEGMENTS = new Set(['scripts', 'references', 'assets', 'agents']);
+
+// A skill name, and a token's first path segment that names one (check (b)
+// rule 2 and check (e)'s skill-name-prefixed path fallback).
+const SKILL_NAME_RE = /^mibolt-[a-z0-9-]+$/;
 
 function fail(message) {
   process.stderr.write(`${message}\n`);
@@ -198,8 +264,8 @@ function getMiseTaskNames(repoRoot) {
   return miseTaskNamesCache;
 }
 
-function resolveSkillDirs(repoRoot, positionalArgs) {
-  const skillsRoot = path.join(repoRoot, '.claude', 'skills');
+function resolveSkillDirs(positionalArgs) {
+  const skillsRoot = SKILLS_ROOT;
   if (positionalArgs.length === 0) {
     return readdirSync(skillsRoot)
       .filter((name) => name.startsWith('mibolt-'))
@@ -215,6 +281,18 @@ function resolveSkillDirs(repoRoot, positionalArgs) {
   }
 
   return positionalArgs.map((arg) => {
+    if (SKILL_NAME_RE.test(arg)) {
+      const resolved = path.join(skillsRoot, arg);
+      const looksLikeSkill =
+        existsSync(resolved) &&
+        statSync(resolved).isDirectory() &&
+        existsSync(path.join(resolved, 'SKILL.md'));
+      if (!looksLikeSkill) {
+        fail(`unknown skill: ${arg}`);
+      }
+      return resolved;
+    }
+
     const resolved = path.resolve(process.cwd(), arg);
     const rel = path.relative(skillsRoot, resolved);
     const isDirectChild =
@@ -338,6 +416,43 @@ function anchorUpperBounds(anchor) {
   });
 }
 
+// Resolves a backticked path token's base (its `:N`/`:N-M` anchor already
+// stripped) against, in order: the skill whose file contains it (rule 1:
+// its first path segment is `scripts`, `references`, `assets` or `agents`,
+// or the base is exactly `SKILL.md`), or a skill named by its first path
+// segment (rule 2: the segment matches `mibolt-<name>`), resolved against
+// the skills root. Returns `{ kind: 'none' }` when neither rule's first
+// segment matches, so the caller falls back to (b)'s rule 4 (a top-level
+// repository entry) or, for a command path, the repository root;
+// `{ kind, found: true, resolved }` when the base exists there;
+// `{ kind, found: false }` when it does not; or, for rule 2 with a first
+// segment that names no skill directory in the skills root,
+// `{ kind: 'skill-name-prefixed', found: false, noSuchSkill: true }`.
+function resolvePathBase(base, skillDir, repoRoot, presentPaths) {
+  const firstSegment = base.split('/')[0];
+
+  if (SKILL_RELATIVE_SEGMENTS.has(firstSegment) || base === 'SKILL.md') {
+    const resolved = path.join(skillDir, base);
+    if (existsSync(resolved) && presentPaths.has(path.relative(repoRoot, resolved))) {
+      return { kind: 'skill-relative', found: true, resolved };
+    }
+    return { kind: 'skill-relative', found: false };
+  }
+
+  if (SKILL_NAME_RE.test(firstSegment)) {
+    if (!existsSync(path.join(SKILLS_ROOT, firstSegment))) {
+      return { kind: 'skill-name-prefixed', found: false, noSuchSkill: true };
+    }
+    const resolved = path.join(SKILLS_ROOT, base);
+    if (existsSync(resolved) && presentPaths.has(path.relative(repoRoot, resolved))) {
+      return { kind: 'skill-name-prefixed', found: true, resolved };
+    }
+    return { kind: 'skill-name-prefixed', found: false };
+  }
+
+  return { kind: 'none' };
+}
+
 function classifyCommand(token) {
   let m;
   if ((m = /^mise run (\S+)/.exec(token))) {
@@ -379,6 +494,28 @@ const HYGIENE_PATTERNS = [
   { token: '/tmp/', re: new RegExp(`${PATH_START}(?:/private)?(?:/var)?/tmp/`) },
   { token: '/var/folders/', re: new RegExp(`${PATH_START}(?:/private)?/var/folders/`) },
   { token: 'file://', re: /file:\/\// },
+];
+
+// Check (f): harness-specific naming banned from every MiBolt skill's
+// SKILL.md and references/*.md, so the skills describe only the project.
+// The first pattern is built from string parts so this script's own source
+// never spells the literal path component it looks for, contiguously, in
+// its own text.
+const CLAUDE_DIR_SEGMENT = '.' + 'claude';
+const NEUTRAL_WORDING_PATTERNS = [
+  new RegExp(`(?:^|[^A-Za-z0-9_])(${escapeRegExp(CLAUDE_DIR_SEGMENT)}(?![A-Za-z0-9_]))`, 'gi'),
+  /\b((?:CLAUDE|AGENTS|GEMINI)\.md)\b/gi,
+  /(?:^|[^A-Za-z0-9_])(\.agents\/)/gi,
+  /\b(claude|codex|anthropic|openai|gemini|copilot|opus|sonnet|haiku)\b/gi,
+  /\b(orchestrator|orchestrators|subagent|subagents|sub-agent|sub-agents|spawn|spawns|spawned|spawning)\b/gi,
+  /\b([a-z]+(?:-[a-z]+)*-(?:opus|sonnet|haiku)(?:-xhigh)?)\b/gi,
+  /\b(playwright-test-[a-z]+)\b/gi,
+  /(mcp__)/gi,
+  /\b(MCP)\b/g,
+  /(chrome-devtools)/gi,
+  /\b(AskUserQuestion|TaskCreate|TaskUpdate|SendMessage|TodoWrite)\b/gi,
+  /\b(Skill tool|Agent tool)\b/gi,
+  /\b(model-routing|git-commit|playwright-tests|task-execute-workflow|linear-conventions|memory-review|angular-developer|angular-new-app|skill-creator|coder-agent|agent-memory|retrospective)\b/gi,
 ];
 
 // Collapses every run of whitespace (newlines included) in `text` to a
@@ -430,7 +567,6 @@ function lineNumberAtOffset(offsets, index) {
 // so the captured `<name>` group is itself already whitespace-collapsed.
 const SECTION_CITATION_RE = /`([^`]+)`(?:'s)? \("([^"]*)"|`([^`]+)`, "([^"]*)"/g;
 
-const SKILL_NAME_RE = /^mibolt-[a-z0-9-]+$/;
 const PATH_TARGET_EXTENSION_RE = /\.[A-Za-z0-9]{1,10}$/;
 
 // A citation target is a skill name when it matches `mibolt-<name>`; a path
@@ -446,10 +582,14 @@ function classifySectionTarget(target) {
 // Resolves a file-path (any file, not only `.md`) section target the way
 // check (b) resolves a path token (repo-relative, anchor stripped), and when
 // that does not exist, relative to the skill directory being checked (so
-// `SKILL.md` and `references/x.md` resolve inside the skill). Returns
-// `{ found: false }` when neither resolution exists, `{ found: true,
-// isDirectory: true }` when the resolved target is a directory, or
-// `{ found: true, text }` with the whitespace-collapsed file text.
+// `SKILL.md` and `references/x.md` resolve inside the skill), and when that
+// does not exist either, against the skills root when the target's first
+// path segment matches `mibolt-<name>` and names a directory there. Returns
+// `{ found: false }` when no resolution exists; `{ found: false,
+// noSuchSkill: true }` when the first segment matches the skill-name pattern
+// but names no such skill; `{ found: true, isDirectory: true }` when the
+// resolved target is a directory; or `{ found: true, text }` with the
+// whitespace-collapsed file text.
 function resolveSectionPathText(target, repoRoot, skillDir, presentPaths) {
   const { base } = splitAnchor(target);
   const repoResolved = path.resolve(repoRoot, base);
@@ -460,6 +600,17 @@ function resolveSectionPathText(target, repoRoot, skillDir, presentPaths) {
     const skillResolved = path.resolve(skillDir, base);
     if (existsSync(skillResolved) && presentPaths.has(path.relative(repoRoot, skillResolved))) {
       resolved = skillResolved;
+    } else {
+      const firstSegment = base.split('/')[0];
+      if (SKILL_NAME_RE.test(firstSegment)) {
+        if (!existsSync(path.join(SKILLS_ROOT, firstSegment))) {
+          return { found: false, noSuchSkill: true };
+        }
+        const skillsRootResolved = path.join(SKILLS_ROOT, base);
+        if (existsSync(skillsRootResolved) && presentPaths.has(path.relative(repoRoot, skillsRootResolved))) {
+          resolved = skillsRootResolved;
+        }
+      }
     }
   }
   if (resolved === null) return { found: false };
@@ -471,8 +622,8 @@ function resolveSectionPathText(target, repoRoot, skillDir, presentPaths) {
 // whitespace-collapsed, concatenated text of that skill's SKILL.md plus all
 // its references/*.md. Returns null when that skill directory does not
 // exist.
-function resolveSectionSkillTargetText(target, repoRoot) {
-  const targetSkillDir = path.join(repoRoot, '.claude', 'skills', target);
+function resolveSectionSkillTargetText(target) {
+  const targetSkillDir = path.join(SKILLS_ROOT, target);
   if (!existsSync(path.join(targetSkillDir, 'SKILL.md'))) return null;
   const files = collectSkillFiles(targetSkillDir);
   return files.map((f) => collapseWhitespace(readFileSync(f, 'utf8')).collapsed).join(' ');
@@ -489,6 +640,46 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
   const npmScriptsCache = ctx.npmScriptsCache;
   const gradleCache = ctx.gradleCache;
 
+  // Shared by both the skill-relative/skill-name-prefixed branch and the
+  // top-level-repo-entry branch of (b): once a token's base has resolved to
+  // a real file or directory, its anchor is checked the same way regardless
+  // of which rule resolved it.
+  function reportAnchor(resolved, anchor, token, base, lineNo) {
+    if (statSync(resolved).isDirectory()) {
+      findings.push({ status: 'FAIL', line: lineNo, kind: 'anchor', token, reason: 'line anchor on a directory' });
+      return;
+    }
+    const upperBounds = anchorUpperBounds(anchor);
+    const maxLine = Math.max(...upperBounds);
+    const lineCount = fileLineCount(resolved);
+    if (maxLine > lineCount) {
+      findings.push({
+        status: 'FAIL',
+        line: lineNo,
+        kind: 'anchor',
+        token,
+        reason: `line ${maxLine} exceeds file with ${lineCount} lines`,
+      });
+      return;
+    }
+    if (options.showAnchors) {
+      const targetLines = readFileSync(resolved, 'utf8').split('\n');
+      const shown = [];
+      for (const part of anchor.split(',')) {
+        const [nStr, mStr] = part.split('-');
+        const n = Number(nStr);
+        const m = mStr ? Number(mStr) : n;
+        for (let ln = n; ln <= Math.min(m, n + 9); ln += 1) {
+          shown.push(`${ln}: ${targetLines[ln - 1] ?? ''}`);
+        }
+        if (m > n + 9) shown.push(`... (+${m - (n + 9)} more lines)`);
+      }
+      infoLines.push(
+        `ANCHOR ${relToSkill}:${lineNo} ${token} -> ${base}\n  ${shown.join('\n  ')}`,
+      );
+    }
+  }
+
   lines.forEach((lineText, idx) => {
     const lineNo = idx + 1;
 
@@ -502,6 +693,26 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
           kind: 'hygiene',
           token: pattern.token,
           reason: 'machine-specific path or file:// URL',
+        });
+      }
+    }
+
+    // (f) neutral wording: every distinct matched text, once per pattern.
+    for (const re of NEUTRAL_WORDING_PATTERNS) {
+      re.lastIndex = 0;
+      const seen = new Set();
+      let neutralMatch;
+      while ((neutralMatch = re.exec(lineText))) {
+        seen.add(neutralMatch[1]);
+      }
+      for (const matchedText of seen) {
+        checked += 1;
+        findings.push({
+          status: 'FAIL',
+          line: lineNo,
+          kind: 'neutral',
+          token: matchedText,
+          reason: 'harness-specific name or path',
         });
       }
     }
@@ -585,8 +796,23 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
             });
           }
         } else if (command.type === 'script') {
-          const resolved = path.resolve(repoRoot, command.scriptPath);
-          if (!existsSync(resolved) || !ctx.presentPaths.has(path.relative(repoRoot, resolved))) {
+          // Rule 3: skill-relative, then skill-name-prefixed, then the
+          // repository root as a last resort (today's unconditional check).
+          const scriptRes = resolvePathBase(command.scriptPath, skillDir, repoRoot, ctx.presentPaths);
+          if (scriptRes.kind === 'none') {
+            const resolved = path.resolve(repoRoot, command.scriptPath);
+            if (!existsSync(resolved) || !ctx.presentPaths.has(path.relative(repoRoot, resolved))) {
+              findings.push({
+                status: 'FAIL',
+                line: lineNo,
+                kind: 'script',
+                token,
+                reason: 'script path does not exist in a fresh checkout',
+              });
+            }
+          } else if (scriptRes.noSuchSkill) {
+            findings.push({ status: 'FAIL', line: lineNo, kind: 'script', token, reason: 'no such skill' });
+          } else if (!scriptRes.found) {
             findings.push({
               status: 'FAIL',
               line: lineNo,
@@ -599,14 +825,42 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
         continue;
       }
 
-      // (b) path / anchor / glob, only for whitespace-free tokens whose
-      // first segment is a real top-level entry of the repo.
+      // (b) path / anchor / glob, only for whitespace-free tokens.
       if (/\s/.test(token)) continue;
-      const firstSegment = token.split('/')[0].split(':')[0];
+      const { base, anchor } = splitAnchor(token);
+
+      // Rule 1 (skill-relative) and rule 2 (skill-name-prefixed): resolved
+      // against the skill whose file contains it, or the skills root,
+      // never against the repository root.
+      const skillPathRes = resolvePathBase(base, skillDir, repoRoot, ctx.presentPaths);
+      if (skillPathRes.kind !== 'none') {
+        checked += 1;
+        if (skillPathRes.noSuchSkill) {
+          findings.push({ status: 'FAIL', line: lineNo, kind: 'path', token, reason: 'no such skill' });
+          continue;
+        }
+        if (!skillPathRes.found) {
+          findings.push({
+            status: 'FAIL',
+            line: lineNo,
+            kind: 'path',
+            token,
+            reason: 'path does not exist in a fresh checkout',
+          });
+          continue;
+        }
+        if (anchor !== null) {
+          reportAnchor(skillPathRes.resolved, anchor, token, base, lineNo);
+        }
+        continue;
+      }
+
+      // Rule 4 (unchanged): a token whose first segment is a real top-level
+      // entry of the repo.
+      const firstSegment = base.split('/')[0].split(':')[0];
       if (!ctx.topLevelEntries.has(firstSegment)) continue;
 
       checked += 1;
-      const { base, anchor } = splitAnchor(token);
 
       // `backend:docker` names a mise task, not a path: a colon in a token with
       // no slash and no line anchor cannot belong to a repository path.
@@ -647,34 +901,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
       }
 
       if (anchor !== null) {
-        if (statSync(resolved).isDirectory()) { findings.push({ status: 'FAIL', line: lineNo, kind: 'anchor', token, reason: 'line anchor on a directory' }); continue; }
-        const upperBounds = anchorUpperBounds(anchor);
-        const maxLine = Math.max(...upperBounds);
-        const lineCount = fileLineCount(resolved);
-        if (maxLine > lineCount) {
-          findings.push({
-            status: 'FAIL',
-            line: lineNo,
-            kind: 'anchor',
-            token,
-            reason: `line ${maxLine} exceeds file with ${lineCount} lines`,
-          });
-        } else if (options.showAnchors) {
-          const targetLines = readFileSync(resolved, 'utf8').split('\n');
-          const shown = [];
-          for (const part of anchor.split(',')) {
-            const [nStr, mStr] = part.split('-');
-            const n = Number(nStr);
-            const m = mStr ? Number(mStr) : n;
-            for (let ln = n; ln <= Math.min(m, n + 9); ln += 1) {
-              shown.push(`${ln}: ${targetLines[ln - 1] ?? ''}`);
-            }
-            if (m > n + 9) shown.push(`... (+${m - (n + 9)} more lines)`);
-          }
-          infoLines.push(
-            `ANCHOR ${relToSkill}:${lineNo} ${token} -> ${base}\n  ${shown.join('\n  ')}`,
-          );
-        }
+        reportAnchor(resolved, anchor, token, base, lineNo);
       }
     }
   });
@@ -695,7 +922,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
     if (targetKind === 'none') continue; // not a citation: a flag or a bare value
 
     if (targetKind === 'skill') {
-      const targetText = resolveSectionSkillTargetText(target, repoRoot);
+      const targetText = resolveSectionSkillTargetText(target);
       checked += 1;
       if (targetText === null) {
         findings.push({
@@ -718,6 +945,17 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
     }
 
     const result = resolveSectionPathText(target, repoRoot, skillDir, ctx.presentPaths);
+    if (result.noSuchSkill) {
+      checked += 1;
+      findings.push({
+        status: 'FAIL',
+        line: lineNo,
+        kind: 'section',
+        token: citationToken,
+        reason: 'no such skill',
+      });
+      continue;
+    }
     if (!result.found) {
       // Same test as (b) above: a whitespace-free target whose first segment
       // is a top-level repo entry is the token (b) already reports, so this
@@ -763,7 +1001,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const repoRoot = getRepoRoot();
-  const skillDirs = resolveSkillDirs(repoRoot, options.skillDirs);
+  const skillDirs = resolveSkillDirs(options.skillDirs);
   const gitFiles = getGitLsFiles(repoRoot);
   const topLevelEntries = new Set(gitFiles.map((f) => f.split('/')[0]));
   const presentPaths = getPresentPaths(repoRoot);

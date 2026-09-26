@@ -19,9 +19,9 @@ Prerequisites:
     - A git checkout (this script must run inside one).
     - Python 3.12 with PyYAML 6.0.2 (see the command below).
 
-Command (from the repository root):
+Command (path relative to this skill's directory; from the repository root):
     uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \
-        .claude/skills/mibolt-verification/scripts/checks-for-changed-paths.py \
+        scripts/checks-for-changed-paths.py \
         [--base <git-ref>] [--paths <path> ...] [--json]
 
     Without --paths, the changed paths are the union of:
