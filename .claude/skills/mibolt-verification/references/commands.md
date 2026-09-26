@@ -33,7 +33,7 @@ are described in `SKILL.md` ("What a check writes or starts").
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/checks-for-changed-paths.py`, from any directory in the checkout with the path given from there | this skill's script | uv on PATH; a git checkout | read-only |
+| `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/checks-for-changed-paths.py`, as written from this skill's directory, or from any other directory in the checkout with the script's path given as seen from there | this skill's script | uv on PATH; a git checkout | read-only |
 | `mise tasks --all` | mise; lists the tasks of all five `mise.toml` files | mise | read-only |
 
 ## The changed-paths script

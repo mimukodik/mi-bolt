@@ -6,17 +6,21 @@ description: "Choosing and running MiBolt checks: which local checks and CI jobs
 # MiBolt verification
 
 Find out which checks a change needs, run them, and read each one's exit
-status. Invoke every command from the repository root, except an `npx`
-command such as `npx eslint` or `npx prettier --check`, which runs from
+status. Invoke every command from the repository root, with two exceptions.
+An `npx` command such as `npx eslint` or `npx prettier --check` runs from
 `frontend/` (`mibolt-workspace-ops`, "Where commands run") and so takes its
 file arguments relative to `frontend/`: `projects/storefront/src/main.ts`, not
 `frontend/projects/storefront/src/main.ts`. The changed-paths script in step 1
 prints them in that form. A path that starts with `scripts/` or `references/`,
 and `SKILL.md`, is relative to this skill's directory, and one that starts with
 a MiBolt skill name is relative to the directory that holds the MiBolt skills.
-Every other path is repository-relative, except directories that exist only
-after an install or a run (`node_modules/`, `coverage/`, `dist/`, Gradle's
-`build/`), which are named relative to the area directory that holds them.
+A command that names such a path is the other exception: it runs, as written,
+from the directory that path is relative to, since from the repository root
+the path finds nothing or, for `scripts/`, the repository's own top-level
+directory of that name. Every other path is repository-relative, except
+directories that exist only after an install or a run (`node_modules/`,
+`coverage/`, `dist/`, Gradle's `build/`), which are named relative to the area
+directory that holds them.
 
 ## Scope and hand-offs
 
@@ -175,8 +179,9 @@ canonical examples are the gate list under "Gates before a commit" below,
    uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/checks-for-changed-paths.py
    ```
 
-   The script finds the repository root through git, so it runs from any
-   directory inside the checkout once its path is given from there.
+   As written it runs from this skill's directory. The script finds the
+   repository root through git, so it runs from any other directory inside
+   the checkout too, once its path is given as seen from there.
    Without `--paths` the changed paths are the union of
    `git diff --name-only <base>...HEAD`, `git diff --name-only HEAD` and the
    untracked files, where `--base` defaults to `origin/main`; that ref is only
@@ -250,9 +255,8 @@ canonical examples are the gate list under "Gates before a commit" below,
      Gradle run does not check the coverage floor; only `check` does.
 
 4. **Run the gates before the commit.** Run each command under "Gates before
-   a commit" as a command of its own and wait on its own exit status, never on
-   a log line: a line that never appears looks exactly like a run still
-   going. By hand in a terminal, run the unit suite as
+   a commit" as a command of its own and read its exit status. By hand in a
+   terminal, run the unit suite as
    `npm --prefix frontend run test -- --no-watch` or through
    `mise run //frontend:test`, which passes `--watch=false`
    (`frontend/mise.toml:9`).
@@ -269,10 +273,19 @@ canonical examples are the gate list under "Gates before a commit" below,
 
 ## Rules that apply here
 
-How Vitest, Gradle, Playwright or any other tool here behaves is read from its
+How Angular, the Angular CLI, the `@angular/build` builders, Vitest, MSW,
+Playwright, typescript-eslint and Prettier behave is read from their
 documentation, with the URL beside the claim, and not found out by a
 throwaway experiment; running this repository's own checks is measurement,
 not an experiment (`mibolt-frontend-code-standards`, "Framework questions").
+The backend's build tools are read the same way: Gradle and its JaCoCo and
+PMD plugins at https://docs.gradle.org, as the Gradle claims in this skill
+are; JaCoCo itself at https://www.jacoco.org/jacoco/trunk/doc/; and PMD at
+https://docs.pmd-code.org/pmd-doc-7.24.0/, the release the build pins. An
+experiment on any of them answers one narrow question at the cost of a build
+and leaves a belief with no source behind it; running a Gradle task here and
+reading `backend/services/commerce/build.gradle` is measurement, not an
+experiment.
 
 ### Browser pass
 
@@ -285,36 +298,38 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
 
 1. Serve the app the change reaches: `mise run storefront` (port 4200),
    `mise run admin` (4220) or `mise run payment` (4210). Each is `ng serve`
-   with the MSW mock running in the browser, so nothing else has to be up.
-   When the result comes from the backend, use `mise run dev` instead: the
-   three apps on their `local-backend` configuration, against the backend on
-   8080 and PostgreSQL in its container.
+   with the MSW mock running in the browser, so no backend has to be up. A
+   flow that crosses from the storefront into the payment page needs the
+   payment app as well, because the storefront's dev server proxies
+   `/demo-fizetes` to 4210 (`frontend/proxy.conf.json`); `mise run frontend`
+   serves all three apps. When the result comes from the backend, use
+   `mise run dev` instead: the three apps on their `local-backend`
+   configuration, against the backend on 8080 and PostgreSQL in its container.
 2. Open the affected screen and drive the changed flow as a user would:
    click, type, submit. Looking at the page is not a pass.
 3. Capture the page structure and a screenshot, before and after the
    interaction when the change alters state.
-4. Read the browser console: zero errors. Read the network log for a failed
-   call behind the change.
+4. Read the browser console and the network log: zero console errors, and no
+   failed call behind the change.
 5. Exercise the states the change creates, the negative ones included:
    signed out, an empty list, the error path.
-6. Keep a screenshot of any failure and state the failure beside it.
+6. Keep a screenshot of any failure.
 7. Stop every server the pass started.
 
 **What does not count**, for any change: a file's existence or size on disk,
 or reading the diff back; a green typecheck, unit or Vitest run; an HTTP 200
 from `curl` or any other request made outside the browser; a grep of a
 stylesheet for a `frontend/docs/design/yettel.md` token or recipe value; a
-statement that the change should work with no screenshot and no console
-reading behind it.
+statement that the change should work, unless the structure capture and
+screenshot of step 3 and the console reading of step 4 all stand behind it.
 
 **A change is exempt only when it cannot reach a browser at all**, such as a
-build script, a CI setting or a document with no rendered output. Say that it
-is exempt and why, rather than leaving the pass out silently.
+build script, a CI setting or a document with no rendered output.
 
 ### Tests and coverage
 
 - **Every bug gets a test in the same commit as its fix**, seen failing before
-  the fix and passing after it; say what made it fail. A test never seen
+  the fix because of the bug, and passing after it. A test never seen
   failing is evidence of nothing. When a fix changes a branch condition, every
   arm of that condition gets a case.
 - **Covered means executed and asserted on.** A line a test runs through on
@@ -327,10 +342,11 @@ is exempt and why, rather than leaving the pass out silently.
   generated `shop-api` library has no `test` target and so no floor. The
   backend floor is the JaCoCo verification in
   `backend/services/commerce/build.gradle`, which `build` runs. A floor fails
-  a run only once the project's coverage falls below it. MiBolt is a demo MVP
-  that will never go live, so coverage is held to a floor rather than to
-  every changed line, and the browser pass is what catches a defect the unit
-  suite cannot see.
+  a run only once the project's coverage falls below it; the numbers of every
+  floor are under "Frontend (`frontend/`)" and "Backend (`backend/`)" above.
+  MiBolt is a demo MVP that will never go live, so coverage is held to a floor
+  rather than to every changed line, and the browser pass is what catches a
+  defect the unit suite cannot see.
 - **Only a layer a unit test cannot reach is excluded from coverage**, and
   only in the coverage configuration, never by an ignore comment in the
   source: shell scripts, compose files, docs, generated code, and the spec
@@ -470,7 +486,8 @@ and rereading each section cited in that file, since check (e) confirms only
 that a quoted name still occurs somewhere in its target
 (`mibolt-project-map/references/citation-check.md`).
 
-Check every path, anchor and command cited here with:
+Check every path, anchor and command cited here, from the directory that
+holds the MiBolt skills, with:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs mibolt-verification
