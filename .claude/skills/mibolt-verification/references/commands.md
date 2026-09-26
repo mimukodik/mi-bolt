@@ -11,11 +11,12 @@ are described in `SKILL.md` ("What a check writes or starts").
 
 - [Side-effect classes](#side-effect-classes)
 - [Discovery](#discovery)
+- [The changed-paths script](#the-changed-paths-script)
 - [Frontend](#frontend)
 - [Backend](#backend)
-- [Contract, tools, hooks, deploy](#contract-tools-hooks-deploy)
+- [Contract, tools, deploy](#contract-tools-deploy)
 - [Umbrella and setup](#umbrella-and-setup)
-- [Owned elsewhere](#owned-elsewhere)
+- [End-to-end and run modes](#end-to-end-and-run-modes)
 
 ## Side-effect classes
 
@@ -32,8 +33,61 @@ are described in `SKILL.md` ("What a check writes or starts").
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python .claude/skills/mibolt-verification/scripts/checks-for-changed-paths.py` | this skill's script | uv on PATH; a git checkout | read-only |
+| `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/checks-for-changed-paths.py`, from any directory in the checkout with the path given from there | this skill's script | uv on PATH; a git checkout | read-only |
 | `mise tasks --all` | mise; lists the tasks of all five `mise.toml` files | mise | read-only |
+
+## The changed-paths script
+
+`SKILL.md` ("From a diff to green checks", step 1) says what it is for; its
+header in `scripts/checks-for-changed-paths.py` is the full usage text.
+
+- **Options.** `--base <ref>` sets the base of the branch diff, `origin/main`
+  by default. `--paths <p> ...` replaces the paths read from git; write each
+  as git prints it: repository-relative, with no leading `/` or `./` and no
+  `.`, `..` or empty segment. `--json` prints the same data as one object
+  (`changed_paths`, `stale_remote_ref_note`, `triggered`, `not_triggered`,
+  `frontend_files_for_eslint`, `frontend_files_for_prettier`,
+  `frontend_files_for_neither`).
+- **Exit codes.** 0 on success, including when nothing is triggered; 2 on a
+  usage or parse error, such as `path must be repo-relative: <p>`,
+  `<ref> not found locally; pass --base <ref>` or
+  `could not parse <file>: <reason>`.
+- **The `frontend/` file lists.** ESLint gets `.ts`, `.js`, `.mjs`, `.cjs` and
+  `.html`; Prettier gets those and `.json`, `.md`, `.css`, `.scss`, `.yaml`,
+  `.yml` and `.prettierrc`. A file neither takes, such as an image,
+  `Dockerfile`, `mise.toml` or an nginx file, goes in the third list.
+  `[CI-only expression]` marks a `run:` line holding `${{ }}` or a
+  `$GITHUB_*` variable.
+
+An excerpt of a real run with `--paths contracts/commerce/openapi.yaml`,
+shortened at `…`:
+
+```text
+changed paths (1)
+  - contracts/commerce/openapi.yaml
+
+component frontend <- 1 path(s) (first match: contracts/**)
+  workflow frontend.yml
+  job "lint" (dir frontend, needs none)
+    run: npm ci
+    run: npm run lint
+      package.json script "lint": ng lint
+  …
+component contracts <- 1 path(s) (first match: contracts/**)
+  workflow contracts.yml
+  job "check" (dir ., needs none)
+    run: mise -C contracts install
+    run: mise -C contracts run check
+  …
+not triggered: tools
+
+frontend files for npx eslint (run from frontend/):
+  (none)
+frontend files for npx prettier --check (run from frontend/):
+  (none)
+frontend files neither command takes:
+  (none)
+```
 
 ## Frontend
 
@@ -43,8 +97,8 @@ in `frontend/` (installed by `mise run setup`) and the Node version pinned at
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `npx eslint <files>`, invoked from `frontend/` | `eslint` in `frontend/package.json:68`; the form is `.claude/rules/code-standards.md` ("A subagent's green report is not a run") | — | read-only |
-| `npx prettier --check <files>`, invoked from `frontend/` | `prettier` in `frontend/package.json:80`; the form is `.claude/rules/code-standards.md` ("A subagent's green report is not a run") | — | read-only |
+| `npx eslint <files>`, invoked from `frontend/` | `eslint` in `frontend/package.json:68`; the form is `SKILL.md` ("Gates before a commit") | — | read-only |
+| `npx prettier --check <files>`, invoked from `frontend/` | `prettier` in `frontend/package.json:80`; the form is `SKILL.md` ("Gates before a commit") | — | read-only |
 | `npm --prefix frontend run lint` | `frontend/package.json:28` | — | read-only |
 | `npm --prefix frontend run format:check` | `frontend/package.json:30` | — | read-only |
 | `mise run //frontend:lint` (both of the above) | `frontend/mise.toml:5-6` | — | read-only |
@@ -73,7 +127,7 @@ Gradle builds `backend/`. It needs Java 21 (`mise.toml:13`) and no database.
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `backend/gradlew -p backend :services:commerce:build` | Gradle build; the form is `.claude/rules/code-standards.md` ("A subagent's green report is not a run") | — | writes local artefacts |
+| `backend/gradlew -p backend :services:commerce:build` | Gradle build; the form is `SKILL.md` ("Gates before a commit") | — | writes local artefacts |
 | `mise run //backend:build` (`//backend:test` first) | `backend/mise.toml:11-13` | — | writes local artefacts |
 | `mise run //backend:test` (`test`, then `integrationTest`) | `backend/mise.toml:8-9` | — | writes local artefacts |
 | `backend/gradlew -p backend :services:commerce:test --tests <pattern>` | Gradle `test` task | — | writes local artefacts |
@@ -81,29 +135,28 @@ Gradle builds `backend/`. It needs Java 21 (`mise.toml:13`) and no database.
 | `mise run //backend:lint` (PMD, main and test) | `backend/mise.toml:5-6` | — | writes local artefacts |
 | `bash backend/services/commerce/scripts/smoke.sh` | the script | a running backend at `BASE`, default `http://localhost:8080/api/v1`; `MIBOLT_DEMO_PASSWORD` when that backend does not use the script's default demo password (`backend/services/commerce/scripts/smoke.sh:9`); curl; python3 | read-only in the repository; writes to that backend's database |
 
-## Contract, tools, hooks, deploy
+## Contract, tools, deploy
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
 | `mise run contracts:check` (vacuum lint, samples, PlantUML; runs in `contracts/`) | `mise.toml:84-86`, then `contracts/mise.toml:14-19` | the tools pinned at `contracts/mise.toml:5-9` | read-only |
 | `mise run //tools:lint` (typecheck; runs in `tools/`) | `tools/mise.toml:5-6` | `node_modules` in `tools/` | read-only |
 | `mise run //tools:test` (Vitest; runs in `tools/`) | `tools/mise.toml:8-9` | `node_modules` in `tools/` | starts processes or ports: `tools/dev-server/dev-server.test.ts` starts short-lived servers on free ports and stops them |
-| `mise run claude:hooks:test` | `mise.toml:92-94` | `node_modules` in `.claude/hooks/` | rewrites tracked files: the shared-memory index, restored after each case |
-| `mise run claude:hooks:typecheck` | `mise.toml:96-98` | `node_modules` in `.claude/hooks/` | read-only |
 | `mise run deploy:check` (renders and checks the Helm chart) | `mise.toml:100-102` | uv; `helm` on PATH | needs a missing tool |
 
 ## Umbrella and setup
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `mise run verify` | `mise.toml:67-74` | `node_modules` in `frontend/`, `tools/` and `.claude/hooks/`; Java 21; the tools pinned in `contracts/mise.toml`; port 4299 free | writes local artefacts; rewrites tracked files; starts processes or ports |
-| `mise run setup` | `mise.toml:62-65` | network access | writes local artefacts (`node_modules/` of `frontend/`, `tools/` and `.claude/hooks/`); an install is a shared resource per `.claude/rules/parallel-spawns.md` |
+| `mise run verify` | `mise.toml:67-74` | everything `mise run setup` installs; Java 21; the tools pinned in `contracts/mise.toml`; port 4299 free | writes local artefacts; rewrites tracked files; starts processes or ports |
+| `mise run setup` | `mise.toml:62-65` | network access | writes local artefacts, the `node_modules/` of `frontend/` and `tools/` among them |
 
-## Owned elsewhere
+## End-to-end and run modes
 
-Listed so their classes are known; neither group is this skill's to run.
+Listed so their classes are known. The end-to-end suite is outside this
+skill, and the run modes serve the apps rather than check them.
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `npm --prefix frontend run e2e`, `npm --prefix frontend run e2e:all`, `npm --prefix frontend run e2e:smoke`; owned by `playwright-tests` | `frontend/package.json:24-26` | browsers from `e2e:install` (`frontend/package.json:27`); for `e2e:smoke`, a backend on 8080 | starts processes or ports (4400, or 4410 for smoke; `frontend/playwright.config.ts:11-18`); writes local artefacts |
-| `mise run storefront`, `mise run backend`, `mise run stack`, `mise run stop` and the other run modes; the orchestrator's alone | `mise.toml` | Docker for every mode that starts PostgreSQL | starts processes or ports |
+| `npm --prefix frontend run e2e`, `npm --prefix frontend run e2e:all`, `npm --prefix frontend run e2e:smoke` | `frontend/package.json:24-26` | browsers from `e2e:install` (`frontend/package.json:27`); for `e2e:smoke`, a backend on 8080 | starts processes or ports (4400, or 4410 for smoke; `frontend/playwright.config.ts:11-18`); writes local artefacts |
+| `mise run storefront`, `mise run backend`, `mise run stack`, `mise run stop` and the other run modes | `mise.toml` | Docker for every mode that starts PostgreSQL | starts processes or ports |

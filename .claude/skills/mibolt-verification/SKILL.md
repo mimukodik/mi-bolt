@@ -8,14 +8,15 @@ description: "Choosing and running MiBolt checks: which local checks and CI jobs
 Find out which checks a change needs, run them, and read each one's exit
 status. Invoke every command from the repository root, except an `npx`
 command such as `npx eslint` or `npx prettier --check`, which runs from
-`frontend/` (`.claude/rules/session-lifecycle.md`, "Tools and startup") and
-so takes its file arguments relative to `frontend/`:
-`projects/storefront/src/main.ts`, not
+`frontend/` (`mibolt-workspace-ops`, "Where commands run") and so takes its
+file arguments relative to `frontend/`: `projects/storefront/src/main.ts`, not
 `frontend/projects/storefront/src/main.ts`. The changed-paths script in step 1
-prints them in that form. Paths this skill cites are repository-relative,
-except directories that exist only after an install or a run
-(`node_modules/`, `coverage/`, `dist/`, Gradle's `build/`), which are named
-relative to the area directory that holds them.
+prints them in that form. A path that starts with `scripts/` or `references/`,
+and `SKILL.md`, is relative to this skill's directory, and one that starts with
+a MiBolt skill name is relative to the directory that holds the MiBolt skills.
+Every other path is repository-relative, except directories that exist only
+after an install or a run (`node_modules/`, `coverage/`, `dist/`, Gradle's
+`build/`), which are named relative to the area directory that holds them.
 
 ## Scope and hand-offs
 
@@ -27,8 +28,10 @@ failed CI job locally.
 
 Everything else goes elsewhere:
 
-- An end-to-end spec to write, repair or plan, or a red `e2e*` run: consult
-  `playwright-tests`, and only when e2e is in scope.
+- An end-to-end spec to write, repair or plan, or a red `e2e*` run: outside
+  this skill. The suite is configured in `frontend/playwright.config.ts`, its
+  conventions are in `frontend/e2e/seed.spec.ts`, its fixtures are under
+  `frontend/e2e/fixtures/`, and its test plans are under `frontend/specs/`.
 - A workflow, path filter or `mise` task to change, or a check to wire in:
   `mibolt-workspace-ops`.
 - What an ESLint, Prettier, tsconfig or PMD rule demands and how to satisfy
@@ -37,9 +40,6 @@ Everything else goes elsewhere:
   `mibolt-admin-frontend` or `mibolt-commerce-backend`.
 - Regenerating the API clients or the catalogue fixture as a step of a change:
   `mibolt-cross-package-changes`. Here `api:drift` is only a check.
-- The browser pass itself: the `real-browser-sonnet` agent, per
-  `.claude/rules/browser-verification.md`.
-- Committing and pushing: `git-commit` and `task-execute-workflow`.
 
 ## The checks
 
@@ -84,9 +84,9 @@ Everything else goes elsewhere:
   what CI's `lint` job runs (`.github/workflows/frontend.yml:34`,
   `.github/workflows/frontend.yml:37`), as `npm --prefix frontend run lint`
   and `npm --prefix frontend run format:check` locally. Before a commit the
-  gate (`.claude/rules/code-standards.md`, "A subagent's green report is not
-  a run") checks only the changed files, with `npx eslint` and
-  `npx prettier --check` run from `frontend/` on the lists step 1 prints.
+  gate ("Gates before a commit" below) checks only the changed files, with
+  `npx eslint` and `npx prettier --check` run from `frontend/` on the lists
+  step 1 prints.
 - **Builds.** `build` builds the storefront alone (`frontend/package.json:12`);
   `build:payment` and `build:admin` build the other two apps. `build:check`
   builds the storefront for production and exits 1 on any output line
@@ -103,8 +103,8 @@ Everything else goes elsewhere:
 - **End-to-end.** Playwright, with its own floor in
   `frontend/e2e/coverage-thresholds.json` (statements 80, branches 68,
   functions 80, lines 80), armed only when `E2E_COVERAGE_GATE=1`
-  (`frontend/playwright.config.ts:90-94`). Running, writing and repairing it
-  belong to `playwright-tests`.
+  (`frontend/playwright.config.ts:90-94`). Its specs are outside this skill
+  (see "Scope and hand-offs").
 
 ### Backend (`backend/`)
 
@@ -155,10 +155,6 @@ These exist and work by hand; nothing runs them automatically.
   production build does enforce are the different ones in
   `frontend/angular.json:37-48` (initial: 500kB warning, 1MB error). It is
   manual-only.
-- `claude:hooks:test` and `claude:hooks:typecheck` run only inside
-  `mise run verify`. A change under `.claude/hooks/` triggers the CI `tools`
-  component (`.github/components.yml:19-23`), whose job runs the typecheck and
-  tests of `tools/` and not these two.
 
 ## Where to start
 
@@ -166,8 +162,7 @@ Start from the changed-paths script in step 1 below; it reads
 `.github/components.yml`, `.github/workflows/ci.yml` and the triggered
 workflows live. `mise tasks --all` lists every root and area task, and
 `frontend/README.md` ("npm scripts") describes every frontend script. The
-canonical examples are the pre-commit gate list in
-`.claude/rules/code-standards.md` ("A subagent's green report is not a run"),
+canonical examples are the gate list under "Gates before a commit" below,
 `frontend/mise.toml:8-21` (exactly what `//frontend:test` and
 `//frontend:build` run), and `backend/services/commerce/build.gradle:141-245`
 (every backend gate).
@@ -177,63 +172,26 @@ canonical examples are the pre-commit gate list in
 1. **List the changed paths and the CI jobs they trigger.**
 
    ```bash
-   uv run --no-project --python 3.12 --with PyYAML==6.0.2 python .claude/skills/mibolt-verification/scripts/checks-for-changed-paths.py
+   uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/checks-for-changed-paths.py
    ```
 
+   The script finds the repository root through git, so it runs from any
+   directory inside the checkout once its path is given from there.
    Without `--paths` the changed paths are the union of
    `git diff --name-only <base>...HEAD`, `git diff --name-only HEAD` and the
    untracked files, where `--base` defaults to `origin/main`; that ref is only
    as current as the last fetch, and the output says so. `--paths <p> ...`
-   checks a hypothetical change instead. Write each path as git prints it:
-   repository-relative, with no leading `/` or `./` and no `.`, `..` or empty
-   segment. `--json` prints the same data as one object (`changed_paths`,
-   `stale_remote_ref_note`, `triggered`, `not_triggered`,
-   `frontend_files_for_eslint`, `frontend_files_for_prettier`,
-   `frontend_files_for_neither`). It exits 0 on success, including when
-   nothing is triggered, and 2 on a usage or parse error, such as
-   `path must be repo-relative: <p>`,
-   `<ref> not found locally; pass --base <ref>` or
-   `could not parse <file>: <reason>`.
+   checks a hypothetical change instead, each path written as git prints it.
 
    Per triggered component it prints the workflow, each job with its working
    directory and `needs`, each `run:` line, and the body of every `npm run`
-   script those lines call; `[CI-only expression]` marks a line holding
-   `${{ }}` or a `$GITHUB_*` variable, which fails when pasted into a local
-   shell. The changed files under `frontend/` come last, re-rooted to
-   `frontend/` and split by the `npx` gate command that takes them. ESLint
-   gets `.ts`, `.js`, `.mjs`, `.cjs` and `.html`; Prettier gets those and
-   `.json`, `.md`, `.css`, `.scss`, `.yaml`, `.yml` and `.prettierrc`. A file
-   neither command takes, such as an image, `Dockerfile`, `mise.toml` or an
-   nginx file, is listed apart, because `npx prettier --check` exits 2 on a
-   file it has no parser for. An excerpt of a real run with
-   `--paths contracts/commerce/openapi.yaml`, shortened at `…`:
-
-   ```text
-   changed paths (1)
-     - contracts/commerce/openapi.yaml
-
-   component frontend <- 1 path(s) (first match: contracts/**)
-     workflow frontend.yml
-     job "lint" (dir frontend, needs none)
-       run: npm ci
-       run: npm run lint
-         package.json script "lint": ng lint
-     …
-   component contracts <- 1 path(s) (first match: contracts/**)
-     workflow contracts.yml
-     job "check" (dir ., needs none)
-       run: mise -C contracts install
-       run: mise -C contracts run check
-     …
-   not triggered: tools
-
-   frontend files for npx eslint (run from frontend/):
-     (none)
-   frontend files for npx prettier --check (run from frontend/):
-     (none)
-   frontend files neither command takes:
-     (none)
-   ```
+   script those lines call; `[CI-only expression]` marks a line that fails
+   when pasted into a local shell. The changed files under `frontend/` come
+   last, re-rooted to `frontend/` and split by the `npx` gate command that
+   takes them, with the files neither command takes listed apart, because
+   `npx prettier --check` exits 2 on a file it has no parser for. Its options,
+   exit codes, `--json` fields and an excerpt of a real run are in
+   `references/commands.md` ("The changed-paths script").
 
    It shows only what `.github/workflows/ci.yml` selects: not Candidate Build,
    which runs on every pull request, and not the checks under "Not wired to
@@ -241,9 +199,8 @@ canonical examples are the pre-commit gate list in
 
 2. **Pick the local checks.** Look the changed paths up in
    [references/command-matrix.md](references/command-matrix.md). The floor is
-   the gate list the orchestrator runs before every commit
-   (`.claude/rules/code-standards.md`, "A subagent's green report is not a
-   run"); in a terminal its unit run takes `-- --no-watch`, as step 4 says.
+   the gate list under "Gates before a commit" below; in a terminal its unit
+   run takes `-- --no-watch`, as step 4 says.
    Its frontend build is `build`, which builds the storefront alone, so an
    admin or demo-payment change also needs that app's build, dist check and
    boot check, which CI's `build` job runs. What each command needs and what
@@ -292,52 +249,125 @@ canonical examples are the pre-commit gate list in
      (https://docs.gradle.org/current/userguide/java_testing.html). A focused
      Gradle run does not check the coverage floor; only `check` does.
 
-4. **Run the gates before the commit.** Run each as a command of its own and
-   wait on its own exit status, never on a log line
-   (`.claude/rules/session-lifecycle.md`, "Tools and startup"). By hand in a
-   terminal, run the unit suite as `npm --prefix frontend run test -- --no-watch`
-   or through `mise run //frontend:test`, which passes `--watch=false`
+4. **Run the gates before the commit.** Run each command under "Gates before
+   a commit" as a command of its own and wait on its own exit status, never on
+   a log line: a line that never appears looks exactly like a run still
+   going. By hand in a terminal, run the unit suite as
+   `npm --prefix frontend run test -- --no-watch` or through
+   `mise run //frontend:test`, which passes `--watch=false`
    (`frontend/mise.toml:9`).
 
 5. **A check is red.** Settle whether the failure is this branch's before
-   fixing or dismissing it, and give a bug fix a test seen failing first; both
-   rules are under "Rules that apply here".
+   fixing or dismissing it ("Pre-existing failures"), and give a bug fix a
+   test seen failing first ("Tests and coverage").
 
-6. **User-visible change.** Get the browser pass before calling it done
-   (`.claude/rules/browser-verification.md`).
+6. **User-visible change.** Run the browser pass before calling it done
+   ("Browser pass").
 
 7. **A CI job failed.** Read [references/ci-mirror.md](references/ci-mirror.md)
    for the local command that reproduces it.
 
 ## Rules that apply here
 
-One line each; the file named is the one that binds.
+How Vitest, Gradle, Playwright or any other tool here behaves is read from its
+documentation, with the URL beside the claim, and not found out by a
+throwaway experiment; running this repository's own checks is measurement,
+not an experiment (`mibolt-frontend-code-standards`, "Framework questions").
 
-- The orchestrator runs the pre-commit gate list itself and reads the exit
-  codes: `.claude/rules/code-standards.md` ("A subagent's green report is not
-  a run").
-- A red check is pre-existing only when the merge-base diff does not list the
-  failing file and the working tree does not show it as changed:
-  `.claude/rules/code-standards.md` ("Pre-existing").
-- Every bug fix ships with a test measured red before and green after, in the
-  same commit: `.claude/rules/code-standards.md` ("Every bug still gets a
-  test").
-- Coverage is an aggregate floor per project, not a per-line gate:
-  `.claude/rules/code-standards.md` ("Coverage is an aggregate floor here, not
-  a per-line gate").
-- Only a layer a unit test cannot reach is excluded from coverage, in the
-  coverage configuration and never by an ignore comment:
-  `.claude/rules/code-standards.md` ("Layers a unit test cannot reach").
-- Every user-visible change gets a `real-browser-sonnet` pass; servers are the
-  orchestrator's: `.claude/rules/browser-verification.md`.
-- The coverage report, the generated clients, a dev server's port and the
-  database are shared between agents running at once:
-  `.claude/rules/parallel-spawns.md` ("What a batch shares").
-- Only the `playwright-test-*` agents write end-to-end tests:
-  `.claude/rules/code-standards.md` ("Only the `playwright-test-*` agents
-  write end-to-end tests").
-- How Vitest, Gradle or Playwright behave is read from their documentation,
-  not probed: `.claude/rules/framework-facts.md`.
+### Browser pass
+
+A change a person can see or click is not done, working or fixed until it has
+been exercised in a real browser: components and pages, routes and
+navigation, backend code whose result a screen shows, sign-in and session
+gating, and styling. A green typecheck, a green test run and a read of the
+diff are necessary and never enough, because the unit suite runs in jsdom
+rather than in a browser (https://angular.dev/cli/test, option `browsers`).
+
+1. Serve the app the change reaches: `mise run storefront` (port 4200),
+   `mise run admin` (4220) or `mise run payment` (4210). Each is `ng serve`
+   with the MSW mock running in the browser, so nothing else has to be up.
+   When the result comes from the backend, use `mise run dev` instead: the
+   three apps on their `local-backend` configuration, against the backend on
+   8080 and PostgreSQL in its container.
+2. Open the affected screen and drive the changed flow as a user would:
+   click, type, submit. Looking at the page is not a pass.
+3. Capture the page structure and a screenshot, before and after the
+   interaction when the change alters state.
+4. Read the browser console: zero errors. Read the network log for a failed
+   call behind the change.
+5. Exercise the states the change creates, the negative ones included:
+   signed out, an empty list, the error path.
+6. Keep a screenshot of any failure and state the failure beside it.
+7. Stop every server the pass started.
+
+**What does not count**, for any change: a file's existence or size on disk,
+or reading the diff back; a green typecheck, unit or Vitest run; an HTTP 200
+from `curl` or any other request made outside the browser; a grep of a
+stylesheet for a `frontend/docs/design/yettel.md` token or recipe value; a
+statement that the change should work with no screenshot and no console
+reading behind it.
+
+**A change is exempt only when it cannot reach a browser at all**, such as a
+build script, a CI setting or a document with no rendered output. Say that it
+is exempt and why, rather than leaving the pass out silently.
+
+### Tests and coverage
+
+- **Every bug gets a test in the same commit as its fix**, seen failing before
+  the fix and passing after it; say what made it fail. A test never seen
+  failing is evidence of nothing. When a fix changes a branch condition, every
+  arm of that condition gets a case.
+- **Covered means executed and asserted on.** A line a test runs through on
+  its way somewhere else is not covered, and neither is one whose only
+  assertion is a snapshot.
+- **Coverage is an aggregate floor, not a per-line gate.** Every frontend
+  project with a `test` target sets one in its `coverageThresholds` in
+  `frontend/angular.json`, measured over the whole project (`perFile: false`)
+  and enforced by `npm --prefix frontend run test` locally and in CI; the
+  generated `shop-api` library has no `test` target and so no floor. The
+  backend floor is the JaCoCo verification in
+  `backend/services/commerce/build.gradle`, which `build` runs. A floor fails
+  a run only once the project's coverage falls below it. MiBolt is a demo MVP
+  that will never go live, so coverage is held to a floor rather than to
+  every changed line, and the browser pass is what catches a defect the unit
+  suite cannot see.
+- **Only a layer a unit test cannot reach is excluded from coverage**, and
+  only in the coverage configuration, never by an ignore comment in the
+  source: shell scripts, compose files, docs, generated code, and the spec
+  files themselves. That configuration is the `coverageInclude` and
+  `coverageExclude` of each `test` target in `frontend/angular.json` and
+  `coverageExclusions` in `backend/services/commerce/build.gradle`, where it
+  can be read and argued with. For an excluded layer the evidence is a
+  command that was run and its verbatim output.
+- **A failing suite inside the diff is fixed, never skipped.**
+
+### Gates before a commit
+
+Before every commit, run each of these and read its exit code:
+
+- `npm --prefix frontend run test`; in a terminal, add `-- --no-watch`
+  (step 4).
+- `npm --prefix frontend run build`.
+- From `frontend/`, `npx eslint <files>` and `npx prettier --check <files>`
+  on the changed files, as step 1 lists them for each.
+- For a change under `backend/`,
+  `backend/gradlew -p backend :services:commerce:build`, which runs the unit
+  and integration tests, PMD and the coverage verification.
+
+`build` builds the storefront alone, so step 2 adds the other apps' builds
+and checks when they changed.
+
+### Pre-existing failures
+
+A red test or lint result is pre-existing only when
+`git diff --name-status <base>...HEAD` does not list the failing file.
+`<base>` is the branch the work was cut from, `origin/main` for work cut from
+`main`, and the three dots start the comparison at the merge base
+(https://git-scm.com/docs/git-diff). Who added a file does not matter: a file
+added to the branch minutes ago is on the branch, so its failures are the
+branch's. That diff reads committed history while the gates run before the
+commit, so a file `git status --short` shows as modified or untracked is the
+change's own, whatever the branch diff says.
 
 ## What a check writes or starts
 
@@ -345,8 +375,8 @@ One line each; the file named is the one that binds.
   runs all five projects (https://angular.dev/cli/test) and rewrites all five
   reports in `frontend/`: `coverage/unit/` for the storefront and
   `coverage/<project>/` for the other four, whichever project the change
-  touched. Two runs in one checkout overwrite each other's evidence
-  (`.claude/rules/parallel-spawns.md`).
+  touched. A second run in the same checkout overwrites the first run's
+  reports, so the reports on disk are always the last run's.
 - **Build output and port 4299.** Every build writes `dist/<app>/` in
   `frontend/`. A `check:*-dist` script reads whatever the last build there
   left, so run the matching build first in the same checkout; with no dist at
@@ -360,16 +390,14 @@ One line each; the file named is the one that binds.
   to `build/` in `backend/services/commerce/`. The coverage verification reads
   every `*.exec` it finds in `build/jacoco/`
   (`backend/services/commerce/build.gradle:172`).
-- **The shared-memory index.** `claude:hooks:test` overwrites the tracked
-  `.claude/shared-memory/MEMORY.md` while a case runs and restores it
-  afterwards (`.claude/hooks/session-start/hook.test.ts:54-70`).
 - **The database.** `smoke.sh` creates carts and orders in whatever backend it
   calls.
 - **`mise run verify`** writes the coverage reports, the build output, the
-  generated clients, the Gradle output and the shared-memory index above, and
-  binds port 4299; it runs neither `smoke.sh` nor `mise run deploy:check`
-  (`mise.toml:67-74`). mise runs up to four tasks at once, and `depends` sets
-  no order among the tasks it lists
+  generated clients and the Gradle output above, and binds port 4299; it runs
+  neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:67-74`). It can
+  also leave a tracked file outside the change modified, so read
+  `git status --short` after it. mise runs up to four tasks at once, and
+  `depends` sets no order among the tasks it lists
   (https://mise.jdx.dev/tasks/running-tasks.html), so its checks can overlap
   one another in the one checkout.
 
@@ -399,8 +427,8 @@ One line each; the file named is the one that binds.
 ## Keep this skill current
 
 Edit this skill in the same change as any change that alters a command, a
-side-effect class, a floor, or a line this skill or its references cite by
-`path:line`. The files most often behind one are: the `scripts` of
+side-effect class, a floor, a port, or a line this skill or its references
+cite by `path:line`. The files most often behind one are: the scripts block of
 `frontend/package.json` or `tools/package.json`; any of the five `mise.toml`
 files; the `test` targets of `frontend/angular.json`, a project's
 `vitest.config.ts` or `frontend/vitest.contract.config.ts`;
@@ -411,12 +439,10 @@ files; the `test` targets of `frontend/angular.json`, a project's
 `backend/services/commerce/src/test/resources/application-test.properties`
 and `backend/services/commerce/scripts/smoke.sh`; `.github/workflows/*.yml` or
 `.github/components.yml`; the headers of the scripts in `frontend/scripts/`
-cited in this skill, with the logs in `frontend/scripts/fixtures/`; the two
-test files cited for side effects, `.claude/hooks/session-start/hook.test.ts`
-and `tools/dev-server/dev-server.test.ts`; and the entries of
-`.claude/rules/code-standards.md` this skill names. A workflow or `mise`
-task that starts running `fixtures:catalog:check`, `check-budgets.mjs` or the
-hook checks ends their "Not wired to anything" entry.
+cited in this skill, with the logs in `frontend/scripts/fixtures/`; and the
+test file cited for side effects, `tools/dev-server/dev-server.test.ts`. A
+workflow or `mise` task that starts running `fixtures:catalog:check` or
+`check-budgets.mjs` ends their "Not wired to anything" entry.
 
 A line added or removed above a cited line alters that citation too, because
 it moves the anchor, and the checker below fails a moved anchor only once it
@@ -425,10 +451,10 @@ references cite by `path:line`, whether or not the list above names it, run
 the checker below with `--show-anchors` and read each line it prints against
 the claim beside it; a range longer than ten lines ends in
 `... (+N more lines)`, so read its rest in the file. Whether a file you edited
-is cited by line is one search, run from the repository root:
+is cited by line is one search, run from this skill's directory:
 
 ```bash
-grep -rn '<path>:[0-9]' .claude/skills/mibolt-verification
+grep -rn '<path>:[0-9]' SKILL.md references
 ```
 
 The changed-paths script reads the CI files live and needs no edit when a
@@ -437,17 +463,17 @@ beyond `**`, `*`, `?` and literals: it then exits 2 with
 `unsupported pattern <p> in .github/components.yml` and has to be extended.
 
 An edit to a file this skill cites a section of by name (today
-`.claude/hooks/CLAUDE.md`, `frontend/README.md`, `backend/README.md`, any
-file under `.claude/rules/`, and this skill's own `SKILL.md`, which its
-references cite) means re-running the checker below and rereading each
-section cited in that file, since check (e) confirms only that a quoted name
-still occurs somewhere in its target
-(`.claude/skills/mibolt-project-map/references/citation-check.md`).
+`frontend/README.md`, `backend/README.md`, the skills
+`mibolt-frontend-code-standards` and `mibolt-workspace-ops`, and this skill's
+own `SKILL.md`, which its references cite) means re-running the checker below
+and rereading each section cited in that file, since check (e) confirms only
+that a quoted name still occurs somewhere in its target
+(`mibolt-project-map/references/citation-check.md`).
 
 Check every path, anchor and command cited here with:
 
 ```bash
-node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-verification
+node mibolt-project-map/scripts/check-skill-references.mjs mibolt-verification
 ```
 
 Add `--show-anchors` to print the current text of each cited line, up to ten
