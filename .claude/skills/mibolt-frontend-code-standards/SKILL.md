@@ -1,13 +1,13 @@
 ---
 name: mibolt-frontend-code-standards
 description: >-
-  Fixing lint, format or type errors under frontend/ in MiBolt, reviewing
-  TypeScript diffs, or judging whether a pattern is allowed: ESLint rules such
-  as strict-boolean-expressions, type assertions, any and cross-app imports,
+  Fixing MiBolt lint, format or type errors under frontend/, reviewing
+  TypeScript diffs, or judging whether a pattern is allowed: ESLint rules
+  (strict-boolean-expressions, type assertions, any, cross-app imports),
   tsconfig and template strictness, Prettier, naming, type guards, Angular
   conventions, accessibility, framework questions, removing a feature. Load it
-  before writing, answering or fixing, since which rules apply differs by
-  folder. Not for Java or Gradle code.
+  before writing, answering or fixing: rules differ by folder. Not for Java or
+  Gradle code.
 ---
 
 # MiBolt frontend code standards
@@ -159,7 +159,7 @@ Services and routes:
 - **A leading `_`** marks a parameter, variable or caught error as intentionally unused (lint: `frontend/eslint.config.mjs:152-159`).
 - **No `public` keyword** on a method, accessor, constructor or parameter property (lint: `frontend/eslint.config.mjs:219-231`).
 - **`T[]` and `readonly T[]`**, never `Array<T>` (lint: `frontend/eslint.config.mjs:292-298`).
-- **A return type on every function and method**, an arrow function assigned to an untyped `const` included; a callback written inline as an argument, or a function whose variable is already typed, needs none (lint: `frontend/eslint.config.mjs:299-308`, https://typescript-eslint.io/rules/explicit-function-return-type/). It sits beside the written preference for inferred types, a recorded conflict.
+- **A return type on every function and method**, an arrow function assigned to an untyped `const` included; a callback written inline as an argument, or a function whose variable is already typed, needs none, and neither do the three narrower cases the lint policy reference lists in section 3 (lint: `frontend/eslint.config.mjs:299-308`, https://typescript-eslint.io/rules/explicit-function-return-type/). It sits beside the written preference for inferred types, a recorded conflict.
 - **File names** (observed): `x-page.ts` for a page, `x.routes.ts`, `x.guard.ts` or `x.guards.ts`, `x.facade.ts` exporting `XFacade` in the storefront, `x.store.ts` in the admin. Which pattern a new unit follows is the area skill's call.
 - **A script or `package.json` script** is named after what it acts on (`mibolt-workspace-ops` ("Naming")), and `mibolt-workspace-ops` owns wiring one in.
 
@@ -186,7 +186,7 @@ Services and routes:
 
 ### Framework questions
 
-- **How Angular, Angular Material, the Angular CLI, the `@angular/build` builders, Vitest, MSW, Playwright, typescript-eslint or Prettier behaves is read from that tool's documentation, never found out with a throwaway experiment** (written), and the URL goes beside every claim it supports. This workspace runs Angular 22, TypeScript 6 and ESLint 10 (`frontend/package.json:45`, `frontend/package.json:82`, `frontend/package.json:68`), all newer than a model's training data, so recall is no evidence either. Angular is read in its version 22 documentation, at https://v22.angular.dev, which redirects to https://angular.dev while 22 is the current major. Angular Material is read at https://material.angular.dev, which on 2026-09-26 served 22.2.0, the same major as the `^22.1.6` that `frontend/package.json:47` pins. Playwright is read at https://playwright.dev/docs, and release notes, issues and changelogs cover what those pages do not.
+- **How Angular, Angular Material, the Angular CLI, the `@angular/build` builders, Vitest, MSW, Playwright, typescript-eslint or Prettier behaves is read from that tool's documentation, never found out with a throwaway experiment** (written), and the URL goes beside every claim it supports. This workspace runs Angular 22, TypeScript 6 and ESLint 10 (`frontend/package.json:45`, `frontend/package.json:82`, `frontend/package.json:68`), all newer than a model's training data, so recall is no evidence either. Angular is read in its version 22 documentation, at https://v22.angular.dev, which redirects to https://angular.dev while 22 is the current major. Angular Material is read in its version 22 documentation, at https://v22.material.angular.dev; on 2026-09-26 it served the same pages as https://material.angular.dev, whose version list names 22.2.0 as the latest, the major that `frontend/package.json:47` pins with `^22.1.6`. Playwright is read at https://playwright.dev/docs, and release notes, issues and changelogs cover what those pages do not.
 - **Measuring this repository is not an experiment**: running its checks and reading their exit codes, grepping the tree, reading `frontend/angular.json`, `frontend/package.json` and `frontend/eslint.config.mjs`, running `git log -S` to find when a line arrived, and reading the installed source under `node_modules/` in `frontend/` to settle what a version actually ships. The test is whose behaviour the question is about: this repository's, or the framework's.
 
 ### Removed features
