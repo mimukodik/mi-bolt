@@ -2,8 +2,8 @@
 
 How `contracts/commerce/openapi.yaml` becomes the shop SDK, the admin client
 and the backend interfaces, what `api:generate` and `api:drift` actually do,
-and how to read a failure in either. Paths are repo-relative and commands run
-from the repository root.
+and how to read a failure in either. Paths and commands are read the way the
+opening paragraph of `SKILL.md` says.
 
 ## Contents
 
@@ -89,9 +89,10 @@ Counts on 2026-09-26: 88 tracked files in the shop SDK, 54 in the admin client.
 
 ## 3. `api:generate` and `api:drift`, exactly
 
-Both rewrite tracked files under the two generated directories, so they are a
-shared resource (`.claude/rules/parallel-spawns.md`, "What a batch shares"):
-run them only when your task hands you that step.
+Both rewrite the tracked files under the two generated directories,
+`frontend/projects/shop-api/src/generated/` and
+`frontend/projects/admin/src/app/api/generated/`; `api:generate` also
+regenerates the backend output, which git ignores (section 4).
 
 - `mise run api:generate` (`mise.toml:76-78`) runs `//frontend:api:generate`,
   which is `npm run api:generate` in `frontend/`: both configs in sequence
@@ -169,20 +170,20 @@ plugin, version 7.25.0 (`backend/services/commerce/build.gradle:5`), with the `s
 ## 5. When regeneration or drift misbehaves
 
 - **`api:drift` red locally after a contract change.** Expected until the
-  regenerated output is staged with the contract change; `SKILL.md`, "The
-  fan-out order", step 6, says who stages it. Rerun once it is.
+  regenerated output is staged with the contract change (`SKILL.md`, "The
+  fan-out order", step 6). Rerun once it is.
 - **`api:drift` red in CI.** The committed clients do not match the committed
   contract: the contract changed without a regeneration, a generated file was
   edited by hand, or a generated file was never added. The fix is to
-  regenerate and have the result committed with the contract, never to edit
-  the generated file. When the red run follows a rebase that changed
-  `frontend/package-lock.json`, compare the version in
+  regenerate, so that the committed clients match the committed contract
+  again, never to edit the generated file. When the red run follows a rebase
+  that changed `frontend/package-lock.json`, compare the version in
   `node_modules/ng-openapi-gen/package.json` in `frontend/` with the
   lockfile's `node_modules/ng-openapi-gen` entry before regenerating: CI
   installs with `npm ci` (`.github/workflows/frontend.yml:155`), so it
-  generates with the locked version. Bringing the local install in line
-  rewrites the `node_modules` every worktree shares, so it is one agent's at a
-  time (`.claude/rules/parallel-spawns.md`, "What a batch shares").
+  generates with the locked version. `mise run //frontend:setup`, which is
+  `npm ci` in `frontend/` (`frontend/mise.toml:2-3`), brings the local
+  install in line with the lockfile by reinstalling every package there.
 - **A model you expected is missing from one client.** `ignoreUnusedModels`
   drops a schema no operation of that client references; check which tag the
   operations using it carry.

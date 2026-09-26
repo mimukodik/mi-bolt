@@ -15,8 +15,13 @@ This skill owns the artefacts with more than one consumer: the OpenAPI
 contract and everything generated from it, the shared `core-api` library, the
 frontend contract suite, and the catalogue data with its fixture. It gives the
 order a change to them fans out in and the check that catches each step left
-out. The consumer edits themselves belong to the area skills. Every path here
-is relative to the repository root, and every command runs from there.
+out. The consumer edits themselves belong to the area skills. A path that
+starts with `scripts/` or `references/`, or is `SKILL.md`, is inside this
+skill's directory; one that starts with a MiBolt skill name is inside the
+directory that holds the MiBolt skills; every other path is relative to the
+repository root. Every command runs from the repository root, as
+`mibolt-workspace-ops` ("Where commands run") sets out, so a script that lives
+in this skill or in another MiBolt skill is given by its full path from there.
 
 ## Scope and hand-offs
 
@@ -51,7 +56,7 @@ the change actually touches, not all of them up front:
 | lint, type and style rules in that code | `mibolt-frontend-code-standards`, `mibolt-backend-code-standards` |
 | which checks to run, and how CI jobs map to local commands; consult it at the end | `mibolt-verification` |
 | mise tasks, CI workflows and path filters, compose, Dockerfiles | `mibolt-workspace-ops` |
-| end-to-end specs in `frontend/e2e/` and plans in `frontend/specs/` | `playwright-tests` |
+| end-to-end specs in `frontend/e2e/` and plans in `frontend/specs/` | none of the MiBolt skills; `frontend/e2e/seed.spec.ts` is the suite's conventions file |
 
 A change inside one app that touches no shared artefact does not need this
 skill.
@@ -132,11 +137,12 @@ Canonical examples, one per mechanism:
 
 ### Find every consumer first
 
-Run
-`node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>`
-from the repository root. It needs a git checkout, git and Node 26 (the
-version `mise.toml:12` pins), and it is read-only: it runs only `git grep` and
-`git ls-files`, over tracked files, with `.claude/` excluded.
+Run `node scripts/find-contract-consumers.mjs --kind <kind> <Name>` from the
+repository root, which it reads as the repository to search. It needs a git
+checkout, git and Node 26 (the version `mise.toml:12` pins), and it is
+read-only: it runs only `git grep` and `git ls-files`, over tracked files,
+leaving out the top-level directory that holds the MiBolt skills so that no
+skill's own text counts as a consumer.
 
 | `--kind` | The name must appear in the contract as | Spellings searched |
 |---|---|---|
@@ -232,10 +238,10 @@ Read it this way:
    examples, samples and `contracts/commerce/kommunikacio.md` rows the change
    touches (chain reference, section 2), and check it with
    `mise run contracts:check`.
-2. **Regenerate** with `mise run api:generate`, which rewrites both frontend
-   clients and the backend interfaces. It rewrites tracked files and is a
-   shared resource (`.claude/rules/parallel-spawns.md`, "What a batch
-   shares"): run it only when your task hands you that step.
+2. **Regenerate** with `mise run api:generate`. It rewrites the tracked files
+   of both frontend clients and regenerates the backend interfaces in the
+   Gradle build directory, which git ignores
+   ([references/codegen.md](references/codegen.md), section 3).
 3. **Contract suite.** Update the counts, lists and fixtures in
    `frontend/tests/contract/` that your chain names.
 4. **Consumers**, each through its own skill and in any order: the backend,
@@ -243,15 +249,18 @@ Read it this way:
 5. **Catalogue fixture**, when catalogue data or the `Product` shape changed:
    `npm --prefix frontend run fixtures:catalog`, then
    `npm --prefix frontend run fixtures:catalog:check`.
-6. **Keep the regenerated clients with the contract change.** `api:drift`
-   compares them with the index, so it passes only once they are staged or
-   committed ([references/codegen.md](references/codegen.md), section 3).
-   Whoever commits stages both generated directories together with the
-   contract; a spawned agent whose task does not tell it to stage names both
-   directories in its report instead (`.claude/rules/session-lifecycle.md`,
-   "The commit belongs to the orchestrator"). How the rest splits into commits
-   is `.claude/rules/session-lifecycle.md` ("One commit, one logical change").
-7. **Verify** through `mibolt-verification`.
+6. **The contract, the regenerated clients and their consumers are one
+   change**, because the checks fail on the pieces apart: the `api-drift` CI
+   job fails whenever the committed clients differ from what the committed
+   contract generates, and most consumer steps left for later fail the
+   contract suite, the backend tests or a type check, as the table under
+   "What fails when a step is skipped" lists. Locally, `api:drift` compares
+   the regenerated clients with the git index, so it passes only once they
+   are staged or committed beside the contract
+   ([references/codegen.md](references/codegen.md), section 3).
+7. **Verify** with the checks `mibolt-verification` names for each changed
+   path, the commands in `mibolt-verification` ("Gates before a commit")
+   among them.
 
 ### By kind of change
 
@@ -285,11 +294,17 @@ One line each; the source named owns the rule.
 - **The server sends codes and parameters, and the UI writes the Hungarian
   text**; `title` and `detail` are English developer text
   (`contracts/commerce/kommunikacio.md:192-205`).
-- **Grep an identifier as the repository spells it**
-  (`.claude/rules/code-standards.md`, "Grep the identifier as the repository
-  spells it"); the finder does this for contract names.
-- **A cut feature leaves nothing behind in any layer**
-  (`.claude/rules/code-standards.md`, "A cut feature leaves nothing behind").
+- **Search an identifier in every spelling the repository gives it** before
+  concluding it has no consumer, as the finder does for contract names:
+  `AddCartItemRequest` in code is `add-cart-item-request.ts` as its generated
+  model file ([references/codegen.md](references/codegen.md), section 2).
+- **A removed name leaves nothing behind in any layer**, with no
+  compatibility shim; `mibolt-frontend-code-standards` ("Removed features")
+  owns the rule, and for a contract name it covers everything the finder
+  lists.
+- **Every defect fixed here gets a test in the same change**, seen failing
+  before the fix and passing after; `mibolt-verification` ("Tests and
+  coverage") owns that rule and the coverage floors.
 - **Name a sample after its schema**, with an optional case part
   (`contracts/check-samples.sh:1-4`).
 - **When `prepareOpenApiSpec` fails, update the replacement its message
@@ -297,15 +312,11 @@ One line each; the source named owns the rule.
   discriminated subtype goes through
   `backend/docs/decisions/0001-openapi-generator-and-discriminator-workaround.md`
   first ([references/codegen.md](references/codegen.md), section 4).
-- **Running the catalogue importer scrapes yettel.hu**: ask the user first and
-  name the scrape in the question itself, per `.claude/CLAUDE.md` ("An
-  outward-facing action is never a passenger in a bigger yes"); a spawned agent
-  does not run it and names the need in its report. A change that an edit to
-  `data/catalog/catalog.json` can make needs no importer run
+- **Running the catalogue importer scrapes yettel.hu**, an external site, and
+  rewrites the files under `data/catalog/`: run it only when the user has
+  agreed to that scrape by name, never as part of a wider go-ahead. A change
+  that an edit to `data/catalog/catalog.json` can make needs no importer run
   ([references/catalog-data.md](references/catalog-data.md), section 2).
-- **Only the `playwright-test-*` agents write end-to-end specs**
-  (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents
-  write end-to-end tests").
 
 ## What fails when a step is skipped
 
@@ -333,17 +344,17 @@ the full set for a change and how CI maps onto them.
 
 | Command | What it proves | Side effects |
 |---|---|---|
-| `node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
+| `node scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
 | `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`); `-checkonly` is PlantUML's legacy spelling, no longer documented: the current CLI lists `--check-syntax`, "Check diagram syntax without generating images" (https://plantuml.com/command-line), and keeps legacy options for a transition period (https://github.com/plantuml/plantuml/issues/2377) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
 | `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:16-22`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
-| `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites both client directories: a shared resource, as in the fan-out order |
+| `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites the tracked files in both client directories before it compares them, as `api:generate` does |
 | `npm --prefix frontend run fixtures:catalog:check` | the committed fixture matches `data/catalog/catalog.json`; silent exit 0 when it does | none |
-| `mise run api:generate`, `npm --prefix frontend run fixtures:catalog` | nothing: these write, they do not check | rewrite generated files |
+| `mise run api:generate`, `npm --prefix frontend run fixtures:catalog` | nothing: these write, they do not check | `api:generate` rewrites both client directories and the backend output in the Gradle build directory; `fixtures:catalog` rewrites `frontend/docs/api/fixtures/catalog.json` |
 
 Done means: the finder's buckets are accounted for, the contract checks and the
-contract suite pass, the regenerated clients are staged beside the contract (or
-named in the report for whoever commits) so that `api:drift` can pass, and each
-consumer's own checks have passed through its skill and `mibolt-verification`.
+contract suite pass, the regenerated clients are staged beside the contract so
+that `api:drift` passes, and each consumer's own checks have passed through its
+skill and `mibolt-verification`.
 
 Tool references: vacuum, https://quobix.com/vacuum/commands/lint/;
 check-jsonschema, https://check-jsonschema.readthedocs.io/en/stable/usage.html;
@@ -390,23 +401,20 @@ Update this skill and its references in the same change as any of these:
   copy of `data/catalog/images/` that no tracked file regenerates;
 - the counts and lists in `frontend/tests/contract/` that the chains cite;
 - the finder's bucket roots, `BUCKET_ROOTS` in
-  `.claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs`;
-  its exit 2 with `bucket root missing` or `cannot derive the path` is the
-  signal that the layout moved.
+  `scripts/find-contract-consumers.mjs`; its exit 2 with `bucket root missing`
+  or `cannot derive the path` is the signal that the layout moved.
 
 Check every path, anchor and command cited here with
-`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-cross-package-changes`.
+`node mibolt-project-map/scripts/check-skill-references.mjs mibolt-cross-package-changes`.
 Run it with `--show-anchors` after an edit to any file this skill or its
 references cite by line, whether or not the list above names it, and judge
 whether each anchored line still says what the skill claims, opening the file
 for the rest of any range the output cuts short after ten lines: an anchor
 passes as long as it stays inside its file, however far the text under it
 moved.
-`git grep -n '<path>:[0-9]' -- .claude/skills/mibolt-cross-package-changes`
-lists the anchors into one file. Run the checker again after any edit to the
-root `CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/` or any
-other file this skill cites a section of by name, and open the sections this
-skill cites there, because check (e) still passes a renamed section whose old
-name occurs elsewhere in the file
-(`.claude/skills/mibolt-project-map/references/citation-check.md`, "What it
-checks").
+`git grep -n '<path>:[0-9]' -- ':(glob)**/mibolt-cross-package-changes/**'`
+lists the anchors into one file. Run the checker again after any edit to a
+file or a MiBolt skill this skill cites a section of by name, and open the
+sections it cites there, because check (e) still passes a renamed section
+whose old name occurs elsewhere in the file (`mibolt-project-map` ("What it
+checks")).

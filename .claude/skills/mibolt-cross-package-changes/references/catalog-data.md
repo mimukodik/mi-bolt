@@ -1,8 +1,8 @@
 # Catalogue data and its consumers
 
 The demo catalogue under `data/catalog/`, the importer that produces it, the
-fixture generated from it, and every consumer that reads either one. Paths are
-repo-relative and commands run from the repository root.
+fixture generated from it, and every consumer that reads either one. Paths and
+commands are read the way the opening paragraph of `SKILL.md` says.
 
 ## Contents
 
@@ -46,19 +46,19 @@ on any other value (`frontend/projects/admin/src/mocks/seed.ts:64-68`).
   (`tools/catalog-import/src/import.ts:1155-1194`); both are ignored
   (`.gitignore:327-328`). Its flags and the directory to run it from are in
   its header (`tools/catalog-import/src/import.ts:4-21`).
-- **Running it is a call to an external site.** Ask the user first and name
-  the scrape in the question itself, per `.claude/CLAUDE.md` ("An
-  outward-facing action is never a passenger in a bigger yes"). A spawned
-  agent, which has no way to ask, does not run it and names the need in its
-  report. A catalogue task that can be done by editing
-  `data/catalog/catalog.json` does not need the importer.
+- **Running it is a call to an external site.** Run it only when the user has
+  agreed to the yettel.hu scrape by name, never as part of a wider go-ahead.
+  A catalogue task that can be done by editing `data/catalog/catalog.json`
+  does not need the importer.
 - `tools/catalog-import/spread-colour-prices.mjs` is a separate, manual
   post-processing step that gives some multi-colour products synthetic
   per-colour prices; the importer does not run it (`tools/catalog-import/spread-colour-prices.mjs:11-13`).
 - `backend/docs/decisions/0005-yettel-catalog-import-script.md` records the
-  importer's design. Its paths (`scripts/catalog-import/`) and its `pnpm`
-  command predate the tool's current home under `tools/catalog-import/`,
-  which is an npm workspace of `tools/package.json:5`.
+  importer's design. Its body predates the tool's current home,
+  `tools/catalog-import/`, an npm workspace of `tools/package.json:5`: the
+  paths and `pnpm` commands it gives there are mapped onto the current ones in
+  `backend/docs/decisions/0005-yettel-catalog-import-script.md` ("Note: paths
+  after the monorepo move").
 
 ## 3. The generated fixture
 
@@ -102,7 +102,8 @@ branches (`.github/components.yml:6`, `.github/components.yml:13`,
 
 ## 5. A catalogue change, step by step
 
-1. Edit `data/catalog/catalog.json` (or rerun the importer, after asking).
+1. Edit `data/catalog/catalog.json` (or rerun the importer, under the
+   condition in section 2).
    Keep it valid against `data/catalog/catalog.schema.json` by hand, since
    nothing but the importer checks it; a new field goes into the schema too.
 2. `npm --prefix frontend run fixtures:catalog`, then
@@ -117,8 +118,8 @@ branches (`.github/components.yml:6`, `.github/components.yml:13`,
    `mibolt-admin-frontend`, the shop-mocks catalogue store to
    `mibolt-shop-frontend`, and the loader and its validation to
    `mibolt-commerce-backend`.
-5. The data, the regenerated fixture and any images go in one commit, with
-   their copies under `frontend/projects/storefront/public/media/` when images
-   changed (section 4); a spawned agent names these files in its report for
-   whoever commits (`.claude/rules/session-lifecycle.md`, "The commit belongs
-   to the orchestrator"). Then hand the checks to `mibolt-verification`.
+5. The data, the regenerated fixture and any changed images, with their
+   copies under `frontend/projects/storefront/public/media/` (section 4), are
+   one change: the fixture and the copies derive from the data, and CI checks
+   no more of that than the fixture's product count and each fixture
+   product's shape (section 3). `mibolt-verification` names the checks to run.

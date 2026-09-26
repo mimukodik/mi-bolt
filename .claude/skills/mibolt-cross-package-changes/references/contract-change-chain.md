@@ -1,10 +1,10 @@
 # Contract change chains
 
 Per kind of contract change: every place that has to move with it, and the
-check that fails when one is left out. Paths are repo-relative and commands
-run from the repository root. The consumer edits belong to the area skill
-named on each step; this file says what has to change and what catches a
-miss, not how to write the consumer code.
+check that fails when one is left out. Paths and commands are read the way
+the opening paragraph of `SKILL.md` says. The consumer edits belong to the
+area skill named on each step; this file says what has to change and what
+catches a miss, not how to write the consumer code.
 
 ## Contents
 
@@ -82,7 +82,7 @@ no consumer, and an error code is searched with the `enum` kind.
 | admin app and admin mocks | form model, mapper, schema, mocks and seed, for `Admin*` schemas: `mibolt-admin-frontend` | the same type-checking failures; no contract test covers the admin mocks |
 | backend | domain record or entity, its Liquibase migration when the field is stored, mapper, service and API test: `mibolt-commerce-backend` | the backend API tests check responses against the source contract with `validAgainstContract()`, which "asserts the response satisfies every applicable rule in the contract" (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/ContractValidation.java:35-38`) |
 | catalogue fixture | for `Product` fields: the source data and the mapping in `frontend/scripts/build-catalog-fixture.mjs` (the catalog-data reference, section 3) | `frontend/tests/contract/schema.spec.ts:571-585` validates every fixture product against `Product` |
-| e2e | `playwright-tests` | the e2e run |
+| e2e | the specs under `frontend/e2e/` that read the field, which no MiBolt skill covers; `frontend/e2e/seed.spec.ts` holds the suite's conventions | the e2e run |
 
 ## 4. A new shop operation
 
@@ -245,8 +245,7 @@ spec.
 ## 9. Removing or renaming something
 
 - Run the finder on the old name. Everything it lists goes in the same change,
-  in every layer, per `.claude/rules/code-standards.md` ("A cut feature
-  leaves nothing behind").
+  in every layer, per `mibolt-frontend-code-standards` ("Removed features").
 - Regeneration removes what the contract no longer declares. A frontend model
   file that is no longer generated, because its schema is gone or no operation
   of that client references it (`ignoreUnusedModels`), is deleted by
@@ -260,13 +259,11 @@ spec.
   against; remove or rename it with the schema.
 - A renamed operation moves every count and list in section 4 or 5, and the
   test titles that name it.
-- End-to-end specs and plans that use the name (the finder's `e2e` bucket) go
-  to `playwright-tests`, and only its agents edit a spec
-  (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents
-  write end-to-end tests"). The same rule makes `frontend/e2e/fixtures/` and
-  `frontend/e2e/seed.spec.ts` ordinary repository code, so a hit there, such
-  as the `/demo/session` path in `frontend/e2e/fixtures/backend-ready.ts`, is
-  edited like any other file the finder lists.
+- End-to-end specs, their fixtures under `frontend/e2e/fixtures/` and the
+  plans under `frontend/specs/` that use the name (the finder's `e2e` bucket)
+  move with it, like any other file the finder lists: the `/demo/session`
+  path in `frontend/e2e/fixtures/backend-ready.ts` is one such hit.
+  `frontend/e2e/seed.spec.ts` holds the suite's conventions.
 
 ## 10. A core-api change
 
