@@ -1,7 +1,7 @@
 # Admin mocks and the spec harness
 
 The admin's own mock backend in `frontend/projects/admin/src/mocks/` and the unit-spec harness in
-`frontend/projects/admin/src/testing/`. Every path is relative to the repository root.
+`frontend/projects/admin/src/testing/`. Paths resolve as `SKILL.md` says.
 
 ## Contents
 

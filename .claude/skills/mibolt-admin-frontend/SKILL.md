@@ -6,7 +6,10 @@ description: "Changing the MiBolt admin back-office app, frontend/projects/admin
 # MiBolt admin frontend
 
 Change `frontend/projects/admin/`, the shop's back-office Angular app, the way it is already
-built. Every path in this skill and its references is relative to the repository root.
+built. A path starting with scripts/, references/, assets/ or agents/, or the name `SKILL.md`, is
+relative to this skill's own directory, and one starting with a MiBolt skill name is relative to
+the directory that holds the MiBolt skills; every other path in this skill and its references is
+relative to the repository root.
 
 ## Scope and hand-offs
 
@@ -194,8 +197,8 @@ Each line names a rule and where it is written or enforced; the owner carries th
 
 - **No type assertion, `as const` aside.** ESLint enforces it for the admin
   (`frontend/eslint.config.mjs:389-391`), stricter than for the rest of the workspace; the written
-  rule is `.claude/rules/code-standards.md` ("Strict generics"). First check whether a generic
-  already carries the type: the generated `invoke<P, R>` returns an `Observable<R>` of the
+  rule is `mibolt-frontend-code-standards` ("Types"). First check whether a generic already
+  carries the type: the generated `invoke<P, R>` returns an `Observable<R>` of the
   operation's own response type, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>`
   (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`), so what they emit needs
   neither an `as` nor a guard. An `as` that narrows becomes a guard: `isRecord`, `isProblem`, or a
@@ -210,40 +213,41 @@ Each line names a rule and where it is written or enforced; the owner carries th
   (`frontend/eslint.config.mjs:26-28`), so a dynamic `import()` of the shop SDK or mocks passes
   lint and review is what keeps it out. Code two apps need moves into a library, which is
   `mibolt-cross-package-changes`'s; `mibolt-frontend-code-standards` owns the lint detail.
-- **The Angular conventions** of root `CLAUDE.md` (signal inputs and outputs, `computed`, native
-  control flow, `@Service()` for root singletons, Signal Forms) hold here, and the admin follows
-  them throughout.
+- **The Angular conventions** that `mibolt-frontend-code-standards` ("Angular") lists hold here,
+  and the admin follows them throughout: signal inputs and outputs, `computed`, native control
+  flow, `@Service()` for root singletons and Signal Forms among them.
 - **Stores never reject.** A new store method that calls the backend returns a tagged union or sets
   a status signal, like the existing ones. Nothing enforces it but review.
 - **Hungarian UI copy, English code.** Validation text comes from
   `frontend/projects/admin/src/app/shared/forms/messages.ts`, never from an inline string.
-- **Accessibility.** Root `CLAUDE.md` ("Accessibility Requirements") overrides generic guidance,
-  in the user's words: "in the frontend app keyboard and ARIA events are not of interest, and
-  focus only minimally, because it will never be a live app! no screen reader will ever read it!"
-  The admin already carries ARIA and focus code: `role="alert"` in `adm-control-error`, focus moved
-  to a title before a reload removes the focused button, `SubmitAttempt` focusing the first invalid
+- **Accessibility.** No work goes into AXE checks, WCAG minimums, keyboard handling or ARIA, and
+  focus handling stays minimal, per `mibolt-frontend-code-standards` ("Accessibility"). The admin
+  already carries ARIA and focus code: `role="alert"` in `adm-control-error`, focus moved to a
+  title before a reload removes the focused button, `SubmitAttempt` focusing the first invalid
   control, and the list's row and cell roles. Neither extend it nor remove it as a side change; it
-  leaves with an element or a feature the task itself removes, per
-  `.claude/rules/code-standards.md` ("A cut feature leaves nothing behind"). A new list column
-  copies its neighbours' markup as it stands, roles included, which is not extending it
+  leaves with an element or a feature the change itself removes, per
+  `mibolt-frontend-code-standards` ("Removed features"). A new list column copies its neighbours'
+  markup as it stands, roles included, which is not extending it
   ([references/product-form.md](references/product-form.md), section 8).
-- **Framework questions** are answered through the instruments in
-  `.claude/rules/framework-facts.md`, with the URL beside the claim. The `angular-developer` skill
-  is vendored generic Angular guidance; this skill records what this repository enforces and does.
-- **The design reference is an open question.** `.claude/CLAUDE.md` ("Design authority") names
-  `frontend/docs/design/yettel.md` as the reference for every rendered surface. That document does
-  not mention the admin, while `frontend/projects/admin/README.md:5` and
+- **Framework questions** about Angular, Angular Material, Vitest or MSW are answered from that
+  tool's documentation for the installed version, with the URL beside the claim, and never by a
+  throwaway experiment; `mibolt-frontend-code-standards` ("Framework questions") says where to
+  read and what counts as measuring this repository instead.
+- **The design reference is an open question.** `frontend/docs/design/yettel.md:5` calls that
+  document "the mandatory design reference for the MiBolt frontend", yet it never mentions the
+  admin, while `frontend/projects/admin/README.md:5` and
   `frontend/projects/admin/README.md:70-72` describe Angular Material with the `azure-blue` theme
   and Tailwind utilities, which is what the admin's code uses. Which of the two governs an admin
   style value is the user's to settle, and this skill does not settle it. A change that needs a new
   style value puts that choice to the user, naming both sources. `mibolt-frontend-code-standards`
   records the same open question as entry C6 of its conflict register, which also names a third,
   pre-implementation source.
-- **End-to-end tests.** The admin has no Playwright spec; it is verified by unit specs over its
-  mocks and by the browser pass. Only the `playwright-test-*` agents write one
-  (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests").
-- **A bug gets a spec** that fails before the fix and passes after it
-  (`.claude/rules/code-standards.md`, "Every bug still gets a test in the same commit as its fix").
+- **End-to-end tests.** The admin has no Playwright spec, and the servers
+  `frontend/playwright.config.ts:26-53` starts are the storefront's and, in CI, demo-payment's,
+  never the admin's; the conventions file `frontend/e2e/seed.spec.ts:62-68` records the admin's
+  sign-in. The admin is verified by unit specs over its mocks and by the browser pass.
+- **A bug gets a spec** that fails before the fix and passes after it, in the same change, per
+  `mibolt-verification` ("Tests and coverage").
 
 ## What else a change reaches
 
@@ -272,9 +276,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
 
 ## Verify
 
-Run everything from the repository root. The dev servers are the orchestrator's to start
-(`.claude/rules/session-lifecycle.md`, "Tools and startup"), and so are the gates before a commit
-(`.claude/rules/code-standards.md`, "A subagent's green report is not a run").
+Run everything from the repository root, in the forms `mibolt-workspace-ops` ("Where commands
+run") gives. The checks that pass before every commit are in `mibolt-verification` ("Gates
+before a commit"); the admin adds its own build checks, below.
 
 - **Focused specs** while working:
 
@@ -289,10 +293,10 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   pattern selects without building or running anything, and exits 0 even when it prints none, so
   read the list rather than the exit status. `mibolt-verification` ("Iterate with focused runs")
   owns why the paths resolve this way and why a focused run passes `--coverage=false`.
-- **The full unit suite**, `npm --prefix frontend run test`, runs every project and writes the
-  coverage report that every agent in the checkout shares
-  (`.claude/rules/parallel-spawns.md`, "What a batch shares"). It is the orchestrator's before a
-  commit.
+- **The full unit suite**, `npm --prefix frontend run test`, runs every project with coverage on.
+  It writes the admin's report to `coverage/admin/` in `frontend/`
+  (`frontend/projects/admin/vitest.config.ts:6`) and holds the admin to the floor in
+  `frontend/angular.json:374-380`, which `mibolt-verification` ("Tests and coverage") explains.
 - **Build checks.** The gate's `npm --prefix frontend run build` builds the storefront alone
   (`frontend/package.json:12`), so every admin change also runs the admin's own, as
   `mibolt-verification` lists them: `npm --prefix frontend run build:admin` writes the production
@@ -304,10 +308,12 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   worktree it runs from, since every checkout on the machine shares the port
   (`frontend/scripts/check-app-boot.mjs:17-19`, `frontend/scripts/check-app-boot.mjs:49`).
 - **Lint and format** of the changed files: the commands are `mibolt-frontend-code-standards`'s.
-- **The browser pass** is mandatory for anything a person sees, per
-  `.claude/rules/browser-verification.md`. The orchestrator serves the admin with `mise run admin`
-  (the mock, http://localhost:4220/admin/), or with `mise run dev` when the change needs the real
-  backend. On the mock, sign in as the seeded admin (`SEED_ADMIN` and `SEED_ADMIN_PASSWORD` in
+- **The browser pass**, `mibolt-verification` ("Browser pass"), is due for anything a person sees
+  or clicks in the admin: the changed flow driven in a real browser, its negative states included,
+  with no console error and no failed request behind it. `mise run admin` serves the admin on its
+  mock at http://localhost:4220/admin/, and `mise run dev` serves it at the same address against
+  the real backend, for a change whose result comes from the backend. On the mock, sign in as the
+  seeded admin (`SEED_ADMIN` and `SEED_ADMIN_PASSWORD` in
   `frontend/projects/admin/src/mocks/seed.ts:13-18`; the mock also prints them to the console), and
   reach the negative states with `?mi-scenario=empty-catalog`, `list-error`, `save-conflict` or
   `upload-error`. On the real backend, the first start on a database with no admin creates one and
@@ -370,8 +376,11 @@ every path, `path:line` anchor and command, and `--show-anchors` prints each anc
 that line against what the text says about it:
 
 ```bash
-node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-admin-frontend
+node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-admin-frontend
 ```
+
+The script's path resolves as the paths rule at the top of this skill says, and the script runs
+from anywhere in the repository.
 
 A range longer than ten lines ends in `... (+N more lines)`, so read its rest in the file. The
 script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers in sections
@@ -381,9 +390,9 @@ script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers i
 `frontend/projects/admin/src/app/features/products/list/product-list.query.ts`; after an edit to
 one of those three files, reread them by hand.
 
-Run it as well after any edit to a file or skill that this skill or its references cite a
-section of by name: today the root `CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/`, the
-`mibolt-verification` skill, and this skill's own `SKILL.md`, which
+Run it as well after any edit to a skill that this skill or its references cite a section of by
+name: today `mibolt-frontend-code-standards`, `mibolt-verification`, `mibolt-workspace-ops`, and
+this skill's own `SKILL.md`, which
 [references/admin-architecture.md](references/admin-architecture.md) cites. Its check (e) fails
 only when a cited name no longer occurs anywhere in the cited file or skill, so it cannot see a
 section that kept its name and changed what it says: reread each section this skill or its

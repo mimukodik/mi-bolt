@@ -1,8 +1,8 @@
 # Admin architecture
 
 Bootstrap, providers, routing, the session, the interceptors, the state idioms and the styling
-setup of `frontend/projects/admin/`. Every path is relative to the repository root. Read the cited
-lines before changing them: the code comments there carry the reasons.
+setup of `frontend/projects/admin/`. Paths resolve as `SKILL.md` says. Read the cited lines before
+changing them: the code comments there carry the reasons.
 
 ## Contents
 
@@ -143,8 +143,8 @@ The 401 round trip:
 ## 6. State idioms
 
 - Root singletons use `@Service()`: `AdminSession` and `MediaUploader`
-  (https://angular.dev/api/core/Service). Root `CLAUDE.md` ("Services") is where the preference
-  is written.
+  (https://angular.dev/api/core/Service). `mibolt-frontend-code-standards` ("Angular") is where
+  the preference is written.
 - The product list, the product editor and the admins screen keep their state in an
   `@Injectable()` store that the page lists in its own `providers`, so every route activation gets
   a fresh one: `ProductListStore`

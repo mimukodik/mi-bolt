@@ -1,7 +1,7 @@
 # Product form and product list
 
 The product create and edit screen and the Termékek list, with the change chain for a new field,
-a new list filter and a new list column. Every path is relative to the repository root.
+a new list filter and a new list column. Paths resolve as `SKILL.md` says.
 
 ## Contents
 
@@ -238,8 +238,8 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
    `--adm-product-columns` for each layout that shows it. Copy an existing column's header cell
    and row cell as they stand, `role="columnheader"` and `role="cell"` included, so the new column
    matches its neighbours. Add no accessibility work beyond what the copied markup already
-   carries, and remove no role an existing cell carries: root `CLAUDE.md` ("Accessibility
-   Requirements") rules out work on ARIA, keyboard handling and AXE checks here. Add it to
+   carries, and remove no role an existing cell carries: `mibolt-frontend-code-standards`
+   ("Accessibility") rules out work on ARIA, keyboard handling and AXE checks here. Add it to
    `SORTABLE_COLUMNS` only if the generated `AdminProductSortField` carries it, and then also to
    the codec's `SORT_VALUES`
    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts:56-64`), which
