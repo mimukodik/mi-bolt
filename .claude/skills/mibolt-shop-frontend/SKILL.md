@@ -12,8 +12,8 @@ to the directory that holds the MiBolt skills, and any other to the
 repository root, except output that exists only after a build, a test run or
 an install, which is named relative to `frontend/`, the directory holding it.
 Commands run from the repository root, as `mibolt-workspace-ops` ("Where
-commands run") sets out, with any script path in them resolved by those
-rules.
+commands run") sets out, except one whose script path starts with a MiBolt
+skill name, which runs from the directory that holds the MiBolt skills.
 
 ## Scope and hand-offs
 
@@ -41,7 +41,7 @@ These belong elsewhere:
 - **Colour, type, radius, spacing and recipe values** come from
   `frontend/docs/design/yettel.md`, as Design authority under Local
   conventions says. This skill carries none of them.
-- **Writing end-to-end specs** is outside this skill. The suite under
+- **Writing end-to-end specs** is outside the MiBolt skills. The suite under
   `frontend/e2e/` is configured by `frontend/playwright.config.ts`, states its
   conventions in `frontend/e2e/seed.spec.ts` and keeps its fixtures in
   `frontend/e2e/fixtures/`; what a shop change breaks there is under What
@@ -51,7 +51,7 @@ Consult these when their condition holds, and not otherwise:
 
 - Consult `mibolt-frontend-code-standards` when a lint or typecheck error
   appears, or when it is unclear whether a pattern is allowed.
-- Consult `mibolt-verification` before declaring the work done.
+- Consult `mibolt-verification` before calling a change done.
 
 ## Area model
 
@@ -335,17 +335,18 @@ because they are easy to break in this area.
 ### Design authority
 
 `frontend/docs/design/yettel.md` is the design reference for every rendered
-surface: colour tokens, typography, radii, spacing, the component recipes
-with the yettel.hu selectors they came from, the list- and device-page
-feature inventories, and in §9 the storefront's token mapping. Take every
-colour, type, radius, spacing and recipe value from it and name its section
-beside the value, as the storefront's stylesheets do in a comment
-(`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss:5-6`).
+surface (`frontend/docs/spec/execution-rules.md:7`): colour tokens, typography,
+radii, spacing, the component recipes with the yettel.hu selectors they came
+from, the list- and device-page feature inventories, and in §9 the
+storefront's token mapping. Take every colour, type, radius, spacing and
+recipe value from it and name its section beside the value in a comment, as
+`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss:5-6`
+does; most component stylesheets do not (15 of 53 cite it, counted 2026-09-26).
 A value it lacks is measured on `frontend/docs/design/yettel/css/portal.css`,
 the captured yettel.hu stylesheet, and added to the document, with its
-selector, before any code uses it. It also records some values that are the
-project's own, marked as such: the skeleton loaders (§5) and the three
-`-soft` status grounds (§9).
+selector, before any code uses it. It also records values that are the
+project's own, marked as such: the skeleton loaders (§5), and the three
+`-soft` status grounds and the dashed disabled look (§9).
 
 The payment app takes the shop's numeric scales and a few colours from the
 document but keeps its own palette and typeface
@@ -377,7 +378,7 @@ styling belongs to `mibolt-admin-frontend`.
   renamed test id or reworded sentence can break them, and
   `frontend/e2e/seed.spec.ts` describes the fault protocol, so a protocol
   change reaches it too. Search `frontend/e2e/` for the old test id or
-  sentence before changing it.
+  sentence before changing it; a spec that uses it is updated in the same change.
 - **The payment round trip.** A change to the intent, its URLs or the return
   leg touches `frontend/projects/storefront/src/app/features/checkout/review-page.ts`,
   `frontend/projects/storefront/src/app/features/checkout/payment-return-page.ts`
@@ -406,7 +407,7 @@ npm --prefix frontend run ng -- test storefront --include projects/storefront/sr
   and what each flag protects are owned by `mibolt-verification` ("From a
   diff to green checks", step 3).
 
-Before declaring the work done, run the commands `mibolt-verification`
+Before calling a change done, run the commands `mibolt-verification`
 ("Gates before a commit") requires, and consult that skill for their
 prerequisites and what each command leaves behind. The ones this area needs
 most often:
@@ -426,12 +427,12 @@ most often:
   4299 (`frontend/scripts/check-app-boot.mjs:17`).
 
 Every change a shopper can see is verified in a real browser, as
-`mibolt-verification` ("Browser pass") sets out: on `mise run storefront`
-(the shop alone on MSW, port 4200), on `mise run frontend` (all three apps on
-MSW, the payment app on 4210) when the payment page takes part, and on
-`mise run dev` (against the backend) when the result comes from there. A
-useful pass exercises the changed flow, including its failure path, which a
-`?mi-scenario=fail-<operation>` URL produces on demand.
+`mibolt-verification` ("Browser pass") sets out. This area is served by
+`mise run storefront` (the shop alone on MSW, port 4200), by
+`mise run frontend` (all three apps on MSW, the payment app on 4210) when the
+payment page takes part, and by `mise run dev` (against the backend) when the
+result comes from there. A useful pass exercises the changed flow, including
+its failure path, which a `?mi-scenario=fail-<operation>` URL produces on demand.
 
 ## References
 
