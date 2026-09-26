@@ -26,9 +26,10 @@
  *
  * Read-only guarantee: this script only runs `git grep` and `git ls-files`,
  * via execFileSync with argument arrays (never a shell string), plus plain
- * file reads with node:fs. No writes, no network. The skills root (the
+ * file reads with node:fs. No writes, no network. Every repo-wide search
+ * excludes the whole top-level directory that holds the skills root (the
  * directory that holds the MiBolt skills; the parent of this skill's
- * directory) is excluded from every repo-wide search, so a sibling skill's
+ * directory), not just that root directory itself, so a sibling skill's
  * draft text is never counted as a consumer.
  *
  * Hits are candidates, not confirmed consumers: a word match such as

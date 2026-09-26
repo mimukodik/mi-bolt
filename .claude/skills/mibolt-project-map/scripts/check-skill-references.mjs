@@ -53,20 +53,27 @@
 //       match at least one such file or directory. A token whose first
 //       segment matches neither a skill-relative segment, a skill name, nor
 //       a top-level repository entry is not checked at all;
-//   (c) commands: `mise run <task>` against `mise tasks --all --json`;
-//       `npm --prefix frontend run <s>` / `npm --prefix tools run <s>`
-//       against that package.json's "scripts"; `backend/gradlew -p backend
-//       :services:commerce:<t>` against a `tasks.register('<t>'` in
-//       backend/services/commerce/build.gradle, a `run` line of
-//       backend/mise.toml, or a `./gradlew` line of
+//   (c) commands, checked wherever they appear: as a backticked inline
+//       token, and also as a line inside a fenced code block (``` or ~~~,
+//       with or without a language tag). A fenced-block line is first
+//       trimmed of leading whitespace and an optional `$ ` prompt, and a
+//       command continued with a trailing `\` is joined with the next line
+//       before matching; a line matching none of the forms below is
+//       ignored, and a line containing `<` (a placeholder) or `*` (a glob)
+//       is skipped with no report and no count, the same way check (e)
+//       skips a placeholder. The forms: `mise run <task>` against
+//       `mise tasks --all --json`; `npm --prefix frontend run <s>` /
+//       `npm --prefix tools run <s>` against that package.json's "scripts";
+//       `backend/gradlew -p backend :services:commerce:<t>` against a
+//       `tasks.register('<t>'` in backend/services/commerce/build.gradle, a
+//       `run` line of backend/mise.toml, or a `./gradlew` line of
 //       .github/workflows/backend.yml (reported UNVERIFIED when none of the
 //       three has it, since Gradle tasks cannot be listed statically, and
-//       never reported as a positive pass);
-//   ... `node [options] <path>` and `uv run ... python [options] <path>`,
-//       taking the first word that is not an option, resolved the same way
-//       (b) resolves a path token — skill-relative, then skill-name-prefixed,
-//       then the repository root as a last resort — and held to the same
-//       fresh-checkout test;
+//       never reported as a positive pass); and `node [options] <path>` and
+//       `uv run ... python [options] <path>`, taking the first word that is
+//       not an option, resolved the same way (b) resolves a path token —
+//       skill-relative, then skill-name-prefixed, then the repository root
+//       as a last resort — and held to the same fresh-checkout test;
 //   (d) hygiene: `/Users/`, `/home/`, `~/`, `/tmp/` (also after `/private`
 //       or `/var`), `/var/folders/` (also after `/private`) and `file://` are
 //       reported as FAIL wherever a path starts with them: at the start of a
@@ -476,6 +483,80 @@ function classifyCommand(token) {
   return null;
 }
 
+// Matches a fenced code block delimiter at the start of a (leading-whitespace
+// trimmed) line: three or more backticks or three or more tildes.
+const FENCE_START_RE = /^(`{3,}|~{3,})/;
+
+// Every line inside a fenced code block (``` or ~~~, with or without a
+// language tag after the opening fence), the fence delimiter lines
+// themselves excluded. A closing fence is the same character repeated at
+// least as many times as the opening fence, with nothing else on the line
+// once leading/trailing whitespace is trimmed.
+function extractFencedLines(lines) {
+  const result = [];
+  let inFence = false;
+  let fenceChar = null;
+  let fenceLen = 0;
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].replace(/^\s+/, '');
+    const m = FENCE_START_RE.exec(trimmed);
+    if (!inFence) {
+      if (m) {
+        inFence = true;
+        fenceChar = m[1][0];
+        fenceLen = m[1].length;
+      }
+      continue;
+    }
+    if (m && m[1][0] === fenceChar && m[1].length >= fenceLen && trimmed.slice(m[1].length).trim() === '') {
+      inFence = false;
+      fenceChar = null;
+      fenceLen = 0;
+      continue;
+    }
+    result.push({ lineNo: i + 1, text: lines[i] });
+  }
+  return result;
+}
+
+// Trims leading whitespace and an optional `$ ` shell prompt from a
+// fenced-block line, before it is tried as a command candidate.
+function stripPrompt(text) {
+  const trimmed = text.replace(/^\s+/, '');
+  return trimmed.startsWith('$ ') ? trimmed.slice(2) : trimmed;
+}
+
+// Fenced-block command candidates, one per (possibly continuation-joined)
+// logical line: a physical line ending with a trailing `\` (once trailing
+// whitespace is ignored) is joined with the next physical line, provided
+// that next line is still inside the same fenced block (its line number is
+// exactly one past the line just consumed).
+function extractFencedCommands(lines) {
+  const fencedLines = extractFencedLines(lines);
+  const commands = [];
+  let i = 0;
+  while (i < fencedLines.length) {
+    const startLineNo = fencedLines[i].lineNo;
+    let lastLineNo = startLineNo;
+    let stripped = stripPrompt(fencedLines[i].text);
+    for (;;) {
+      const trimmedEnd = stripped.replace(/\s+$/, '');
+      if (!trimmedEnd.endsWith('\\')) break;
+      const nextIdx = i + 1;
+      if (nextIdx >= fencedLines.length) break;
+      const next = fencedLines[nextIdx];
+      if (next.lineNo !== lastLineNo + 1) break;
+      const withoutBackslash = trimmedEnd.slice(0, -1).replace(/\s+$/, '');
+      stripped = `${withoutBackslash} ${stripPrompt(next.text)}`;
+      lastLineNo = next.lineNo;
+      i = nextIdx;
+    }
+    commands.push({ lineNo: startLineNo, text: stripped });
+    i += 1;
+  }
+  return commands;
+}
+
 function loadPackageScripts(repoRoot, area) {
   const pkgPath = path.join(repoRoot, area, 'package.json');
   if (!existsSync(pkgPath)) return null;
@@ -640,6 +721,88 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
   const npmScriptsCache = ctx.npmScriptsCache;
   const gradleCache = ctx.gradleCache;
 
+  // Check (c): resolves and reports one already-classified command, shared by
+  // the backticked-inline-token loop below and the fenced-code-block pass
+  // near the end of this function, so a command is checked identically
+  // whichever form it was found in.
+  function checkCommand(command, token, lineNo) {
+    checked += 1;
+    if (command.type === 'mise') {
+      const taskName = command.task.startsWith('//') ? command.task : `//:${command.task}`;
+      if (options.noMise) {
+        findings.push({
+          status: 'UNVERIFIED',
+          line: lineNo,
+          kind: 'mise',
+          token,
+          reason: 'mise task check skipped (--no-mise)',
+        });
+      } else {
+        const taskNames = getMiseTaskNames(repoRoot);
+        if (!taskNames.has(taskName)) {
+          findings.push({
+            status: 'FAIL',
+            line: lineNo,
+            kind: 'mise',
+            token,
+            reason: `mise task not found: ${taskName}`,
+          });
+        }
+      }
+    } else if (command.type === 'npm') {
+      if (!npmScriptsCache[command.area]) {
+        npmScriptsCache[command.area] = loadPackageScripts(repoRoot, command.area);
+      }
+      const pkg = npmScriptsCache[command.area];
+      const relPath = pkg ? pkg.relPath : path.join(command.area, 'package.json');
+      if (!pkg || !(command.script in pkg.scripts)) {
+        findings.push({
+          status: 'FAIL',
+          line: lineNo,
+          kind: 'npm',
+          token,
+          reason: `npm script not found in ${relPath}`,
+        });
+      }
+    } else if (command.type === 'gradle') {
+      if (!gradleTaskVerified(repoRoot, command.task, gradleCache)) {
+        findings.push({
+          status: 'UNVERIFIED',
+          line: lineNo,
+          kind: 'gradle',
+          token,
+          reason: 'Gradle task cannot be verified statically',
+        });
+      }
+    } else if (command.type === 'script') {
+      // Rule 3: skill-relative, then skill-name-prefixed, then the
+      // repository root as a last resort (today's unconditional check).
+      const scriptRes = resolvePathBase(command.scriptPath, skillDir, repoRoot, ctx.presentPaths);
+      if (scriptRes.kind === 'none') {
+        const resolved = path.resolve(repoRoot, command.scriptPath);
+        if (!existsSync(resolved) || !ctx.presentPaths.has(path.relative(repoRoot, resolved))) {
+          findings.push({
+            status: 'FAIL',
+            line: lineNo,
+            kind: 'script',
+            token,
+            reason: 'script path does not exist in a fresh checkout',
+          });
+        }
+      } else if (scriptRes.noSuchSkill) {
+        findings.push({ status: 'FAIL', line: lineNo, kind: 'script', token, reason: 'no such skill' });
+      } else if (!scriptRes.found) {
+        findings.push({
+          status: 'FAIL',
+          line: lineNo,
+          kind: 'script',
+          token,
+          reason: 'script path does not exist in a fresh checkout',
+        });
+      }
+    }
+  }
+
   // Shared by both the skill-relative/skill-name-prefixed branch and the
   // top-level-repo-entry branch of (b): once a token's base has resolved to
   // a real file or directory, its anchor is checked the same way regardless
@@ -747,81 +910,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
 
       const command = classifyCommand(token);
       if (command) {
-        checked += 1;
-        if (command.type === 'mise') {
-          const taskName = command.task.startsWith('//') ? command.task : `//:${command.task}`;
-          if (options.noMise) {
-            findings.push({
-              status: 'UNVERIFIED',
-              line: lineNo,
-              kind: 'mise',
-              token,
-              reason: 'mise task check skipped (--no-mise)',
-            });
-          } else {
-            const taskNames = getMiseTaskNames(repoRoot);
-            if (!taskNames.has(taskName)) {
-              findings.push({
-                status: 'FAIL',
-                line: lineNo,
-                kind: 'mise',
-                token,
-                reason: `mise task not found: ${taskName}`,
-              });
-            }
-          }
-        } else if (command.type === 'npm') {
-          if (!npmScriptsCache[command.area]) {
-            npmScriptsCache[command.area] = loadPackageScripts(repoRoot, command.area);
-          }
-          const pkg = npmScriptsCache[command.area];
-          const relPath = pkg ? pkg.relPath : path.join(command.area, 'package.json');
-          if (!pkg || !(command.script in pkg.scripts)) {
-            findings.push({
-              status: 'FAIL',
-              line: lineNo,
-              kind: 'npm',
-              token,
-              reason: `npm script not found in ${relPath}`,
-            });
-          }
-        } else if (command.type === 'gradle') {
-          if (!gradleTaskVerified(repoRoot, command.task, gradleCache)) {
-            findings.push({
-              status: 'UNVERIFIED',
-              line: lineNo,
-              kind: 'gradle',
-              token,
-              reason: 'Gradle task cannot be verified statically',
-            });
-          }
-        } else if (command.type === 'script') {
-          // Rule 3: skill-relative, then skill-name-prefixed, then the
-          // repository root as a last resort (today's unconditional check).
-          const scriptRes = resolvePathBase(command.scriptPath, skillDir, repoRoot, ctx.presentPaths);
-          if (scriptRes.kind === 'none') {
-            const resolved = path.resolve(repoRoot, command.scriptPath);
-            if (!existsSync(resolved) || !ctx.presentPaths.has(path.relative(repoRoot, resolved))) {
-              findings.push({
-                status: 'FAIL',
-                line: lineNo,
-                kind: 'script',
-                token,
-                reason: 'script path does not exist in a fresh checkout',
-              });
-            }
-          } else if (scriptRes.noSuchSkill) {
-            findings.push({ status: 'FAIL', line: lineNo, kind: 'script', token, reason: 'no such skill' });
-          } else if (!scriptRes.found) {
-            findings.push({
-              status: 'FAIL',
-              line: lineNo,
-              kind: 'script',
-              token,
-              reason: 'script path does not exist in a fresh checkout',
-            });
-          }
-        }
+        checkCommand(command, token, lineNo);
         continue;
       }
 
@@ -905,6 +994,16 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
       }
     }
   });
+
+  // (c) fenced-block commands: computed once per file, independent of the
+  // per-line loop above, since a continued command can span two physical
+  // lines.
+  for (const { lineNo, text } of extractFencedCommands(lines)) {
+    if (text.includes('<') || text.includes('*')) continue; // placeholder/glob: skipped, like (e)
+    const command = classifyCommand(text);
+    if (!command) continue; // matches none of the recognised command forms
+    checkCommand(command, text, lineNo);
+  }
 
   // (e) section-name citations: scanned on the whole file's
   // whitespace-collapsed text, since a citation can wrap across lines, so
