@@ -11,9 +11,13 @@ description: >-
 
 # MiBolt frontend code standards
 
-Every path here is relative to the repository root. Globs quoted from
-`frontend/eslint.config.mjs` or `frontend/angular.json` are relative to
-`frontend/`, the way those files write them.
+A path that starts with scripts/, references/, assets/ or agents/, or is
+`SKILL.md`, is relative to this skill's directory; one that starts with a
+MiBolt skill name, such as `mibolt-project-map/scripts/check-skill-references.mjs`,
+is relative to the directory that holds the MiBolt skills; every other path is
+relative to the repository root. Globs quoted from `frontend/eslint.config.mjs`
+or `frontend/angular.json` are relative to `frontend/`, the way those files
+write them.
 
 ## 1. Scope and hand-offs
 
@@ -28,15 +32,15 @@ storefront, demo-payment and admin apps, the `core-api`, `shop-api` and
 - Which checks a change needs, the coverage floors and the CI jobs: `mibolt-verification`. This skill names only the commands in section 7.
 - Area idioms, such as storefront facades, admin stores, change chains and mock handlers: `mibolt-shop-frontend` and `mibolt-admin-frontend`.
 - The generated clients, the contract, and moving code into a shared library: `mibolt-cross-package-changes`.
-- Writing or repairing an end-to-end spec: only the `playwright-test-*` agents do that (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests"), through the `playwright-tests` skill. The same rule excepts `frontend/e2e/seed.spec.ts`, which is the conventions file rather than a test, and `frontend/e2e/fixtures/`: both are ordinary code and stay here.
-- Colour, type, radius and recipe values: `frontend/docs/design/yettel.md`, per `.claude/CLAUDE.md` ("Design authority").
+- What an end-to-end spec under `frontend/e2e/` tests, and how its steps are written: outside the MiBolt skills. The lint rules that reach `frontend/e2e/` stay here, and so do `frontend/e2e/seed.spec.ts`, which is the conventions file the specs follow rather than a test, and `frontend/e2e/fixtures/`: both are ordinary code.
+- Colour, type, radius and recipe values: `frontend/docs/design/yettel.md`, the design reference (`mibolt-shop-frontend` ("Design authority")).
 
 ## 2. Evidence model and where the rules live
 
 Every rule in section 5 carries a label, and the label says what breaking it
 costs:
 
-- **written**: stated in a rule file, an instruction file or a project document, and binding whether or not a tool checks it.
+- **written**: a project rule, stated in this skill or in a project document, and binding whether or not a tool checks it.
 - **lint**, **tsc**, **prettier**: ESLint, the TypeScript and Angular compilers, or Prettier fails on it, so the gate catches it.
 - **observed**: the code does it consistently and no source requires it. Follow it inside an existing file; never cite it as a rule.
 - **conflict**: two sources disagree, or the code does what a written rule words differently. Read [references/conflict-register.md](references/conflict-register.md) before changing anything it names.
@@ -45,13 +49,15 @@ A rule that is only written is still a rule. The `as` ban is written for the
 whole workspace and linted in the admin app alone; the narrower lint scope does
 not narrow the rule.
 
-The sources, pointed at rather than copied:
+Section 5 states the written rules for this code, and the lint policy
+reference, section 7, marks which of the Angular and TypeScript ones a tool
+checks. The project documents they draw on:
 
-- `.claude/rules/code-standards.md`, "Modern TypeScript" through "Always use the type guards": generic interfaces, `as`, `any`, existing type guards first; `.claude/rules/code-standards.md`, "Well-documented codebase": how much to document.
-- `CLAUDE.md` at the repository root: the TypeScript and Angular conventions, including the accessibility override (`CLAUDE.md`, "Accessibility Requirements").
 - `frontend/docs/lint-relaxations.md`: which lint rules the user had switched off, and what stays.
 - `frontend/docs/spec/execution-rules.md:9` and `contracts/commerce/openapi.yaml:25-29`: the language split.
-- `.claude/rules/framework-facts.md`: how a question about Angular, typescript-eslint or Prettier behaviour is answered.
+
+How a question about Angular, typescript-eslint or Prettier behaviour is
+answered is under "Framework questions" in section 5.
 
 ## 3. Config files to open
 
@@ -69,8 +75,8 @@ The sources, pointed at rather than copied:
 
 1. **Read the effective rule for the file**, with `--print-config` (section 7), instead of reasoning over the config's blocks. The blocks mislead: `curly` is set to error at `frontend/eslint.config.mjs:239` and reported as `[0,"all"]`, off, because `eslint-config-prettier` is applied last (`frontend/eslint.config.mjs:532`).
 2. **Place the rule** in section 5, and look up its options and file scope in [references/frontend-lint-policy.md](references/frontend-lint-policy.md).
-3. **Fix the code, not the rule.** Hand-written code holds two suppression comments, both in spec files and both naming what they suppress (the lint policy reference, section 9). A new suppression comment (`eslint-disable…`, `@ts-expect-error`, `@ts-ignore`), or an edit to `frontend/eslint.config.mjs` that makes an error go away, changes what the gate checks rather than the code. No file hands that decision to an agent: the relax pass in `frontend/docs/lint-relaxations.md:6-11` was the user's own, so a further relaxation goes to the user as a question, per `.claude/CLAUDE.md` ("Think before coding": "Any deviation from the request must be discussed with the user first").
-4. **Re-run the check on the changed files only** (section 7). A `--fix` or `--write` sweep names its files explicitly, per `.claude/CLAUDE.md` ("Surgical changes").
+3. **Fix the code, not the rule.** Hand-written code holds two suppression comments, both in spec files and both naming what they suppress (the lint policy reference, section 9). A new suppression comment (`eslint-disable…`, `@ts-expect-error`, `@ts-ignore`), or an edit to `frontend/eslint.config.mjs` that makes an error go away, changes what the gate checks rather than the code. No file makes that decision for you: the relax pass in `frontend/docs/lint-relaxations.md:6-11` was the user's own, so a further relaxation is a question for the user, never part of a fix.
+4. **Re-run the check on the changed files only** (section 7). A `--fix` or `--write` sweep names its files explicitly, and names only files the change touched.
 5. **Leave a recorded conflict alone.** Where the code around your change contradicts a written rule, the register says whether that is known; do not rewrite it as a side effect.
 
 **Reviewing a diff:** the tools catch only the rows labelled lint, tsc or
@@ -89,11 +95,13 @@ a diff is new.
 
 ### Types
 
-- **No `as`** (written: `.claude/rules/code-standards.md`, "Strict generics. `as` is forbidden; use `satisfies`"); what replaces one depends on what it did. First check whether a generic already carries the type, and where one does, the `as` simply goes: the generated clients' `invoke<P, R>` returns an `Observable<R>`, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>` (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`, `frontend/projects/shop-api/src/generated/api.ts:45-57`). Otherwise an `as` that narrows becomes a type guard, with a response body, an `HttpErrorResponse.error` or a `JSON.parse` result bound to `unknown` first, as the two narrowing examples in section 4 do. An `as` that widens, such as `null as MockSnapshot | null` (`frontend/projects/shop-mocks/src/mocks-handlers.spec.ts:2082`), becomes a type annotation on the declaration: `const state: { captured: MockSnapshot | null } = { captured: null };`. `satisfies` replaces an `as` only where the value already matches the type, such as an object literal that should match an interface, or a test double that implements the whole interface (`frontend/projects/admin/src/app/core/api/transport.interceptor.spec.ts:31-36`): it checks a type "without changing the resulting type of that expression" (https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#the-satisfies-operator), so it neither narrows nor widens. The rule file names `satisfies` without that condition; the condition comes from the operator, not from a narrower reading of the rule. **Conflict** in enforcement: lint forbids assertions, all but `as const`, only in `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and in two contract files (`frontend/eslint.config.mjs:441-443`).
-- **No `any`** (written: `.claude/rules/code-standards.md`, "Strict generics"; lint: `no-explicit-any` in every linted TypeScript file except `frontend/e2e/seed.spec.ts`, which ESLint parses as plain JavaScript, the `no-unsafe-*` rules under `projects/`, and `$any()` in templates at `frontend/eslint.config.mjs:529`). Bind a value typed `any`, such as `HttpErrorResponse.error` or the result of `JSON.parse`, to `unknown` at once and narrow it.
-- **Use the guard that exists before writing one** (written: `.claude/rules/code-standards.md`, "Always use the type guards that already exist in the project"). `isRecord` has three copies: `frontend/projects/storefront/src/app/shared/utils/is-record.ts`, `frontend/projects/admin/src/app/core/is-record.ts` and `frontend/projects/shop-mocks/src/is-record.ts`. The admin may not import the mocks' copy (`frontend/eslint.config.mjs:397`), and the storefront's copy says in its header that it exists so app code never imports from `projects/shop-mocks/src`. Others include `isProblem` (`frontend/projects/admin/src/app/core/api/problem.ts:16`), `isSort` and `isStorageBucket` (`frontend/projects/storefront/src/app/features/catalog/catalog-query.ts:48-54`) and the DOM guards in `frontend/projects/storefront/src/app/shared/utils/event-target.ts`. List them all, generated code and specs left out, with `git grep -nE '\): [A-Za-z.]+ is ' -- frontend/projects ':!**/generated/**' ':!**/*.spec.ts'`.
+- **No `as`** (written); what replaces one depends on what it did. First check whether a generic already carries the type, and where one does, the `as` simply goes: the generated clients' `invoke<P, R>` returns an `Observable<R>`, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>` (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`, `frontend/projects/shop-api/src/generated/api.ts:45-57`). Otherwise an `as` that narrows becomes a type guard, with a response body, an `HttpErrorResponse.error` or a `JSON.parse` result bound to `unknown` first, as the two narrowing examples in section 4 do. An `as` that widens, such as `null as MockSnapshot | null` (`frontend/projects/shop-mocks/src/mocks-handlers.spec.ts:2082`), becomes a type annotation on the declaration: `const state: { captured: MockSnapshot | null } = { captured: null };`. `satisfies` replaces an `as` only where the value already matches the type, such as an object literal that should match an interface, or a test double that implements the whole interface (`frontend/projects/admin/src/app/core/api/transport.interceptor.spec.ts:31-36`): it checks a type "without changing the resulting type of that expression" (https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#the-satisfies-operator), so it neither narrows nor widens. The written rule names `satisfies` without that condition; the condition comes from the operator, not from a narrower reading of the rule. **Conflict** in enforcement: lint forbids assertions, all but `as const`, only in `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and in two contract files (`frontend/eslint.config.mjs:441-443`).
+- **No `any`** (written; lint: `no-explicit-any` in every linted TypeScript file except `frontend/e2e/seed.spec.ts`, which ESLint parses as plain JavaScript, the `no-unsafe-*` rules under `projects/`, and `$any()` in templates at `frontend/eslint.config.mjs:529`). A type that is uncertain is `unknown` narrowed by a type guard, or a generic parameter. Bind a value typed `any`, such as `HttpErrorResponse.error` or the result of `JSON.parse`, to `unknown` at once and narrow it.
+- **Use the guard that exists before writing one, and write one when none fits** (written). `isRecord` has three copies: `frontend/projects/storefront/src/app/shared/utils/is-record.ts`, `frontend/projects/admin/src/app/core/is-record.ts` and `frontend/projects/shop-mocks/src/is-record.ts`. The admin may not import the mocks' copy (`frontend/eslint.config.mjs:397`), and the storefront's copy says in its header that it exists so app code never imports from `projects/shop-mocks/src`. Others include `isProblem` (`frontend/projects/admin/src/app/core/api/problem.ts:16`), `isSort` and `isStorageBucket` (`frontend/projects/storefront/src/app/features/catalog/catalog-query.ts:48-54`) and the DOM guards in `frontend/projects/storefront/src/app/shared/utils/event-target.ts`. List them all, generated code and specs left out, with `git grep -nE '\): [A-Za-z.]+ is ' -- frontend/projects ':!**/generated/**' ':!**/*.spec.ts'`.
+- **Generic interfaces** (written): a shape whose field types depend on how it is used is generic in them, which is also how a cast is avoided. `CheckoutMutation<T>` (`frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:106-116`) is generic so that `serialize<T>` can return a `CheckoutResult<T>` without one.
+- **Infer a type where it is obvious** (written; lint under `projects/`: `no-inferrable-types` rejects an annotation on a variable, parameter or property initialised to a number, string or boolean, https://typescript-eslint.io/rules/no-inferrable-types/). A function's return type is where this meets the return-type rule under "Members and naming", a recorded conflict.
 - **Only a `boolean` goes in a condition** (lint: `strict-boolean-expressions`, `frontend/eslint.config.mjs:177-188`, every allow option false, in `projects/**/*.ts` including specs and not in `tests/` or `e2e/`). It is a TypeScript rule and reports nothing in a template, external or inline, so the condition it flags is in the `.ts` file the report names. Compare explicitly with `!== null`, `!== undefined`, `.length > 0` or `typeof x === 'string'`, as `frontend/projects/storefront/src/app/features/cart/cart-page.ts:188` does.
-- **Compiler strictness** (tsc: `frontend/tsconfig.json:6-10`): `strict`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, and `noPropertyAccessFromIndexSignature`, which makes a `Record<string, unknown>` field read as `body['code']` rather than `body.code` (https://www.typescriptlang.org/tsconfig/#noPropertyAccessFromIndexSignature).
+- **Strict type checking** (written; tsc: `frontend/tsconfig.json:6-10`): `strict`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, and `noPropertyAccessFromIndexSignature`, which makes a `Record<string, unknown>` field read as `body['code']` rather than `body.code` (https://www.typescriptlang.org/tsconfig/#noPropertyAccessFromIndexSignature).
 - **Template strictness** (tsc: `frontend/tsconfig.json:24-30`): `strictTemplates`, `strictInjectionParameters`, `strictInputAccessModifiers`, and every extended template diagnostic raised to an error, which fails the compilation (https://angular.dev/extended-diagnostics#configuration).
 - **Further type-aware lint under `projects/`** includes `no-unnecessary-condition`, `prefer-readonly`, `no-non-null-assertion`, `no-floating-promises` and `prefer-nullish-coalescing`; read any of them for a file with `--print-config`.
 
@@ -106,27 +114,58 @@ a diff is new.
 
 ### Angular
 
-- **`inject()`, not constructor-parameter injection** (lint: `@angular-eslint/prefer-inject`, from `angular.configs.tsRecommended` at `frontend/eslint.config.mjs:114`).
-- **`input()`, the signal query functions, and `readonly` signal properties** (lint: `@angular-eslint/prefer-signals`, `frontend/eslint.config.mjs:146`). `output()` instead of `@Output()` is written only (`CLAUDE.md`, "Components"): the rule does not look at `@Output()`.
-- **Native control flow** in templates (lint: `frontend/eslint.config.mjs:498`).
+Most of these rules come from Angular's own best-practices file for version 22
+(https://angular.dev/assets/context/best-practices.md, linked from
+https://angular.dev/ai/develop-with-ai), with two departures: its accessibility
+section is replaced by "Accessibility" below, and its rule to use
+`NgOptimizedImage` for every static image is not a rule here. That rule was
+dropped from the project's rules on purpose in commit `e2dfcbf6`, so new code
+does not introduce `NgOptimizedImage`, and `frontend/projects/` holds none
+(observed).
+
+Components:
+
+- **Standalone components only, and no `standalone: true`** (written; lint: `prefer-standalone` reports only `standalone: false`). Standalone is the default (https://angular.dev/api/core/Component), and no `@NgModule` exists in hand-written code (observed).
+- **No explicit `changeDetection: ChangeDetectionStrategy.OnPush`** (written). `OnPush` is the default in Angular 22 (https://angular.dev/api/core/Component); lint reports only an opt-out of it, because `allowExplicitOnPush` is true.
+- **`input()`, the signal query functions, and `readonly` signal properties** (lint: `@angular-eslint/prefer-signals`, `frontend/eslint.config.mjs:146`). `output()` instead of `@Output()`, and `model()` for a property bound two-way with `[(prop)]` instead of an `input()` paired with an `output()`, are written only: the rule does not look at `@Output()`.
+- **No `@HostBinding` or `@HostListener`** (written): host bindings and listeners go in the `host` object of the `@Component` or `@Directive` decorator, as `frontend/projects/storefront/src/app/features/checkout/checkout-step-header.ts:26` does.
+- **`class` and `style` bindings, never `ngClass` or `ngStyle`, and no `CommonModule`** (written): a component imports only the directives and pipes its template uses, such as `AsyncPipe` or `DatePipe`.
+- **Small components with one responsibility, and inline templates for the small ones** (written). An external template or stylesheet is named relative to the component file, as every `templateUrl` in the tree is (observed). Inline against external is a recorded conflict: do not convert a component's template as a side change.
 - **Selector prefix per app**: `app` for the storefront, `pay` for demo-payment, `adm` for the admin (`frontend/angular.json:15`, `frontend/angular.json:148`, `frontend/angular.json:243`). Lint accepts any of the three in any project (`frontend/eslint.config.mjs:127-142`), so only review keeps each app on its own.
-- **The rest of the Angular rules in the root `CLAUDE.md` are written only**: no `standalone: true`, no explicit `OnPush`, no `@HostBinding` or `@HostListener` (`CLAUDE.md`, "Angular Best Practices"), `model()` for two-way binding, Signal Forms, no `ngClass`, `ngStyle` or `CommonModule` (`CLAUDE.md`, "Components"), `@Service` for new singletons (`CLAUDE.md`, "Services"). The lint policy reference shows which lint rule, if any, comes near each.
-- **Templates inline or external**, and **the zoneless provider**, are recorded conflicts. Do not convert a component's template, and do not add or remove `provideZonelessChangeDetection()`, as a side change.
+
+Templates:
+
+- **Native control flow**, `@if`, `@for` and `@switch` rather than `*ngIf`, `*ngFor` and `*ngSwitch` (lint: `frontend/eslint.config.mjs:498`).
+- **Simple templates, with no complex logic** (written). A template expression has `undefined` and `$any` as its only globals and no `new` operator (https://angular.dev/guide/templates/expression-syntax#globals), so a value such as the current date comes from the component class; `$any()` is a lint error here besides (`frontend/eslint.config.mjs:529`).
+- **An observable a template reads goes through the `async` pipe** (written). No template reads one today: class code subscribes instead, a recorded conflict.
+
+State and forms:
+
+- **Signals for state** (written): `signal()` for local state, `computed()` for derived state, and `linkedSignal()` for state derived from several reactive sources that must stay in step. A signal changes through `set()` or `update()`, with an update function that is pure; `WritableSignal` in the installed `@angular/core` 22.1.6 has no `mutate()`, so a call to one does not compile (tsc).
+- **Signal Forms from `@angular/forms/signals` for a new form** (written), stable since Angular 22 (https://angular.dev/events/v22); where a form does not use them, reactive forms are preferred over template-driven ones. Outside the specs, every forms import is from `@angular/forms/signals` and none is from `@angular/forms` (observed).
+
+Services and routes:
+
+- **`inject()`, not constructor-parameter injection** (lint: `@angular-eslint/prefer-inject`, from `angular.configs.tsRecommended` at `frontend/eslint.config.mjs:114`).
+- **A service has one responsibility, and a new singleton service is `@Service()`, not `@Injectable({ providedIn: 'root' })`** (written). `@Service` provides the class in the root injector by default and takes its dependencies through `inject()` only (https://angular.dev/guide/di/creating-and-using-services#using-the-service-vs-injectable-decorator). Outside the specs, every root singleton class is `@Service()` (observed: eight, such as `frontend/projects/storefront/src/app/features/cart/cart.facade.ts:80`); `providedIn: 'root'` appears only on `InjectionToken` factories, such as `frontend/projects/storefront/src/app/core/persistence-mode.ts:24-27`, and a bare `@Injectable()` marks a store a component provides, such as `frontend/projects/admin/src/app/features/admins/admins.store.ts:34`.
+- **Feature routes load lazily**, through `loadComponent` or `loadChildren` (written). The storefront and the admin load every feature page that way (observed, for example `frontend/projects/storefront/src/app/app.routes.ts:44-52`); demo-payment, a single page, routes to it directly.
+- **The zoneless provider** is a recorded conflict: do not add or remove `provideZonelessChangeDetection()` as a side change.
 
 ### Members and naming
 
+- **Document the code, without over-explaining it** (written). A comment says what the code cannot say for itself, such as the reason for a choice that is not obvious: `frontend/projects/storefront/src/app/features/cart/cart.facade.ts:152-158` gives the reason the `Api` is constructed by hand.
 - **PascalCase** for types, interfaces, enums, enum members, type aliases and type parameters, and **camelCase with no leading `_`** for private members (lint: `frontend/eslint.config.mjs:250-291`).
 - **A leading `_`** marks a parameter, variable or caught error as intentionally unused (lint: `frontend/eslint.config.mjs:152-159`).
 - **No `public` keyword** on a method, accessor, constructor or parameter property (lint: `frontend/eslint.config.mjs:219-231`).
 - **`T[]` and `readonly T[]`**, never `Array<T>` (lint: `frontend/eslint.config.mjs:292-298`).
-- **A return type on every function and method**, an arrow function assigned to an untyped `const` included; a callback written inline as an argument, or a function whose variable is already typed, needs none (lint: `frontend/eslint.config.mjs:299-308`, https://typescript-eslint.io/rules/explicit-function-return-type/).
+- **A return type on every function and method**, an arrow function assigned to an untyped `const` included; a callback written inline as an argument, or a function whose variable is already typed, needs none (lint: `frontend/eslint.config.mjs:299-308`, https://typescript-eslint.io/rules/explicit-function-return-type/). It sits beside the written preference for inferred types, a recorded conflict.
 - **File names** (observed): `x-page.ts` for a page, `x.routes.ts`, `x.guard.ts` or `x.guards.ts`, `x.facade.ts` exporting `XFacade` in the storefront, `x.store.ts` in the admin. Which pattern a new unit follows is the area skill's call.
-- **A script or `package.json` script** is named after what it acts on (written: `.claude/rules/code-standards.md`, "A name says what it operates on, and who owns it"); wiring one in belongs to `mibolt-workspace-ops`.
+- **A script or `package.json` script** is named after what it acts on: `mibolt-workspace-ops` ("Naming") states that rule and owns wiring one in.
 
 ### Tests
 
 - **No `.only`, `.skip`, `.todo`, `.fails`, `.skipIf` or `.runIf`**, in any syntactic form (lint: `frontend/eslint.config.mjs:35-65`, applied at `frontend/eslint.config.mjs:453-472` to `projects/**/*.spec.ts` and `tests/**/*.ts`).
-- **No coverage-ignore pragma** (`v8 ignore`, `istanbul ignore`, `c8 ignore`) in any comment (lint: `frontend/eslint.config.mjs:473-484`, over `projects/`, `tests/` and `e2e/`; written: `.claude/rules/code-standards.md`, "never by ignore comments scattered through the source").
+- **No coverage-ignore pragma** (`v8 ignore`, `istanbul ignore`, `c8 ignore`) in any comment (lint: `frontend/eslint.config.mjs:473-484`, over `projects/`, `tests/` and `e2e/`; written: code a unit test cannot reach is left out through the test target's `coverageExclude` in `frontend/angular.json`, such as `frontend/angular.json:117`, never line by line in the source).
 - **`frontend/tests/` runs no type-aware rule** (`frontend/eslint.config.mjs:192-203`), because no tsconfig includes it.
 
 ### Formatting and styles
@@ -140,14 +179,19 @@ a diff is new.
 
 ### Accessibility
 
-- **The root `CLAUDE.md` overrides generic accessibility guidance** (written: `CLAUDE.md`, "Accessibility Requirements"), in the user's words: "in the frontend app keyboard and ARIA events are not of interest, and focus only minimally, because it will never be a live app! no screen reader will ever read it!"
-- **Existing ARIA and focus code is neither extended nor removed as a side change** (written: extending it is the work `CLAUDE.md` ("Accessibility Requirements") rules out, and removing it is a change nothing asked for, which `.claude/CLAUDE.md` ("Surgical changes") rules out). It leaves with an element or a feature the task itself removes, per `.claude/rules/code-standards.md` ("A cut feature leaves nothing behind"). The code already carries some, such as `frontend/projects/storefront/src/app/a11y-structure.spec.ts`.
+- **No work goes into AXE checks, WCAG AA minimums, keyboard handling, or ARIA attributes and events, and focus handling stays minimal** (written): what a native element gives on its own is enough, and nothing is spent on focus management. The reason, in the user's words: "in the frontend app keyboard and ARIA events are not of interest, and focus only minimally, because it will never be a live app! no screen reader will ever read it!" This replaces generic accessibility guidance, including the accessibility section of Angular's best-practices file, which asks for every AXE check and every WCAG AA minimum (https://angular.dev/assets/context/best-practices.md).
+- **Existing ARIA and focus code is neither extended nor removed as a side change** (written: extending it is the work the rule above rules out, and removing it is a change nothing asked for). It leaves with an element or a feature that a change removes on purpose, as "Removed features" below requires. The code already carries some, such as `frontend/projects/storefront/src/app/a11y-structure.spec.ts`.
 - **The template lint block still extends `angular.configs.templateAccessibility`** (`frontend/eslint.config.mjs:493`), so its rules fail `lint` like any other. The register records how the two sit together.
 
 ### Framework questions
 
-- **Answer a question about how Angular, typescript-eslint or Prettier behaves from its documentation** (written: `.claude/rules/framework-facts.md`), with the instruments that file names, never with a probe, and put the URL beside the claim.
-- **The `angular-developer` skill is generic Angular guidance**: commit `5f5b6392` copied it unchanged from https://github.com/angular/skills. This skill records what this repository enforces and does.
+- **How Angular, the Angular CLI, the `@angular/build` builders, Vitest, MSW, Playwright, typescript-eslint or Prettier behaves is read from that tool's documentation, never found out with a throwaway experiment** (written), and the URL goes beside every claim it supports. This workspace runs Angular 22, TypeScript 6 and ESLint 10 (`frontend/package.json:45`, `frontend/package.json:82`, `frontend/package.json:68`), all newer than a model's training data, so recall is no evidence either. Angular is read at https://angular.dev in its version 22 documentation, Playwright at https://playwright.dev/docs, and release notes, issues and changelogs cover what those pages do not.
+- **Measuring this repository is not an experiment**: running its checks and reading their exit codes, grepping the tree, reading `frontend/angular.json`, `frontend/package.json` and `frontend/eslint.config.mjs`, running `git log -S` to find when a line arrived, and reading the installed source under `node_modules/` in `frontend/` to settle what a version actually ships. The test is whose behaviour the question is about: this repository's, or the framework's.
+
+### Removed features
+
+- **A cut component, route, filter or feature leaves every layer in the same change** (written): its type-union member, template, SCSS, handler, fixture and tests, end-to-end specs included. No compatibility shim, no tolerance kept because the old payload still parses, and no code parked for a later rebuild. Mock data under `frontend/projects/shop-mocks/src/` is not a reason to keep any of it: a fixture in a shape the code no longer knows goes out with the rest, and so does a handler that tolerates it.
+- **This binds the code the change itself makes dead.** Dead code the change does not touch stays where it is, and is mentioned rather than deleted.
 
 ## 6. What a change here reaches
 
@@ -159,17 +203,16 @@ a diff is new.
 ## 7. Commands
 
 The `npm --prefix` command runs from the repository root. The `npx` commands
-need `frontend/` as their working directory, because the Angular workspace's
-`node_modules` is there and `npx` looks for a local binary from where it runs,
-and a command that depends on its working directory names it in full
-(`.claude/rules/session-lifecycle.md`, "Tools and startup"). So `<repo-root>`
-below stands for the checkout's absolute path, and the file arguments after the
-`cd` are relative to `frontend/`. Every command below needs that
-`node_modules`, which `mise run //frontend:setup` installs with `npm ci`
-(`frontend/mise.toml:2-3`).
+need `frontend/` as their working directory (`mibolt-workspace-ops` ("Where
+commands run")), because the Angular workspace's `node_modules` is there and
+`npx` looks for a local binary from where it runs. Each is written with its
+`cd`: `<repo-root>` stands for the checkout's absolute path, and the file
+arguments after the `cd` are relative to `frontend/`. Every command below
+needs that `node_modules`, which `mise run //frontend:setup` installs with
+`npm ci` (`frontend/mise.toml:2-3`).
 
 - `npm --prefix frontend run lint`: `ng lint` over every project's lint target. It passes no `--fix` and the builder's cache is off by default, so it writes nothing.
-- `cd <repo-root>/frontend && npx eslint <files>` and `cd <repo-root>/frontend && npx prettier --check <files>`: the pre-commit form from `.claude/rules/code-standards.md` ("A subagent's green report is not a run"). Neither writes without `--fix` or `--write`. Exit 0 from `npx eslint` means no error-level finding; the `security/*` rules report as warnings, which print without changing the exit code.
+- `cd <repo-root>/frontend && npx eslint <files>` and `cd <repo-root>/frontend && npx prettier --check <files>`: the form in which the checks before a commit run them (`mibolt-verification` ("Gates before a commit")). Neither writes without `--fix` or `--write`. Exit 0 from `npx eslint` means no error-level finding; the `security/*` rules report as warnings, which print without changing the exit code.
 - `cd <repo-root>/frontend && npx eslint --print-config <file> | grep -A12 '"<rule-id>"'`: the rule as it applies to that one file, as JSON. `-A12` shows the whole entry for most rules, but not for `@typescript-eslint/naming-convention` (60 lines), `no-restricted-imports` in an admin file (19) or `no-restricted-syntax` in a spec file (23), counted 2026-09-26; raise `-A` for those. `<rule-id>` is the full id with its plugin prefix, the form a lint report prints, for example `"@typescript-eslint/strict-boolean-expressions"`; the bare `"strict-boolean-expressions"` matches nothing, and `grep` then prints nothing and exits 1. A rule the output does not list at all is not configured for that file. The first number is the severity: 0 off, 1 warn, 2 error, and only 2 fails the run (https://eslint.org/docs/latest/use/configure/rules).
 
 There is no separate typecheck script in `frontend/package.json`: a type or
@@ -178,33 +221,35 @@ says which command compiles which project.
 
 ## 8. References
 
-- [references/frontend-lint-policy.md](references/frontend-lint-policy.md): which config block reaches which files, every rule's options and anchor, the root `CLAUDE.md` rules marked enforced or written only, the relax pass, and the suppressions in the tree. Read when fixing a specific lint error, when reviewing a diff, or when a rule's scope matters.
-- [references/conflict-register.md](references/conflict-register.md): the `as` enforcement scope, the two `Api` construction idioms, inline versus external templates, the zoneless provider, `.scss` files written as CSS with Sass line comments in three, how far the design reference reaches, the accessibility override beside the lint preset, and two checks nothing runs, each with its sources and what is left alone. Read when code contradicts a written rule, when two idioms coexist, or before changing anything the register names.
+- [references/frontend-lint-policy.md](references/frontend-lint-policy.md): which config block reaches which files, every rule's options and anchor, the written Angular and TypeScript rules marked enforced or written only, the installed lint rules the config leaves off, the relax pass, and the suppressions in the tree. Read when fixing a specific lint error, when reviewing a diff, or when a rule's scope matters.
+- [references/conflict-register.md](references/conflict-register.md): the `as` enforcement scope, the two `Api` construction idioms, inline versus external templates, the zoneless provider, `.scss` files written as CSS with Sass line comments in three, how far the design reference reaches, the accessibility rule beside the lint preset, two checks nothing runs, inferred types beside required return types, and the `async` pipe beside subscriptions into signals, each with its sources and what is left alone. Read when code contradicts a written rule, when two idioms coexist, or before changing anything the register names.
 
 ## 9. Keep this skill current
 
 The skill goes stale when any of these changes: `frontend/eslint.config.mjs`,
 `frontend/tsconfig.json`, `frontend/tsconfig.e2e.json` or a `frontend/projects/*/tsconfig*.json`,
 `frontend/.prettierrc`, `frontend/.prettierignore`, the `lintFilePatterns` in
-`frontend/angular.json`, the lint tool versions or the `lint`, `format` and
-`format:check` scripts in `frontend/package.json`,
-`frontend/docs/lint-relaxations.md`, the root `CLAUDE.md`, `.claude/CLAUDE.md` or
-a file under `.claude/rules/`, or any other file that an anchor or a quoted
-section name, here or in the references, points into. A change that settles a
-register entry takes the entry out and states the rule in section 5.
+`frontend/angular.json`, the Angular, TypeScript or lint tool versions or the
+`lint`, `format` and `format:check` scripts in `frontend/package.json`,
+`frontend/docs/lint-relaxations.md`, a section this skill quotes from
+`mibolt-shop-frontend`, `mibolt-verification`, `mibolt-workspace-ops` or
+`mibolt-project-map`, or any other file that an anchor or a quoted section
+name, here or in the references, points into. A change that settles a register
+entry takes the entry out and states the rule in section 5.
 
 After such a change, run
-`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-frontend-code-standards`
-and read the text it prints at each anchored line against the claim beside
-that anchor; a range longer than ten lines ends in `... (+N more lines)`, so
-read its rest in the file. It reports every path, anchor and command here or
-in the references that no longer resolves, but an anchor whose cited text has
-moved to another line passes as long as its line number is still inside the
-file, and only reading that text shows it now points at something else.
+`node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-frontend-code-standards`
+from the directory that holds the MiBolt skills, and read the text it prints at
+each anchored line against the claim beside that anchor; a range longer than
+ten lines ends in `... (+N more lines)`, so read its rest in the file. It
+reports every path, anchor and command here or in the references that no
+longer resolves, but an anchor whose cited text has moved to another line
+passes as long as its line number is still inside the file, and only reading
+that text shows it now points at something else.
 
 The checker's check (e) reports a section name quoted after a path or a skill
-name, such as `.claude/CLAUDE.md` ("Surgical changes"), only once the name
-occurs nowhere in the target, so a heading renamed while the target still
+name, such as `mibolt-verification` ("Gates before a commit"), only once the
+name occurs nowhere in the target, so a heading renamed while the target still
 mentions the old name elsewhere passes. After an edit to a file a quoted name
 points into, open each section this skill or its references quote from it and
 confirm it still says what they use it for. The counts and greps dated

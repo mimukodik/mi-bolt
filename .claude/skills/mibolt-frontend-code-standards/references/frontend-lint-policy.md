@@ -1,9 +1,9 @@
 # Frontend lint policy, rule by rule
 
 The detail behind section 5 of `SKILL.md`: which block of the ESLint config
-reaches which files, the options each rule runs with, which root `CLAUDE.md`
-rules no tool checks, and what the relax pass switched off. Globs are quoted as
-the config writes them, relative to `frontend/`. The effective values were read
+reaches which files, the options each rule runs with, which written Angular
+and TypeScript rules no tool checks, and what the relax pass switched off.
+Globs are quoted as the config writes them, relative to `frontend/`. The effective values were read
 with `npx eslint --print-config` on 2026-09-26 (ESLint 10.10.0,
 typescript-eslint 8.69.0, angular-eslint 22.5.0); when a config line has moved,
 read the rule again with that command rather than trusting this file. In that
@@ -18,7 +18,7 @@ output the severity is 0 off, 1 warn, 2 error, and only 2 changes the exit code
 4. Import boundaries
 5. Tests, coverage pragmas and end-to-end files
 6. Templates
-7. Root `CLAUDE.md` rules: enforced or written only
+7. Written Angular and TypeScript rules: enforced or written only
 8. The relax pass, and what stays
 9. Suppression comments in the tree
 
@@ -90,32 +90,49 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 - **Test policy** (`frontend/eslint.config.mjs:35-65`, applied at `frontend/eslint.config.mjs:453-472`): `only`, `skip`, `todo`, `fails`, `skipIf` and `runIf` are banned as a property, as a computed key, and when destructured, on `projects/**/*.spec.ts` and `tests/**/*.ts`.
 - **Coverage pragmas** (`frontend/eslint.config.mjs:473-484`): a comment containing `v8 ignore`, `istanbul ignore` or `c8 ignore` anywhere is an error in `projects/`, `tests/` and `e2e/`.
 - **`frontend/tests/`** keeps `no-explicit-any` (from `recommended`) but runs no type-aware rule, so `strict-boolean-expressions` and the `no-unsafe-*` rules do not reach it.
-- **`frontend/e2e/` and `frontend/playwright.config.ts`** (`frontend/eslint.config.mjs:343-384`): `recommended` presets, type-aware parsing, `playwright/no-focused-test`, `playwright/no-skipped-test` allowing the conditional `test.skip(condition, reason)`, `test` imported from `e2e/fixtures/coverage` rather than `@playwright/test` (lifted inside `e2e/fixtures/**`), and no `page.reload()` or `waitForTimeout()`. Every spec there except `e2e/seed.spec.ts` is written only by the `playwright-test-*` agents; the seed, which is the conventions file, and `e2e/fixtures/**` are ordinary code (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests").
+- **`frontend/e2e/` and `frontend/playwright.config.ts`** (`frontend/eslint.config.mjs:343-384`): `recommended` presets, type-aware parsing, `playwright/no-focused-test`, `playwright/no-skipped-test` allowing the conditional `test.skip(condition, reason)`, `test` imported from `e2e/fixtures/coverage` rather than `@playwright/test` (lifted inside `e2e/fixtures/**`), and no `page.reload()` or `waitForTimeout()`. `e2e/seed.spec.ts` is the conventions file the specs follow rather than a test, and it and `e2e/fixtures/**` are ordinary code.
 
 ## 6. Templates
 
 `projects/**/*.html` (`frontend/eslint.config.mjs:485-531`), and every inline template, which the processor at `frontend/eslint.config.mjs:122` hands to ESLint as a virtual `.html` file under that glob:
 
 - `templateRecommended`: `banana-in-box`, template `eqeqeq`, `no-negated-async`, `prefer-control-flow` (also set at `frontend/eslint.config.mjs:498`).
-- `templateAccessibility` (`frontend/eslint.config.mjs:493`): `alt-text`, `click-events-have-key-events`, `elements-content`, `interactive-supports-focus`, `label-has-associated-control`, `mouse-events-have-key-events`, `no-autofocus`, `no-distracting-elements`, `role-has-required-aria`, `table-scope`, `valid-aria`, all at error. How these sit beside the accessibility override is recorded as a conflict; `SKILL.md` links the register.
+- `templateAccessibility` (`frontend/eslint.config.mjs:493`): `alt-text`, `click-events-have-key-events`, `elements-content`, `interactive-supports-focus`, `label-has-associated-control`, `mouse-events-have-key-events`, `no-autofocus`, `no-distracting-elements`, `role-has-required-aria`, `table-scope`, `valid-aria`, all at error. How these sit beside the accessibility rule is recorded as a conflict; `SKILL.md` links the register.
 - Set in the block (`frontend/eslint.config.mjs:509-529`): `attributes-order` (alphabetical, structural directives first, then template references, attributes, inputs, two-way bindings, outputs), `no-duplicate-attributes`, `no-interpolation-in-attributes`, `prefer-self-closing-tags`, `prefer-static-string-properties`, `prefer-template-literal`, `button-has-type`, and `no-any`, which bans `$any()`.
 
-## 7. Root `CLAUDE.md` rules: enforced or written only
+## 7. Written Angular and TypeScript rules: enforced or written only
 
-| Rule in `CLAUDE.md` | Checked by |
+| Written rule | Checked by |
 | --- | --- |
-| avoid `any` (`CLAUDE.md`, "TypeScript Best Practices") | `no-explicit-any` in every linted TypeScript file except `e2e/seed.spec.ts` (section 1); `$any()` by the template `no-any` |
-| standalone, no `standalone: true` (`CLAUDE.md`, "Angular Best Practices") | `prefer-standalone` reports `standalone: false` only; `standalone: true` is written only |
-| no explicit `OnPush` (`CLAUDE.md`, "Angular Best Practices") | written only: `allowExplicitOnPush` is true |
-| no `@HostBinding` or `@HostListener` (`CLAUDE.md`, "Angular Best Practices") | written only |
-| `input()` and `output()` (`CLAUDE.md`, "Components") | `@Input()` by `prefer-signals`; `@Output()` written only |
-| `model()`, `computed()`, `linkedSignal()` (`CLAUDE.md`, "Components") | written only |
-| inline templates for small components (`CLAUDE.md`, "Components") | written only, and a recorded conflict with the code |
-| Signal Forms, else reactive forms (`CLAUDE.md`, "Components") | written only |
-| no `ngClass`, `ngStyle` or `CommonModule` (`CLAUDE.md`, "Components") | written only |
-| native control flow (`CLAUDE.md`, "Templates") | `template/prefer-control-flow` |
-| `@Service` for new singletons (`CLAUDE.md`, "Services") | written only |
-| `inject()` (`CLAUDE.md`, "Services") | `prefer-inject` |
+| strict type checking (`SKILL.md`, "Types") | tsc: `strict` and the flags at `frontend/tsconfig.json:6-10` |
+| infer a type where it is obvious (`SKILL.md`, "Types") | `no-inferrable-types` under `projects/`, for an annotation on a number, string or boolean initialiser; `explicit-function-return-type` requires return types, a recorded conflict |
+| avoid `any`, `unknown` when the type is uncertain (`SKILL.md`, "Types") | `no-explicit-any` in every linted TypeScript file except `e2e/seed.spec.ts` (section 1); `$any()` by the template `no-any` |
+| standalone, no `standalone: true` (`SKILL.md`, "Angular") | `prefer-standalone` reports `standalone: false` only; `standalone: true` is written only |
+| no explicit `OnPush` (`SKILL.md`, "Angular") | written only: `allowExplicitOnPush` is true |
+| no `@HostBinding` or `@HostListener`, the `host` object instead (`SKILL.md`, "Angular") | written only |
+| `input()` and `output()` (`SKILL.md`, "Angular") | `@Input()` by `prefer-signals`; `@Output()` written only |
+| `model()` for a two-way binding (`SKILL.md`, "Angular") | written only |
+| inline templates for small components (`SKILL.md`, "Angular") | written only, and a recorded conflict with the code |
+| no `ngClass`, `ngStyle` or `CommonModule` (`SKILL.md`, "Angular") | written only |
+| native control flow (`SKILL.md`, "Angular") | `template/prefer-control-flow` |
+| simple templates, no globals or `new` in one (`SKILL.md`, "Angular") | no lint rule; `$any()` by the template `no-any` |
+| the `async` pipe for an observable a template reads (`SKILL.md`, "Angular") | written only, and a recorded conflict with the code |
+| `signal()`, `computed()`, `linkedSignal()`, changed through `set()` or `update()` (`SKILL.md`, "Angular") | written only; `WritableSignal` has no `mutate()`, so tsc rejects a call to one |
+| Signal Forms, else reactive forms (`SKILL.md`, "Angular") | written only |
+| `@Service` for new singletons (`SKILL.md`, "Angular") | written only |
+| `inject()` (`SKILL.md`, "Angular") | `prefer-inject` |
+| lazy feature routes (`SKILL.md`, "Angular") | written only |
+
+The installed angular-eslint 22.5.0 ships rules that would check several of
+the written-only rows, and the config enables none of them (`--print-config`
+on `frontend/projects/storefront/src/app/features/cart/cart-page.ts` and its
+`.html`, 2026-09-26): `prefer-host-metadata-property` (`@HostBinding`,
+`@HostListener`), `prefer-output-emitter-ref` (`@Output()`),
+`prefer-signal-model` (an `input()` paired with an `output()` for a two-way
+binding), `prefer-service-decorator` (`@Injectable({ providedIn: 'root' })`),
+and the template rules `prefer-class-binding` and `prefer-style-binding`
+(`ngClass`, `ngStyle`), each glossed in brackets from its own
+`meta.docs.description`. Enabling one is a rule change, not part of a fix.
 
 `git grep -nE 'standalone:|ChangeDetectionStrategy|@HostBinding|@HostListener|@Input\(|@Output\(|ngClass|ngStyle|CommonModule' -- frontend/projects ':!**/generated/**'`,
 run from the repository root on 2026-09-26, printed nothing and exited 1, so
