@@ -128,9 +128,11 @@ section 5.
 3. Walk the §9 list at the end of section 5. A path written into code,
    configuration or a test follows
    `mibolt-workspace-ops` ("No machine-specific paths").
-4. Run `mise run //backend:lint` for the enforced part, and report every
-   finding with its tag. A finding in a file the diff does not touch is
-   judged by `mibolt-verification` ("Pre-existing failures").
+4. Run `mise run //backend:lint` for the enforced part, and give every
+   finding its tag. A finding is pre-existing only when
+   `git diff --name-status <base>...HEAD` does not list its file and
+   `git status --short` does not show that file
+   (`mibolt-verification` ("Pre-existing failures")).
 
 ## 5. The rules
 
@@ -268,8 +270,9 @@ line, with its enforcement:
 - A test built on the Docker database (`:451-452`). Review-only, as above.
 - Getting around the coverage floor by counting generated code, or switching
   it off (`:453`). Review of the JaCoCo block in
-  `backend/services/commerce/build.gradle`; the floors and their numbers are
-  in `mibolt-verification` ("Tests and coverage").
+  `backend/services/commerce/build.gradle`. The floor rule is in
+  `mibolt-verification` ("Tests and coverage"), and its numbers are in
+  `mibolt-verification` ("Backend (`backend/`)").
 - An undocumented decision, or a silent departure from these documents
   (`:454`). Review-only; the decision workflow belongs to
   `mibolt-commerce-backend`.
