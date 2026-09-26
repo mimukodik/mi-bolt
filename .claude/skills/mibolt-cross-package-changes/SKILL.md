@@ -20,10 +20,18 @@ starts with `scripts/` or `references/`, or is `SKILL.md`, is inside this
 skill's directory; one that starts with a MiBolt skill name is inside the
 directory that holds the MiBolt skills; every other path is relative to the
 repository root. Every command runs from the repository root, as
-`mibolt-workspace-ops` ("Where commands run") sets out, and a script path
-inside a command is expanded by the rules above before it runs: in
+`mibolt-workspace-ops` ("Where commands run") sets out, except the citation
+checker, `mibolt-project-map/scripts/check-skill-references.mjs`, which runs
+as written from the directory that holds the MiBolt skills (see "Keep this
+skill current"). A script path inside any other command follows the rules
+above too, so one that starts with a skill name does not resolve from the
+root as typed: replace it with that file's path from the root before running
+it. In
 `node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs`, the
-script is the finder in this skill's own `scripts/` directory.
+script is the finder in this skill's own `scripts/` directory, and typed as
+it stands the command exits 1 with `Cannot find module`. The finder stays at
+the root even so: it searches the repository it is started in, and from the
+directory that holds the MiBolt skills it exits 2.
 
 ## Scope and hand-offs
 
@@ -409,7 +417,8 @@ Update this skill and its references in the same change as any of these:
   `scripts/find-contract-consumers.mjs`; its exit 2 with `bucket root missing`
   or `cannot derive the path` is the signal that the layout moved.
 
-Check every path, anchor and command cited here with
+Check every path, anchor and command cited here, from the directory that
+holds the MiBolt skills, with
 `node mibolt-project-map/scripts/check-skill-references.mjs mibolt-cross-package-changes`.
 Run it with `--show-anchors` after an edit to any file this skill or its
 references cite by line, whether or not the list above names it, and judge
