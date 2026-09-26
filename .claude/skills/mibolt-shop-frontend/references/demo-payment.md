@@ -122,9 +122,7 @@ discriminated union in one signal; everything else is `computed`.
   `frontend/proxy.payment.conf.json` forwards `/api` to port 8080.
   `frontend/README.md` ("Configurations: mock or real backend") describes
   both modes.
-- Starting and stopping these servers is the orchestrator's
-  (`.claude/rules/session-lifecycle.md`, "Tools and startup"). Changing a
-  port or proxy belongs to `mibolt-workspace-ops`.
+- Changing a port or proxy belongs to `mibolt-workspace-ops`.
 
 ## 6. Tests and checks
 
@@ -138,9 +136,10 @@ discriminated union in one signal; everything else is `computed`.
   that output.
 - `npm --prefix frontend run check:payment-boot` serves the app with
   `ng serve` on port 4299 and checks that the mock worker script is served
-  under `/demo-fizetes/` (`frontend/scripts/check-app-boot.mjs:1-20`). It
-  starts a server, so run it only where the task allows that.
+  under `/demo-fizetes/` (`frontend/scripts/check-app-boot.mjs:1-20`), then
+  stops that server. `npm --prefix frontend run check:admin-boot` uses the
+  same port, so the two run one after the other, never at once.
 - End-to-end coverage of the round trip is
   `frontend/e2e/smoke/card-payment-round-trip-reaches-the-receipt.spec.ts`
   and the specs under `frontend/e2e/integration/` whose names contain
-  `payment`. They belong to the `playwright-tests` skill.
+  `payment`.

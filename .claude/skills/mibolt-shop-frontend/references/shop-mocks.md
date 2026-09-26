@@ -113,8 +113,7 @@ where the table above says.
 A new operation joins `FAULT_OPERATIONS` together with the `faultResponse`
 call in its handler. The end-to-end conventions describe this protocol in
 `frontend/e2e/seed.spec.ts`, item 12, so that description changes when the
-protocol does; consult the `playwright-tests` skill for how that file is
-kept.
+protocol does.
 
 ## 5. Persistence across reloads
 

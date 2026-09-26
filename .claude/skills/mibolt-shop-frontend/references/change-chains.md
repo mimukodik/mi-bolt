@@ -154,8 +154,10 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    both consume the primitives through that barrel.
 2. Take every value from a token in
    `frontend/projects/storefront/src/styles/tokens.css` or a recipe in
-   `frontend/docs/design/yettel.md`. A value neither carries is handled as
-   `.claude/CLAUDE.md` ("Design authority") says, before it is used.
+   `frontend/docs/design/yettel.md`. A value neither carries is measured on
+   `frontend/docs/design/yettel/css/portal.css` and added to
+   `frontend/docs/design/yettel.md` before it is used, as Design authority in
+   [SKILL.md](../SKILL.md) says.
 3. Find every consumer by class name and by element selector (`app-<name>`)
    before changing an input or output.
 4. The production build budgets every component stylesheet

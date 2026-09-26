@@ -5,11 +5,15 @@ description: "Changing what shoppers see in the MiBolt storefront and demo-payme
 
 # MiBolt shop frontend
 
-Change the shop the way it is already built. Every path in this skill and its
-references is relative to the repository root, and every command runs from
-there. The exception is output that exists only after a build, a test run or
-an install, which is named relative to `frontend/`, the directory that holds
-it.
+Change the shop the way it is already built. A path that starts with
+`references/` is relative to this skill's directory, one that starts with a
+MiBolt skill name (`mibolt-project-map/scripts/check-skill-references.mjs`)
+to the directory that holds the MiBolt skills, and any other to the
+repository root, except output that exists only after a build, a test run or
+an install, which is named relative to `frontend/`, the directory holding it.
+Commands run from the repository root, as `mibolt-workspace-ops` ("Where
+commands run") sets out, with any script path in them resolved by those
+rules.
 
 ## Scope and hand-offs
 
@@ -35,20 +39,19 @@ These belong elsewhere:
 - **Ports, proxy files, `frontend/angular.json` build and serve options and
   mise tasks** belong to `mibolt-workspace-ops`.
 - **Colour, type, radius, spacing and recipe values** come from
-  `frontend/docs/design/yettel.md`, per `.claude/CLAUDE.md` ("Design
-  authority"). This skill carries none of them.
+  `frontend/docs/design/yettel.md`, as Design authority under Local
+  conventions says. This skill carries none of them.
+- **Writing end-to-end specs** is outside this skill. The suite under
+  `frontend/e2e/` is configured by `frontend/playwright.config.ts`, states its
+  conventions in `frontend/e2e/seed.spec.ts` and keeps its fixtures in
+  `frontend/e2e/fixtures/`; what a shop change breaks there is under What
+  else a change touches.
 
 Consult these when their condition holds, and not otherwise:
 
 - Consult `mibolt-frontend-code-standards` when a lint or typecheck error
   appears, or when it is unclear whether a pattern is allowed.
 - Consult `mibolt-verification` before declaring the work done.
-- Consult `playwright-tests` only for end-to-end spec work. The test specs
-  under `frontend/e2e/` are written only by the `playwright-test-*` agents
-  (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents
-  write end-to-end tests"), so this skill does not teach them; the same rule
-  leaves `frontend/e2e/seed.spec.ts`, the conventions file, and
-  `frontend/e2e/fixtures/` as ordinary code.
 
 ## Area model
 
@@ -101,8 +104,9 @@ compile time as well.
   global `styles` (`frontend/angular.json:29-33`). The payment app imports no
   Tailwind (`frontend/projects/demo-payment/src/styles.css:4-7`).
 - `frontend/projects/storefront/public/` holds the files the build copies as
-  they are: the fonts, `favicon.ico`, the images under `assets/` (the
-  placeholder and the product-page fixture's pictures), and
+  they are: the fonts, `favicon.ico`, the images under
+  `frontend/projects/storefront/public/assets/` (the placeholder and the
+  product-page fixture's pictures), and
   `mockServiceWorker.js`, which only the development configuration copies
   and which the payment app's and the admin's development builds take from
   here as well (`frontend/angular.json`). Its `media/` folder is the
@@ -111,9 +115,9 @@ compile time as well.
 
 **State.** Six root services hold it: `CatalogFacade`, `ProductFacade`,
 `CartFacade`, `CheckoutFacade`, `OrderSubmission` and `DemoAccess`, each a
-`@Service()` class taking its dependencies through `inject()`, as root
-`CLAUDE.md` ("Services") asks of a new singleton. A facade keeps
-`private readonly xWritable = signal(...)` and exposes
+`@Service()` class taking its dependencies through `inject()`, the form
+`mibolt-frontend-code-standards` ("Angular") gives a new singleton. A facade
+keeps `private readonly xWritable = signal(...)` and exposes
 `readonly x = this.xWritable.asReadonly()`; the catalogue and product facades
 fold their signals into one `computed` `vm` and load through an RxJS
 pipeline, a `Subject` into `switchMap` onto the SDK and back into signals, so
@@ -151,8 +155,10 @@ states most of them in one place:
 Find an existing instance of what you are adding and trace it end to end
 first: `git grep -n is5g -- frontend/projects/storefront/src frontend/projects/shop-mocks/src`
 shows every place a boolean catalogue filter reaches. Grep the identifier in
-every spelling the repository uses (`.claude/rules/code-standards.md`, "Grep
-the identifier as the repository spells it").
+every spelling the repository uses: templates, stylesheets and test ids
+hyphenate it (`add-to-cart`) where TypeScript symbols do not (`AddToCart`),
+and under `frontend/projects/storefront/src/app/features/product/` the two
+return different files.
 
 | Task | Open first |
 |---|---|
@@ -201,8 +207,8 @@ Copy these when you need a pattern:
    collision before building rather than settling it either way, because
    whether the recorded decision or the new request stands is the product
    owner's call. Take no colour, type, radius, spacing or recipe value from
-   the spec: those come from `frontend/docs/design/yettel.md`
-   (`.claude/CLAUDE.md`, "Design authority"), which
+   the spec: those come from `frontend/docs/design/yettel.md` (Design
+   authority, under Local conventions), which
    `frontend/docs/spec/screens.md:7` names too.
 3. **Check the SDK.** If the field, parameter, operation or error code is not
    in `frontend/projects/shop-api/src/generated/`, the contract changes first
@@ -242,14 +248,14 @@ are owned by `mibolt-frontend-code-standards`, and the conflicts named below
 are entries in its conflict register; they appear here as one line each
 because they are easy to break in this area.
 
-- **Root `CLAUDE.md` sets the Angular conventions** (`input()`, `output()`,
-  `computed()`, native control flow, no `ngClass`, `ngStyle` or
-  `CommonModule`, Signal Forms for new forms). Follow it; this skill does not
-  repeat it.
-- **No `as` and no `any`** (`.claude/rules/code-standards.md`). Lint enforces
-  the assertion ban only in the admin and two contract files (register entry
-  C1), and the written rule binds the shop all the same. Narrow `unknown`
-  with the storefront's own `isRecord`
+- **The Angular conventions** (`input()`, `output()`, `computed()`, native
+  control flow, no `ngClass`, `ngStyle` or `CommonModule`, Signal Forms for
+  new forms) are stated in `mibolt-frontend-code-standards` ("Angular").
+  Follow them; this skill does not repeat them.
+- **No `as` and no `any`**, per `mibolt-frontend-code-standards` ("Types").
+  Lint enforces the assertion ban only in the admin and two contract files
+  (register entry C1), and the written rule binds the shop all the same.
+  Narrow `unknown` with the storefront's own `isRecord`
   (`frontend/projects/storefront/src/app/shared/utils/is-record.ts:5`) or a
   new guard, as both `mapError` functions do.
 - **One app never imports another** (`frontend/eslint.config.mjs:410-437`),
@@ -262,9 +268,9 @@ because they are easy to break in this area.
   `new Api(inject(ApiConfiguration), inject(HttpClient))`. Which one a new
   unit takes is not settled (register entry C2).
 - **Components use external `templateUrl` and `styleUrl` files** (observed,
-  with one inline exception), although root `CLAUDE.md` prefers inline
-  templates for small components (register entry C3). Do not convert one as
-  a side change.
+  with one inline exception), although the project's written Angular
+  conventions prefer inline templates for small components (register entry
+  C3). Do not convert one as a side change.
 - **The storefront's component stylesheets are `.scss` files written as
   CSS** (observed: none uses `@use`, `@import`, `@mixin`, `@include`,
   `@forward` or a `$` variable). Write CSS in them. The only Sass syntax
@@ -289,24 +295,23 @@ because they are easy to break in this area.
   `isSafeReturnUrl`
   (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts:49`).
   Do not route around either.
-- **Accessibility.** Root `CLAUDE.md` ("Accessibility Requirements") overrides
-  generic accessibility guidance, in the user's words: "in the frontend app
-  keyboard and ARIA events are not of interest, and focus only minimally,
-  because it will never be a live app! no screen reader will ever read it!".
-  Both apps already carry ARIA and focus code, such as
+- **Accessibility.** No work goes into AXE checks, WCAG minimums, keyboard
+  handling or ARIA, and focus handling stays at what a native element gives,
+  per `mibolt-frontend-code-standards` ("Accessibility"). Both apps already
+  carry ARIA and focus code, such as
   `frontend/projects/storefront/src/app/a11y-structure.spec.ts` and the focus
   effect in `PaymentPage`. Neither extend that code nor remove it as a side
-  change; it leaves with an element or a feature the task itself removes, per
-  `.claude/rules/code-standards.md` ("A cut feature leaves nothing behind").
-  The template accessibility lint rules still run on every template, so a new
-  or changed template has to lint clean against them. Put a click on a
-  native `<button>`, which `click-events-have-key-events` accepts without a
-  key handler, and where a rule still fails, ask rather than add keyboard or
-  ARIA code (register entry C7).
-- **Framework questions** are answered with the instruments in
-  `.claude/rules/framework-facts.md`, never by a probe. The `angular-developer`
-  skill is vendored generic Angular guidance; this skill records what this
-  repository enforces and does.
+  change; it leaves with an element or a feature the change itself removes,
+  per `mibolt-frontend-code-standards` ("Removed features"). The template
+  accessibility lint rules still run on every template, so a new or changed
+  template has to lint clean against them. Put a click on a native
+  `<button>`, which `click-events-have-key-events` accepts without a key
+  handler, and where a rule still fails, ask rather than add keyboard or ARIA
+  code (register entry C7).
+- **Framework questions** about Angular, the Angular CLI, `@angular/build`,
+  Vitest, MSW or Playwright are answered from their documentation, never by a
+  throwaway experiment, per `mibolt-frontend-code-standards` ("Framework
+  questions").
 
 **Unit specs.** Specs sit beside their source as `*.spec.ts`.
 
@@ -324,8 +329,30 @@ because they are easy to break in this area.
 - Some specs carry a `// @vitest-environment jsdom` comment and some do not
   (31 of the 74 storefront specs, counted 2026-09-26). Start a new spec from
   the header of the nearest spec of the same kind rather than from memory.
-- A bug fix comes with a test that fails before it and passes after it
-  (`.claude/rules/code-standards.md`, "Every bug still gets a test").
+- A bug fix comes with a test that fails before it and passes after it, per
+  `mibolt-verification` ("Tests and coverage").
+
+### Design authority
+
+`frontend/docs/design/yettel.md` is the design reference for every rendered
+surface: colour tokens, typography, radii, spacing, the component recipes
+with the yettel.hu selectors they came from, the list- and device-page
+feature inventories, and in §9 the storefront's token mapping. Take every
+colour, type, radius, spacing and recipe value from it and name its section
+beside the value, as the storefront's stylesheets do in a comment
+(`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss:5-6`).
+A value it lacks is measured on `frontend/docs/design/yettel/css/portal.css`,
+the captured yettel.hu stylesheet, and added to the document, with its
+selector, before any code uses it. It also records some values that are the
+project's own, marked as such: the skeleton loaders (§5) and the three
+`-soft` status grounds (§9).
+
+The payment app takes the shop's numeric scales and a few colours from the
+document but keeps its own palette and typeface
+(`frontend/projects/demo-payment/src/styles.css:9-18`). The document names
+neither that app nor the admin, and how far it reaches them is open (entry C6
+of the conflict register in `mibolt-frontend-code-standards`); the admin's
+styling belongs to `mibolt-admin-frontend`.
 
 ## What else a change touches
 
@@ -349,7 +376,8 @@ because they are easy to break in this area.
   elements by `data-testid`, and most also by visible text or role, so a
   renamed test id or reworded sentence can break them, and
   `frontend/e2e/seed.spec.ts` describes the fault protocol, so a protocol
-  change reaches it too. Consult `playwright-tests` for either.
+  change reaches it too. Search `frontend/e2e/` for the old test id or
+  sentence before changing it.
 - **The payment round trip.** A change to the intent, its URLs or the return
   leg touches `frontend/projects/storefront/src/app/features/checkout/review-page.ts`,
   `frontend/projects/storefront/src/app/features/checkout/payment-return-page.ts`
@@ -378,13 +406,14 @@ npm --prefix frontend run ng -- test storefront --include projects/storefront/sr
   and what each flag protects are owned by `mibolt-verification` ("From a
   diff to green checks", step 3).
 
-Before declaring the work done, consult `mibolt-verification` for the full
-set, its prerequisites and what each command leaves behind. The ones this
-area needs most often:
+Before declaring the work done, run the commands `mibolt-verification`
+("Gates before a commit") requires, and consult that skill for their
+prerequisites and what each command leaves behind. The ones this area needs
+most often:
 
 - `npm --prefix frontend run test` runs every project and writes its reports
-  under `coverage/` in `frontend/`, which parallel runs share
-  (`.claude/rules/parallel-spawns.md`, "What a batch shares").
+  under `coverage/` in `frontend/`, so a second run in the same checkout
+  overwrites the first one's.
 - `npm --prefix frontend run lint` runs ESLint over every project, templates
   included, as CI's `lint` job does (`.github/workflows/frontend.yml:34`);
   the template accessibility rules above report there (register entry C7).
@@ -396,12 +425,13 @@ area needs most often:
 - `npm --prefix frontend run check:payment-boot` starts `ng serve` on port
   4299 (`frontend/scripts/check-app-boot.mjs:17`).
 
-Every change a shopper can see is verified in a real browser, per
-`.claude/rules/browser-verification.md`. The orchestrator starts and stops
-the servers: `mise run storefront` for the shop on MSW, `mise run frontend`
-when the payment page takes part, and `mise run dev` when the result comes
-from the backend. A useful pass exercises the changed flow, including its
-failure path, which a `?mi-scenario=fail-<operation>` URL produces on demand.
+Every change a shopper can see is verified in a real browser, as
+`mibolt-verification` ("Browser pass") sets out: on `mise run storefront`
+(the shop alone on MSW, port 4200), on `mise run frontend` (all three apps on
+MSW, the payment app on 4210) when the payment page takes part, and on
+`mise run dev` (against the backend) when the result comes from there. A
+useful pass exercises the changed flow, including its failure path, which a
+`?mi-scenario=fail-<operation>` URL produces on demand.
 
 ## References
 
@@ -441,7 +471,8 @@ references that describes it, in the same change:
 - the `storefront`, `demo-payment` and `shop-mocks` targets in
   `frontend/angular.json`, and the installed `@angular/build` version, which
   decides the `--include` form above;
-- the token mapping in `frontend/docs/design/yettel.md` §9;
+- `frontend/docs/design/yettel.md`, whose sections this skill and its
+  references cite by number (§2, §5, §9);
 - any file this skill or its references cite by line (`path:N` or
   `path:N-M`), since an edit above a cited line moves it; `--show-anchors`
   below prints each anchor beside its target file, so search that output for
@@ -450,7 +481,7 @@ references that describes it, in the same change:
 Then check that every path, anchor and command here still resolves:
 
 ```bash
-node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-shop-frontend
+node mibolt-project-map/scripts/check-skill-references.mjs mibolt-shop-frontend
 ```
 
 It exits 0 when nothing fails, and an anchor whose line has moved still
@@ -458,9 +489,9 @@ passes while its line number stays inside the file. Add `--show-anchors` to
 print each anchored line, and read whether it still says what this skill
 claims; the script cannot judge that. A range longer than ten lines ends in
 `... (+N more lines)`, so read its rest in the file. Run it also after any
-edit to a file this skill or its references cite a section of by name: root
-`CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/`,
-`frontend/README.md` or a file of the `mibolt-verification` skill. The script
+edit to a file this skill or its references cite a section of by name:
+`frontend/README.md`, or a file of the `mibolt-verification`,
+`mibolt-frontend-code-standards` or `mibolt-workspace-ops` skill. The script
 fails a cited name only once it occurs nowhere in the file or skill cited. It
 cannot tell whether a section that kept its name still says what this skill
 uses it for, so re-read each section this skill or its references cite from
