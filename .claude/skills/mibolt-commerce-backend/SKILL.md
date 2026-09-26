@@ -17,9 +17,9 @@ starts with `scripts/` or `references/` is relative to this skill's directory,
 one that starts with a MiBolt skill name is relative to the directory that
 holds the MiBolt skills, and every other path is relative to the repository
 root unless its sentence names the directory it sits in. Every command runs
-from the repository root (`mibolt-workspace-ops`, "Where commands run"), and a
-script path in one that falls under either of the first two rules is given
-from the root when the command is run. The requirement documents are Hungarian;
+from the repository root (`mibolt-workspace-ops`, "Where commands run")
+unless its sentence names another directory, as each command here that runs
+a MiBolt skill's script does. The requirement documents are Hungarian;
 [references/invariants-index.md](references/invariants-index.md) is the
 English index into them.
 
@@ -36,8 +36,8 @@ to read a row"). Outside, and where each case goes:
 - **The contract and everything generated from it**:
   `contracts/commerce/openapi.yaml`, its samples,
   `contracts/commerce/kommunikacio.md`, the frontend clients, the
-  `ProblemCode` fan-out, and the catalogue data under `data/catalog`. Hand
-  these to `mibolt-cross-package-changes`. A backend task that needs a new
+  `ProblemCode` fan-out, and the catalogue data under `data/catalog`. These
+  belong to `mibolt-cross-package-changes`. A backend task that needs a new
   endpoint, field, enum value or error code starts there and comes back here.
 - **Rules over how Java is written**: PMD, the layering statement, naming,
   error-text language, nulls, logging, formatting, test-code rules and the
@@ -48,7 +48,7 @@ to read a row"). Outside, and where each case goes:
 - **The gates**: coverage floors, the full build, CI jobs and when a browser
   pass applies. Consult `mibolt-verification` before calling a change done.
 - **Running and shipping**: the Dockerfile, compose, the database container
-  and its ports, workflow files, Helm and `mise` tasks. Hand these to
+  and its ports, workflow files, Helm and `mise` tasks. These belong to
   `mibolt-workspace-ops`.
 - **The frontends**: the storefront, the payment app and the shop mocks are
   `mibolt-shop-frontend`; the admin app and its mocks are
@@ -335,7 +335,7 @@ Owned by this skill:
   `@Transactional` on order placement.
 - Follow the changeset pattern in section 4; the script warns on a departure.
 - **Record every decision** a later reader would ask "why this way?" about,
-  in the same session as the decision (`backend/docs/02-backend.md:405-429`):
+  when it is made, not afterwards (`backend/docs/02-backend.md:405-429`):
   - one numbered file under `backend/docs/decisions/`, the next being `0023`;
   - the five sections §8 names, in the English form the records use:
     Situation, Options, Decision, Consequences, Date and status, as in
@@ -343,9 +343,9 @@ Owned by this skill:
     (several later records omit Options or Date and status);
   - a departure from a requirement document also corrects that document
     (`backend/docs/02-backend.md:431-434`);
-  - a defect in the contract is reported, not fixed from the implementation
-    side (`backend/docs/02-backend.md:436-438`), and goes to
-    `mibolt-cross-package-changes`;
+  - a defect in the contract is not fixed from the implementation side
+    (`backend/docs/02-backend.md:436-438`), because a contract change reaches
+    the frontends as well; it goes to `mibolt-cross-package-changes`;
   - an earlier record is amended with a dated section, not rewritten, as in
     `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md:143`.
 
@@ -387,17 +387,19 @@ Owned by `mibolt-backend-code-standards`, one line each:
   `backend/services/commerce/scripts/smoke.sh` in the same change
   ([references/testing.md](references/testing.md)).
 - **Coverage.** A new class counts against a per-class floor as well as the
-  total; the numbers are `mibolt-verification`'s ("Tests and coverage").
+  total. The numbers are `mibolt-verification`'s ("Backend (`backend/`)"),
+  and the rule that they are floors, not per-line gates, is
+  `mibolt-verification`'s ("Tests and coverage").
 
 ## 7. Verification
 
-Commands, from the repository root:
+Commands, from the repository root unless one names another directory:
 
-- `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/check-liquibase-changelog.py --base origin/main`:
-  the changelog check, read-only. Pass the branch this work was cut from as
-  `--base`. Exit 0 no FAIL, 1 a FAIL, 2 a usage or
-  prerequisite error. Needs uv, git 2.30 or later, and PyYAML 6.0.2 fetched
-  once by uv if its cache lacks it.
+- `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/check-liquibase-changelog.py --base origin/main`,
+  from this skill's directory: the changelog check, read-only. Pass the
+  branch this work was cut from as `--base`. Exit 0 no FAIL, 1 a FAIL, 2 a
+  usage or prerequisite error. Needs uv, git 2.30 or later, and PyYAML 6.0.2
+  fetched once by uv if its cache lacks it.
 - `backend/gradlew -p backend :services:commerce:test --tests '<pattern>'`:
   unit tests only.
 - `backend/gradlew -p backend :services:commerce:integrationTest --tests '<pattern>'`:
@@ -431,7 +433,7 @@ Done means:
   updated, all green; and decision 0010 or a new record updated. Where that
   catalogue has no such cart as loaded, never edit it in the same change:
   [references/testing.md](references/testing.md) says how a test gets one for
-  its own run, and when to say instead that the case is missing and why.
+  its own run, and when not even that tells the old value from the new.
 - **Anything the UI displays**: also a real-browser pass on the backend-backed
   build, per `mibolt-verification` ("Browser pass").
 
@@ -476,7 +478,8 @@ Update this skill in the same change when any of these moves:
 - `backend/services/commerce/scripts/smoke.sh`;
 - the changelog layout, which makes the script exit 2 with `layout changed`.
 
-Check every path, anchor and command here with:
+From the directory that holds the MiBolt skills, check every path, anchor and
+command here with:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs mibolt-commerce-backend

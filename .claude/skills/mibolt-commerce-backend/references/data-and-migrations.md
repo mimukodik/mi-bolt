@@ -108,9 +108,11 @@ until it is reset; resetting it is `mibolt-workspace-ops`.
 
 `scripts/check-liquibase-changelog.py`, in this skill's directory, is
 read-only: it reads the changelog YAML and runs only `git rev-parse` and
-`git diff --name-status`. Run it from the repository root of the checkout to
-check, naming the script by its path from there; it finds the root with
-`git rev-parse --show-toplevel` from the working directory.
+`git diff --name-status`. It checks the checkout it runs in, finding the root
+with `git rev-parse --show-toplevel` from the working directory, so it runs
+from anywhere inside that checkout. The command below is written as run from
+this skill's directory; from anywhere else, name the script by its path from
+there.
 
 ```bash
 uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \
@@ -180,8 +182,8 @@ changeset that was deleted or renamed. Either way, where the edit belongs to
 the change in hand, put the file back as it was at the merge base, its
 content, name and place, then add the intended schema change, if any, as a new
 changeset. The script reads the working tree, so an edit that belongs to no
-part of the change in hand fails it as well; leave that file as it is and
-report it rather than reverting it.
+part of the change in hand fails it as well; the repair above is not for that
+edit, so leave the file as it is and ask the user what becomes of it.
 
 ## Schema validation at start, and H2 against PostgreSQL
 

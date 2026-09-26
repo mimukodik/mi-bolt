@@ -99,9 +99,9 @@ sets and restores `stock` with `JdbcTemplate`. At up to five per line (rule
 variants: a cart of three, 38 970, tells a 30 000 threshold from 40 000, and
 one beside a 299 990 phone, 312 980, tells a 300 000 ceiling from 320 000.
 Where not even that separates the two values, as with thresholds of 30 000
-and 35 000, say that the case is missing and why. Never leave the row changed,
-and never edit the fixture in the same change, not even to give
-`nokia-105--black--128` stock: the integration classes share one H2 database,
+and 35 000, the change has no API case that tells them apart. Never leave
+the row changed, and never edit the fixture in the same change, not even to
+give `nokia-105--black--128` stock: the integration classes share one H2 database,
 `listProductsReturnsAllSixEntriesWithFullFacets` in
 `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/catalog/ProductsApiTest.java`
 pins the fixture's entry count, in-stock facet and price range, and
@@ -141,7 +141,8 @@ consumed, so contract drift is caught independently of the generated code.
   requires, and `fieldErrors` paths that really point into the body
   (`:382-395`).
 - A bug fix comes with a test seen failing first; that rule and the coverage
-  floors belong to `mibolt-verification` ("Tests and coverage").
+  policy are `mibolt-verification`'s ("Tests and coverage"), and the backend's
+  floor values are `mibolt-verification`'s ("Backend (`backend/`)").
 
 ## smoke.sh
 
