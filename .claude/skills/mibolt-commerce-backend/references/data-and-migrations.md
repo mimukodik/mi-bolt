@@ -176,11 +176,13 @@ FAIL applied changeset modified: backend/services/commerce/src/main/resources/db
 
 For the first, append the printed include block. The second,
 `applied changeset modified`, is also what the script prints for an applied
-changeset that was deleted or renamed. Either way, put the file back by hand as
-it was at the merge base, its content, name and place, since
-`.claude/rules/session-lifecycle.md` ("Nothing is undone with git") rules out
-a git restore; then add the intended schema change, if any, as a new
-changeset.
+changeset that was deleted or renamed. Either way, where the change is this
+work's own, put the file back by hand as it was at the merge base, its content,
+name and place, since `.claude/rules/session-lifecycle.md` ("Nothing is undone
+with git") rules out a git restore; then add the intended schema change, if
+any, as a new changeset. Where it is not, as with an edit a parallel session
+left in the tree, leave the file as it is and report it: that section keeps
+another's work in the tree until the user says otherwise.
 
 ## Schema validation at start, and H2 against PostgreSQL
 

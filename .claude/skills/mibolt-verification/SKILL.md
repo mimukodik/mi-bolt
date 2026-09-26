@@ -322,17 +322,18 @@ One line each; the file named is the one that binds.
 - Every bug fix ships with a test measured red before and green after, in the
   same commit: `.claude/rules/code-standards.md` ("Every bug still gets a
   test").
-- Coverage is an aggregate floor per project, not a per-line gate; only a
-  layer a unit test cannot reach is excluded from it, in the coverage
-  configuration and never by an ignore comment:
+- Coverage is an aggregate floor per project, not a per-line gate:
   `.claude/rules/code-standards.md` ("Coverage is an aggregate floor here, not
-  a per-line gate", and the entry opening "Layers a unit test cannot reach").
+  a per-line gate").
+- Only a layer a unit test cannot reach is excluded from coverage, in the
+  coverage configuration and never by an ignore comment:
+  `.claude/rules/code-standards.md` ("Layers a unit test cannot reach").
 - Every user-visible change gets a `real-browser-sonnet` pass; servers are the
   orchestrator's: `.claude/rules/browser-verification.md`.
 - The coverage report, the generated clients, a dev server's port and the
   database are shared between agents running at once:
   `.claude/rules/parallel-spawns.md` ("What a batch shares").
-- Only the `playwright-test-*` agents write end-to-end specs:
+- Only the `playwright-test-*` agents write end-to-end tests:
   `.claude/rules/code-standards.md` ("Only the `playwright-test-*` agents
   write end-to-end tests").
 - How Vitest, Gradle or Playwright behave is read from their documentation,
@@ -386,8 +387,9 @@ One line each; the file named is the one that binds.
   failed, or when a local run has to reproduce one. It maps each job to its
   local mirror, says how closely it mirrors it, and names what CI keeps when
   the job fails.
-- In the repository: `frontend/README.md` ("npm scripts", "Tests", "CI"),
-  `backend/README.md` ("Tests and quality gates"), and the decisions behind
+- In the repository: `frontend/README.md` ("npm scripts"),
+  `frontend/README.md` ("Tests") and `frontend/README.md` ("CI");
+  `backend/README.md` ("Tests and quality gates"); and the decisions behind
   the backend gates:
   `backend/docs/decisions/0003-h2-postgresql-mode-for-tests.md`,
   `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md`,
@@ -398,12 +400,11 @@ One line each; the file named is the one that binds.
 
 Edit this skill in the same change as any change that alters a command, a
 side-effect class, a floor, or a line this skill or its references cite by
-`path:line`; `--show-anchors` below prints every such line. The files most
-often behind one are: the `scripts` of `frontend/package.json` or
-`tools/package.json`; any of the five `mise.toml` files; the `test` targets of
-`frontend/angular.json`, a project's `vitest.config.ts` or
-`frontend/vitest.contract.config.ts`; `frontend/playwright.config.ts` and
-`frontend/e2e/coverage-thresholds.json`; `frontend/eslint.config.mjs` and
+`path:line`. The files most often behind one are: the `scripts` of
+`frontend/package.json` or `tools/package.json`; any of the five `mise.toml`
+files; the `test` targets of `frontend/angular.json`, a project's
+`vitest.config.ts` or `frontend/vitest.contract.config.ts`;
+`frontend/playwright.config.ts` and `frontend/e2e/coverage-thresholds.json`; `frontend/eslint.config.mjs` and
 `frontend/README.md`; the test, JaCoCo and PMD blocks of
 `backend/services/commerce/build.gradle`,
 `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java`,
@@ -417,15 +418,30 @@ and `tools/dev-server/dev-server.test.ts`; and the entries of
 task that starts running `fixtures:catalog:check`, `check-budgets.mjs` or the
 hook checks ends their "Not wired to anything" entry.
 
+A line added or removed above a cited line alters that citation too, because
+it moves the anchor, and the checker below fails a moved anchor only once it
+falls past the end of its file. So after an edit to any file this skill or its
+references cite by `path:line`, whether or not the list above names it, run
+the checker below with `--show-anchors` and read each line it prints against
+the claim beside it. Whether a file you edited is cited by line is one search,
+run from the repository root:
+
+```bash
+grep -rn '<path>:[0-9]' .claude/skills/mibolt-verification
+```
+
 The changed-paths script reads the CI files live and needs no edit when a
 component or job changes, unless `.github/components.yml` gains a pattern
 beyond `**`, `*`, `?` and literals: it then exits 2 with
 `unsupported pattern <p> in .github/components.yml` and has to be extended.
 
-An edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`,
-`.claude/hooks/CLAUDE.md` or any file under `.claude/rules/` means re-running
-the checker below: its check (e) reports a section this skill cites by name
-that was renamed or removed.
+An edit to a file this skill cites a section of by name (today
+`.claude/hooks/CLAUDE.md`, `frontend/README.md`, `backend/README.md`, any
+file under `.claude/rules/`, and this skill's own `SKILL.md`, which its
+references cite) means re-running the checker below and rereading each
+section cited in that file, since check (e) confirms only that a quoted name
+still occurs somewhere in its target
+(`.claude/skills/mibolt-project-map/references/citation-check.md`).
 
 Check every path, anchor and command cited here with:
 
@@ -433,5 +449,6 @@ Check every path, anchor and command cited here with:
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-verification
 ```
 
-Add `--show-anchors` to print the current text of every cited line, and read
-whether it still says what this skill claims; the script cannot judge that.
+Add `--show-anchors` to print the current text of every cited line; whether
+that text still says what this skill claims is for you to judge, since the
+script cannot.

@@ -43,10 +43,12 @@ Consult these when their condition holds, and not otherwise:
 - Consult `mibolt-frontend-code-standards` when a lint or typecheck error
   appears, or when it is unclear whether a pattern is allowed.
 - Consult `mibolt-verification` before declaring the work done.
-- Consult `playwright-tests` only for end-to-end spec work. Specs under
-  `frontend/e2e/` are written only by the `playwright-test-*` agents
+- Consult `playwright-tests` only for end-to-end spec work. The test specs
+  under `frontend/e2e/` are written only by the `playwright-test-*` agents
   (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents
-  write end-to-end tests"), so this skill does not teach them.
+  write end-to-end tests"), so this skill does not teach them; the same rule
+  leaves `frontend/e2e/seed.spec.ts`, the conventions file, and
+  `frontend/e2e/fixtures/` as ordinary code.
 
 ## Area model
 
@@ -125,9 +127,10 @@ states most of them in one place:
   version come from its answer, and the checkout never recomputes them. A
   figure a backend rule decides, such as a delivery fee, the free-shipping
   threshold or the cash-on-delivery ceiling, is the server's too: no
-  storefront source holds one (observed), and a page that needs one the SDK
-  does not carry gets it through a contract change first (Workflows step 2),
-  never from a number written into the storefront or read from `shop-mocks`.
+  storefront source holds one (observed), and a page that needs a figure
+  the SDK does not carry gets it through a contract change first (Workflows
+  step 3), never from a number written into the storefront or read from
+  `shop-mocks`.
 - Every cart and checkout write carries `If-Match` bound to the cart version
   at dispatch time, not at click time. `CartMutationQueue` serialises cart
   writes and `CheckoutFacade` serialises its own; both share the cart's
@@ -188,10 +191,7 @@ Copy these when you need a pattern:
 ## Workflows
 
 1. **Trace an existing instance** of the same kind of change, as above.
-2. **Check the SDK.** If the field, parameter, operation or error code is not
-   in `frontend/projects/shop-api/src/generated/`, the contract changes first
-   in `mibolt-cross-package-changes`.
-3. **Check the screen's spec for a recorded decision.**
+2. **Check the screen's spec for a recorded decision.**
    `frontend/docs/spec/screens.md` is the screen spec of the planning package
    (see the docs index in `mibolt-project-map`), and some of its per-screen
    lines record a decision a change can collide with, such as the cart's
@@ -204,6 +204,9 @@ Copy these when you need a pattern:
    the spec: those come from `frontend/docs/design/yettel.md`
    (`.claude/CLAUDE.md`, "Design authority"), which
    `frontend/docs/spec/screens.md:7` names too.
+3. **Check the SDK.** If the field, parameter, operation or error code is not
+   in `frontend/projects/shop-api/src/generated/`, the contract changes first
+   in `mibolt-cross-package-changes`.
 4. **Change the layers from the data outwards**: the mock, then the codec or
    facade, then the component, each with its spec beside it; for a bug, write
    the failing spec first. The step lists for a catalogue filter, a
@@ -438,7 +441,11 @@ references that describes it, in the same change:
 - the `storefront`, `demo-payment` and `shop-mocks` targets in
   `frontend/angular.json`, and the installed `@angular/build` version, which
   decides the `--include` form above;
-- the token mapping in `frontend/docs/design/yettel.md` §9.
+- the token mapping in `frontend/docs/design/yettel.md` §9;
+- any file this skill or its references cite by line (`path:N` or
+  `path:N-M`), since an edit above a cited line moves it; `--show-anchors`
+  below prints each anchor beside its target file, so search that output for
+  the files the change touched.
 
 Then check that every path, anchor and command here still resolves:
 
@@ -446,9 +453,14 @@ Then check that every path, anchor and command here still resolves:
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-shop-frontend
 ```
 
-It exits 0 when nothing fails. Add `--show-anchors` to print each anchored
-line, and read whether it still says what this skill claims; the script
-cannot judge that. Run it also after any edit to root `CLAUDE.md`,
-`.claude/CLAUDE.md` or a file under `.claude/rules/`: this skill cites
-sections of those files by name, and the script reports a cited section that
-was renamed or removed.
+It exits 0 when nothing fails, and an anchor whose line has moved still
+passes while its line number stays inside the file. Add `--show-anchors` to
+print each anchored line, and read whether it still says what this skill
+claims; the script cannot judge that. Run it also after any edit to a file
+this skill or its references cite a section of by name: root `CLAUDE.md`,
+`.claude/CLAUDE.md`, a file under `.claude/rules/`, `frontend/README.md` or
+a file of the `mibolt-verification` skill. The script fails a cited name
+only once it occurs nowhere in the file or skill cited. It cannot tell
+whether a section that kept its name still says what this skill uses it
+for, so re-read each section this skill or its references cite from the
+edited file.

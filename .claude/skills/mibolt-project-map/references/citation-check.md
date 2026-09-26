@@ -26,8 +26,10 @@ command line is in `SKILL.md`, "Keep this skill current".
 
 In `SKILL.md` and `references/*.md` it checks that relative links resolve;
 that backticked repository paths with their line anchors, globs and script
-paths exist in a fresh checkout; that `mise run` tasks, bare task names such
-as `backend:docker`, and npm scripts are defined; and it fails any line on
+paths exist in a fresh checkout; that a line anchor sits on a file and names
+no line past its end, an anchor on a directory failing with
+`line anchor on a directory`; that `mise run` tasks, bare task names such as
+`backend:docker`, and npm scripts are defined; and it fails any line on
 which a home-directory path, a temp-directory path or a file URL begins. A
 Gradle task, written in the form
 `backend/gradlew -p backend :services:commerce:build`, is found only when
@@ -43,16 +45,16 @@ double-quoted name; or a backticked target, a comma, a space and a
 double-quoted name. Only the first quoted name right after the target counts.
 
 The backticked token is a target only when it is a skill name,
-`mibolt-<name>`, or a path, meaning it contains a `/` or its last segment ends
-in a file extension, a dot and one to ten letters or digits, as in `SKILL.md`
-or `mise.toml`. Any other token followed by a quoted phrase, such as a flag or
-a bare value, is not a citation: it prints no line and adds nothing to the
-counts. A path is resolved the way the path check resolves one, from the
-repository root and, when that does not exist, from the skill's own directory,
-so `SKILL.md` and `references/x.md` resolve inside the skill; it may name any
-file, not only a Markdown one. A skill name stands for that skill's `SKILL.md`
-and all its `references/*.md`, read as one text. The citation then ends one of
-four ways:
+`mibolt-<name>`, or a path, meaning that, with any line anchor removed, it
+contains a `/` or its last segment ends in a file extension, a dot and one to
+ten letters or digits, as in `SKILL.md` or `mise.toml`. Any other token
+followed by a quoted phrase, such as a flag or a bare value, is not a
+citation: it prints no line and adds nothing to the counts. A path is
+resolved the way the path check resolves one, from the repository root and,
+when that does not exist, from the skill's own directory, so `SKILL.md` and
+`references/x.md` resolve inside the skill; it may name any file, not only a
+Markdown one. A skill name stands for that skill's `SKILL.md` and all its
+`references/*.md`, read as one text. The citation then ends one of four ways:
 
 - A path that resolves to a file, or a skill name whose skill exists, passes
   when the name, its whitespace collapsed the same way, occurs as a substring
@@ -65,15 +67,17 @@ four ways:
   of that name holding a `SKILL.md`, fails with `no such skill`.
 - A path that resolves from neither place fails with
   `section target not found`, except in two cases that print no line and add
-  nothing to the counts: its first path segment is a top-level entry of the
-  repository, because the path check already reports that token as missing,
-  or it contains `<` or `*`, a placeholder or a glob that is not meant to
-  resolve.
+  nothing to the counts: it holds no whitespace and its first path segment is
+  a top-level entry of the repository, because the path check already reports
+  that token as missing, or it contains `<` or `*`, a placeholder or a glob
+  that is not meant to resolve.
 
 Every citation outside those two exceptions adds one to "checked", whether it
 passes, fails or is UNVERIFIED. The match is a substring of the whole target,
 not of one heading, so a heading renamed while its old name still occurs
-elsewhere in the target, in a sentence or a cross-reference, still passes.
+elsewhere in the target, in a sentence or a cross-reference, still passes. A
+citation into the file it sits in, or into its own skill by name, always
+passes, because the citation itself holds the name.
 
 ## Output and exit codes
 
@@ -97,14 +101,14 @@ $ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --sh
 ANCHOR SKILL.md:173 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
   50: mibolt.checkout.free-shipping-threshold-huf=30000
 ...
-mibolt-project-map: 398 checked, 0 FAIL, 0 UNVERIFIED
+mibolt-project-map: 401 checked, 0 FAIL, 0 UNVERIFIED
 
 $ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --no-mise .claude/skills/mibolt-project-map
 UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
 ...
-UNVERIFIED references/citation-check.md:30 mise backend:docker — mise task check skipped (--no-mise)
+UNVERIFIED references/citation-check.md:32 mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 398 checked, 0 FAIL, 11 UNVERIFIED
+mibolt-project-map: 401 checked, 0 FAIL, 11 UNVERIFIED
 ```
 
 ## Write citations the checker can read
@@ -119,9 +123,11 @@ mibolt-project-map: 398 checked, 0 FAIL, 11 UNVERIFIED
   taken as a script path from the repository root, and a placeholder task or
   script name is checked as a real one. Put a template in a fenced code block
   instead: the path and command checks read only backticked tokens, while the
-  hygiene check reads every line. Cite a command that runs from another
-  directory, such as a script in `frontend/package.json`, by its `path:line`
-  anchor rather than backticking the command.
+  hygiene check and check (e) read every line, fenced blocks included, so a
+  section-citation template keeps a placeholder in its target, as the
+  template under the section-citation bullet below does. Cite a command that
+  runs from another directory, such as a script in `frontend/package.json`, by
+  its `path:line` anchor rather than backticking the command.
 - Backtick only a path a fresh checkout holds: a tracked path, or a new file no
   ignore rule covers. A gitignored output backticked from the repository root,
   such as the service's build directory or a `node_modules` directory, fails
@@ -133,19 +139,20 @@ mibolt-project-map: 398 checked, 0 FAIL, 11 UNVERIFIED
 - Cite a section of another file by its name, in one of the two shapes check
   (e) reads, and copy the name verbatim, backticks included, from a heading, a
   bold lead-in or a table cell of the target as it is now. A citation into the
-  root `CLAUDE.md`, `.claude/CLAUDE.md` or a file under `.claude/rules/` is by
-  section name, never by a line anchor: those files are rewritten section by
-  section, and an anchor into one keeps passing after its line has moved to
-  other text, while a name that is gone fails. The target is a file or a skill
-  name, never a directory, which has no text to search and is reported
-  UNVERIFIED. A misspelt skill name or a missing path is caught only while it
-  still has the form of a target, `mibolt-<name>` or a path with a `/` or a
-  file extension; a target in neither form, such as a file with no extension
-  named without its directory, is not read as a citation and prints nothing.
-  The reverse also happens: a backticked command or version number that
-  contains a `/` or ends in what reads as a file extension, followed by a
-  quoted phrase in either shape, is taken for a path target and can fail with
-  `section target not found`; reword the sentence around it.
+  root `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/hooks/CLAUDE.md` or a file
+  under `.claude/rules/` is by section name, never by a line anchor: those
+  files are rewritten section by section, and an anchor into one keeps passing
+  after its line has moved to other text, while a name that is gone fails.
+  The target is a file or a skill name, never a directory, which has no text
+  to search and is reported UNVERIFIED. A misspelt skill name or a missing
+  path is caught only while it still has the form of a target, `mibolt-<name>`
+  or a path with a `/` or a file extension; a target in neither form, such as
+  a file with no extension named without its directory, is not read as a
+  citation and prints nothing. The reverse also happens: a backticked command
+  or version number that contains a `/` or ends in what reads as a file
+  extension, followed by a quoted phrase in either shape, is taken for a path
+  target and can fail with `section target not found`; reword the sentence
+  around it.
 
   ```text
   `<file or mibolt-skill>` ("<section name>")
@@ -157,3 +164,9 @@ mibolt-project-map: 398 checked, 0 FAIL, 11 UNVERIFIED
   somewhere in its target. Run it with `--show-anchors` after a change to a
   cited file, read the printed lines against the sentences that cite them, and
   reread each cited section the same way.
+- Write every anchor as `path:line` wherever it should be checked. An anchor
+  written without its path, as `:N`, `(line N)` or `(lines N-M)` after a path
+  the sentence already names, is neither checked nor printed by
+  `--show-anchors`, because an anchor is read only inside a backticked token
+  whose first path segment is a top-level entry of the repository; reread each
+  such anchor in its file by hand.

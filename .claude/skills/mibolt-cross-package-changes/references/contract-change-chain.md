@@ -32,7 +32,7 @@ need.
 | a shop operation | `--kind operation addCartItem` | a cart mutation: SDK function, facade call, shop-mocks handler, contract tests, backend controller |
 | an admin operation | `--kind operation archiveAdminProduct` | an admin products operation: admin client, admin app, backend admin controller |
 | an error code | `--kind enum PRICE_CHANGED` | a code both clients, the storefront, shop-mocks and the backend handle |
-| a field on `Product` | `--kind property releasedAt` | reaches the catalogue data, the fixture, shop-mocks and the storefront specs that build a `Product` or `CatalogItem`; its admin hits are the `Admin*` schemas' own `releasedAt`, which move only if an `Admin*` schema gets the field too |
+| a field on `Product` | `--kind property releasedAt` | reaches the catalogue data, the fixture, shop-mocks and the storefront specs that build a `Product` or `CatalogItem`; the `CatalogItem` builders need the new field only if it goes on `ProductBase`, where `releasedAt` sits and which both extend. Its admin hits are the `Admin*` schemas' own `releasedAt`, which move only if an `Admin*` schema gets the field too |
 | a schema | `--kind schema Cart` | has a sample, `contracts/commerce/samples/Cart.json` |
 
 Read a sibling's output the way `SKILL.md` ("Read it this way") says: its
@@ -261,9 +261,12 @@ spec.
 - A renamed operation moves every count and list in section 4 or 5, and the
   test titles that name it.
 - End-to-end specs and plans that use the name (the finder's `e2e` bucket) go
-  to `playwright-tests`; only its agents edit them
+  to `playwright-tests`, and only its agents edit a spec
   (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents
-  write end-to-end tests").
+  write end-to-end tests"). The same rule makes `frontend/e2e/fixtures/` and
+  `frontend/e2e/seed.spec.ts` ordinary repository code, so a hit there, such
+  as the `/demo/session` path in `frontend/e2e/fixtures/backend-ready.ts`, is
+  edited like any other file the finder lists.
 
 ## 10. A core-api change
 

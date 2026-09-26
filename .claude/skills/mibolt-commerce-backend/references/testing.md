@@ -82,15 +82,26 @@ own cookie of that name replaces it
 
 `backend/services/commerce/src/test/resources/catalog/catalog.json` is the
 catalogue the `test` profile loads, so every cart an integration test builds
-comes from it. The cheapest variant in stock there costs 299 990 HUF; the one
-cheaper variant, `nokia-105`, has no stock, and adding it to a cart is refused
-with `OUT_OF_STOCK`
+comes from it. As loaded, its in-stock variants cost 299 990, 349 990,
+399 990 and 449 990 HUF, so every cart costs one of those or a sum of them;
+the one cheaper variant, `nokia-105--black--128` at 12 990 HUF, has no stock,
+and adding it to a cart is refused with `OUT_OF_STOCK`
 (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:92-96`).
-So a change between two values that are both below 299 990, such as moving
-the free-shipping threshold (30 000 today) to another value under it, has no
-cart priced between the old and the new value: say that the case is missing
-and why. Adding a fixture variant for it is a change of its own, because
-`listProductsReturnsAllSixEntriesWithFullFacets` in
+So moving the free-shipping threshold (30 000 today) to another value up to
+299 990, or raising the cash-on-delivery ceiling (300 000 today) to anything
+under 349 990, leaves no cart as loaded whose outcome differs between the two.
+
+A test gets such a cart by giving `nokia-105--black--128` stock for its own
+run and restoring the row in a `finally`, the way
+`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/order/OrdersApiTest.java:504-518`
+sets and restores `stock` with `JdbcTemplate`. At up to five per line (rule
+16), that adds 12 990 to 64 950 in steps of 12 990, alone or beside the other
+variants: a cart of three, 38 970, tells a 30 000 threshold from 40 000, and
+one beside a 299 990 phone, 312 980, tells a 300 000 ceiling from 320 000.
+Where not even that separates the two values, as with thresholds of 30 000
+and 35 000, say that the case is missing and why. Never leave the row changed
+and never add a variant in the same change: the integration classes share one
+H2 database, and `listProductsReturnsAllSixEntriesWithFullFacets` in
 `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/catalog/ProductsApiTest.java`
 pins the fixture's entry count, in-stock facet and price range.
 

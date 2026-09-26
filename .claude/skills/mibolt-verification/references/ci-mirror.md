@@ -89,5 +89,5 @@ The changed-paths script does not list these.
 - `mise run claude:hooks:test` and `mise run claude:hooks:typecheck` run only
   inside `mise run verify`.
 - `npm --prefix frontend run fixtures:catalog:check` and
-  `node frontend/scripts/check-budgets.mjs` are manual-only; see "Not wired to
-  anything" in `SKILL.md`.
+  `node frontend/scripts/check-budgets.mjs` are manual-only; see `SKILL.md`
+  ("Not wired to anything").

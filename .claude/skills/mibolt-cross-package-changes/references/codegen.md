@@ -169,8 +169,8 @@ plugin, version 7.25.0 (`backend/services/commerce/build.gradle:5`), with the `s
 ## 5. When regeneration or drift misbehaves
 
 - **`api:drift` red locally after a contract change.** Expected until the
-  regenerated output is staged with the contract change; SKILL.md, fan-out
-  step 6, says who stages it. Rerun once it is.
+  regenerated output is staged with the contract change; `SKILL.md`, "The
+  fan-out order", step 6, says who stages it. Rerun once it is.
 - **`api:drift` red in CI.** The committed clients do not match the committed
   contract: the contract changed without a regeneration, a generated file was
   edited by hand, or a generated file was never added. The fix is to

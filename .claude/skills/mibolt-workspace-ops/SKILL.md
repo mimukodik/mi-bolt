@@ -163,10 +163,11 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    (`mise.toml:67-74`).
 7. CI never runs a root task, so a check that CI should run also needs a step
    in its workflow; [references/ci-cd.md](references/ci-cd.md) has the shape.
-   The edit itself still starts CI, because every `mise.toml` sits inside at
-   least one component's paths in `.github/components.yml`, the root one in
-   four of the five; `mibolt-verification` maps a changed path to the
-   components it starts and the checks to run locally.
+   The edit itself still runs component workflows in CI, because every
+   `mise.toml` sits inside at least one component's paths in
+   `.github/components.yml`, the root one in four of the five;
+   `mibolt-verification` maps a changed path to the components it starts and
+   the checks to run locally.
 
 Done when `mise tasks` shows the task with its description, both tables carry
 the row, and the checks `mibolt-verification` names for the change pass.
@@ -271,7 +272,9 @@ argument to Compose. Then match the symptom in the table at the end of
   (`backend/README.md:81-88`). `mibolt-commerce-backend` sends it here for a
   local database that halts on an edited changeset, and it is also what makes
   a changed catalogue or `MIBOLT_DEMO_*` value take effect. Running it is the
-  orchestrator's step, as with every mode.
+  orchestrator's step, as with every mode, and where one of those cases calls
+  for it without the user having asked, the orchestrator asks the user first,
+  because it deletes every local row (`backend/README.md:82-83`).
 - **Pin images by digest,** as every base image in both Dockerfiles and the
   PostgreSQL image in `deploy/compose.yaml:10` are. An image's published tag is
   a hash of tracked files (`deploy/candidate/README.md:27-29`), so only a
@@ -360,12 +363,19 @@ files; anything under `deploy/` or `.github/`; the two Dockerfiles,
 ports and command tables in `README.md` and `docs/monorepo.md`, the variable
 table at `backend/README.md:19-31`, the CI prose at
 `frontend/README.md:87-89` and `backend/docs/06-uzembe-helyezes.md`. When you
-edit one of those, reread the lines this skill and its references cite from it.
+edit one of those, or any other file this skill or its references cite by
+`path:line`, run the checker below with `--show-anchors` and reread every line
+it prints from that file against the claim beside it, opening the file for the
+rest of a range it cuts short: the checker passes an anchor as long as its line
+number stays inside the file, however far the text it pointed at has moved.
+Where this skill names the edited file without an anchor, nothing is printed
+for it, so reread what this skill and its references say about that file.
 
 Check the cited paths, anchors and commands with
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-workspace-ops`;
 add `--show-anchors` to print each anchored line's current text, so a reader
 can judge whether it still says what this skill claims. Run the checker again
 after an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or any file under
-`.claude/rules/`: its check (e) reports a section this skill cites by name that
-was renamed or removed.
+`.claude/rules/`: its check (e) fails a section this skill cites by name only
+once that name occurs nowhere in the file, so also reread each section cited
+from the edited file against the sentence here that cites it.

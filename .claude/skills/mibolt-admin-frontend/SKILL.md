@@ -195,9 +195,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
 - **No type assertion, `as const` aside.** ESLint enforces it for the admin
   (`frontend/eslint.config.mjs:389-391`), stricter than for the rest of the workspace; the written
   rule is `.claude/rules/code-standards.md` ("Strict generics"). First check whether a generic
-  already carries the type: the generated `invoke<P, R>` returns the operation's own response
-  type, and `invoke$Response<P, R>` returns it inside `StrictHttpResponse<R>`
-  (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`), so what they return needs
+  already carries the type: the generated `invoke<P, R>` returns an `Observable<R>` of the
+  operation's own response type, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>`
+  (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`), so what they emit needs
   neither an `as` nor a guard. Otherwise narrow with a guard: `isRecord`, `isProblem`, or a local
   literal-union guard like those at
   `frontend/projects/admin/src/app/features/products/list/product-list.query.ts:67-83`.
@@ -298,8 +298,10 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   build to `dist/admin/` in `frontend/`, `npm --prefix frontend run check:admin-dist` then reads it
   and exits 2 when there is none, and `npm --prefix frontend run check:admin-boot` starts
   `ng serve admin` on port 4299 and checks that the mock worker is served under `/admin/`;
-  `check:payment-boot` uses the same port, so no two boot checks run at once, whichever app each
-  serves (`frontend/scripts/check-app-boot.mjs:17-19`).
+  `check:payment-boot` uses the same port and the script takes no lock on it, so never start a
+  boot check while another is running, whichever app each serves and whichever checkout or
+  worktree it runs from, since every checkout on the machine shares the port
+  (`frontend/scripts/check-app-boot.mjs:17-19`, `frontend/scripts/check-app-boot.mjs:49`).
 - **Lint and format** of the changed files: the commands are `mibolt-frontend-code-standards`'s.
 - **The browser pass** is mandatory for anything a person sees, per
   `.claude/rules/browser-verification.md`. The orchestrator serves the admin with `mise run admin`
@@ -360,13 +362,25 @@ Update this skill in the same change when one of these moves:
 - `frontend/projects/admin/README.md`, and the admin's blocks in `frontend/angular.json` and
   `frontend/eslint.config.mjs`, which the line anchors here point into.
 
-Then check every path, line anchor and command in this skill, and read each printed anchor line
-against what the text says about it:
+Then run the check below, and run it as well after an edit to any other file this skill or its
+references cite by `path:line`, since an edit that only shifts lines leaves an anchor on the
+wrong line, and the check still passes it as long as the number stays inside the file. It checks
+every path, `path:line` anchor and command, and `--show-anchors` prints each anchored line; read
+that line against what the text says about it:
 
 ```bash
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-admin-frontend
 ```
 
-Run it as well after any edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or a file under
-`.claude/rules/`: its check (e) reports a section this skill cites by name that was renamed or
-removed.
+The script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers in sections
+4, 5, 7 and 8 of [references/product-form.md](references/product-form.md), which point into
+`frontend/projects/admin/src/mocks/products-write.handlers.ts`,
+`frontend/projects/admin/src/mocks/products-read.handlers.ts` and
+`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`; after an edit to
+one of those three files, reread them by hand.
+
+Run it as well after any edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`, a file under
+`.claude/rules/` or the `mibolt-verification` skill, since this skill cites sections of each by
+name. Its check (e) fails only when a cited name no longer occurs anywhere in the cited file or
+skill, so it cannot see a section that kept its name and changed what it says: reread each
+section this skill cites from what was edited, against what this skill uses it for.

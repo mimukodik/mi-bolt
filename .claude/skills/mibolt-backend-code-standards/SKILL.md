@@ -194,7 +194,8 @@ section 5.
   port 55433 (`backend/services/commerce/src/main/resources/application.properties:5`).
   How the annotation works belongs to `mibolt-commerce-backend`.
 
-**Observed patterns; follow them, nothing checks them:**
+**Observed patterns; follow them, nothing checks them unless the bullet
+names the check:**
 
 - **Put a class in the domain package it serves.** The root is
   `com.example.mi_bolt_backend` (`backend/docs/02-backend.md:22`), split into
@@ -321,7 +322,7 @@ Update this skill in the same change as any of these:
   `backend/services/commerce/build.gradle:220-245`. A `toolVersion` bump
   changes the quickstart's content: re-read the quickstart at the new release
   tag.
-- `backend/docs/02-backend.md` §2, §3, §7.0 or §9, or
+- `backend/docs/02-backend.md` §1, §2, §3, §7.0, §7.4, §8 or §9, or
   `backend/docs/04-adatbazis.md` §1 or §4.
 - `.editorconfig`, or a formatter or static-analysis plugin added to the
   build.
@@ -334,12 +335,19 @@ Update this skill in the same change as any of these:
 - A decision under `backend/docs/decisions/` that amends 0009 or changes a
   rule above.
 
-Then check the skill against the repository:
-`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-backend-code-standards`
-exits 0 when every path, anchor and command resolves; settle each
-`UNVERIFIED` line it prints by hand. Add `--show-anchors` to read each
-anchored line against the claim made about it, and re-run the measurement
-commands in the reference to refresh the counts. Run the checker as well after
-an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or any file under
-`.claude/rules/`: its check (e) reports a section this skill cites there that
-was renamed or removed.
+Then run
+`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-backend-code-standards`,
+and run it as well after an edit anywhere in a file this skill or its
+reference cites by line, including the Java sources the reference cites for
+its examples: a line added or removed above a cited block moves the block off
+its anchor, and the check fails only once an anchor runs past the end of its
+file. It must exit 0. Settle each `UNVERIFIED` line by hand, and read each
+anchored line it prints against the claim made about it. Sections 2 and 5
+and the reference often write an anchor bare, as `:N` after a path already
+named; the checker neither checks nor prints those, so read each in that file.
+Re-run the measurement commands in the reference to refresh the counts. Run
+the checker as well after an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`
+or any file under `.claude/rules/`: its check (e) reports a section name cited
+from one of them that no longer occurs anywhere in that file, so also reread
+each section this skill cites from the edited file. What each check proves is
+in `.claude/skills/mibolt-project-map/references/citation-check.md`.

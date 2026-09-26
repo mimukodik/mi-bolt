@@ -28,7 +28,7 @@ storefront, demo-payment and admin apps, the `core-api`, `shop-api` and
 - Which checks a change needs, the coverage floors and the CI jobs: `mibolt-verification`. This skill names only the commands in section 7.
 - Area idioms, such as storefront facades, admin stores, change chains and mock handlers: `mibolt-shop-frontend` and `mibolt-admin-frontend`.
 - The generated clients, the contract, and moving code into a shared library: `mibolt-cross-package-changes`.
-- Writing or repairing an end-to-end spec: only the `playwright-test-*` agents do that (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests"), through the `playwright-tests` skill.
+- Writing or repairing an end-to-end spec: only the `playwright-test-*` agents do that (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests"), through the `playwright-tests` skill. The same rule excepts `frontend/e2e/seed.spec.ts`, which is the conventions file rather than a test, and `frontend/e2e/fixtures/`: both are ordinary code and stay here.
 - Colour, type, radius and recipe values: `frontend/docs/design/yettel.md`, per `.claude/CLAUDE.md` ("Design authority").
 
 ## 2. Evidence model and where the rules live
@@ -89,7 +89,7 @@ a diff is new.
 
 ### Types
 
-- **No `as`** (written: `.claude/rules/code-standards.md`, "Strict generics. `as` is forbidden; use `satisfies`"); what replaces one depends on what it did. First check whether a generic already carries the type, and where one does, the `as` simply goes: the generated clients' `invoke<P, R>` returns the operation's own response type, and `invoke$Response<P, R>` returns it inside `StrictHttpResponse<R>` (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`, `frontend/projects/shop-api/src/generated/api.ts:45-57`). Otherwise an `as` that narrows becomes a type guard, with a response body, an `HttpErrorResponse.error` or a `JSON.parse` result bound to `unknown` first, as the two narrowing examples in section 4 do. `satisfies` replaces an `as` only where the value already matches the type, such as an object literal that should match an interface, or a test double that implements the whole interface (`frontend/projects/admin/src/app/core/api/transport.interceptor.spec.ts:31-36`): it checks a type "without changing the resulting type of that expression" (https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#the-satisfies-operator), so it never narrows. The rule file names `satisfies` without that condition; the condition comes from the operator, not from a narrower reading of the rule. **Conflict** in enforcement: lint forbids assertions, all but `as const`, only in `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and in two contract files (`frontend/eslint.config.mjs:441-443`).
+- **No `as`** (written: `.claude/rules/code-standards.md`, "Strict generics. `as` is forbidden; use `satisfies`"); what replaces one depends on what it did. First check whether a generic already carries the type, and where one does, the `as` simply goes: the generated clients' `invoke<P, R>` returns an `Observable<R>`, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>` (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`, `frontend/projects/shop-api/src/generated/api.ts:45-57`). Otherwise an `as` that narrows becomes a type guard, with a response body, an `HttpErrorResponse.error` or a `JSON.parse` result bound to `unknown` first, as the two narrowing examples in section 4 do. An `as` that widens, such as `null as MockSnapshot | null` (`frontend/projects/shop-mocks/src/mocks-handlers.spec.ts:2082`), becomes a type annotation on the declaration: `const state: { captured: MockSnapshot | null } = { captured: null };`. `satisfies` replaces an `as` only where the value already matches the type, such as an object literal that should match an interface, or a test double that implements the whole interface (`frontend/projects/admin/src/app/core/api/transport.interceptor.spec.ts:31-36`): it checks a type "without changing the resulting type of that expression" (https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#the-satisfies-operator), so it neither narrows nor widens. The rule file names `satisfies` without that condition; the condition comes from the operator, not from a narrower reading of the rule. **Conflict** in enforcement: lint forbids assertions, all but `as const`, only in `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and in two contract files (`frontend/eslint.config.mjs:441-443`).
 - **No `any`** (written: `.claude/rules/code-standards.md`, "Strict generics"; lint: `no-explicit-any` in every linted TypeScript file except `frontend/e2e/seed.spec.ts`, which ESLint parses as plain JavaScript, the `no-unsafe-*` rules under `projects/`, and `$any()` in templates at `frontend/eslint.config.mjs:529`). Bind a value typed `any`, such as `HttpErrorResponse.error` or the result of `JSON.parse`, to `unknown` at once and narrow it.
 - **Use the guard that exists before writing one** (written: `.claude/rules/code-standards.md`, "Always use the type guards that already exist in the project"). `isRecord` has three copies: `frontend/projects/storefront/src/app/shared/utils/is-record.ts`, `frontend/projects/admin/src/app/core/is-record.ts` and `frontend/projects/shop-mocks/src/is-record.ts`. The admin may not import the mocks' copy (`frontend/eslint.config.mjs:397`), and the storefront's copy says in its header that it exists so app code never imports from `projects/shop-mocks/src`. Others include `isProblem` (`frontend/projects/admin/src/app/core/api/problem.ts:16`), `isSort` and `isStorageBucket` (`frontend/projects/storefront/src/app/features/catalog/catalog-query.ts:48-54`) and the DOM guards in `frontend/projects/storefront/src/app/shared/utils/event-target.ts`. List them all, generated code and specs left out, with `git grep -nE '\): [A-Za-z.]+ is ' -- frontend/projects ':!**/generated/**' ':!**/*.spec.ts'`.
 - **Only a `boolean` goes in a condition** (lint: `strict-boolean-expressions`, `frontend/eslint.config.mjs:177-188`, every allow option false, in `projects/**/*.ts` including specs and not in `tests/` or `e2e/`). It is a TypeScript rule and reports nothing in a template, external or inline, so the condition it flags is in the `.ts` file the report names. Compare explicitly with `!== null`, `!== undefined`, `.length > 0` or `typeof x === 'string'`, as `frontend/projects/storefront/src/app/features/cart/cart-page.ts:188` does.
@@ -189,17 +189,22 @@ The skill goes stale when any of these changes: `frontend/eslint.config.mjs`,
 `frontend/angular.json`, the lint tool versions or the `lint`, `format` and
 `format:check` scripts in `frontend/package.json`,
 `frontend/docs/lint-relaxations.md`, the root `CLAUDE.md`, `.claude/CLAUDE.md` or
-a file under `.claude/rules/`, or any file an anchor or a quoted section name
-here points into. A change that settles a register entry takes the entry out
-and states the rule in section 5.
+a file under `.claude/rules/`, or any other file that an anchor or a quoted
+section name, here or in the references, points into. A change that settles a
+register entry takes the entry out and states the rule in section 5.
 
 After such a change, run
-`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-frontend-code-standards`.
-It reports every path, anchor and command here that no longer resolves; with
-`--show-anchors` it also prints the text now at each anchored line, and only
-reading that text shows an anchor that still resolves but has come to point at
-something else. Its check (e) reports a section name quoted after a path, such
-as `.claude/CLAUDE.md` ("Surgical changes"), once the name occurs nowhere in
-that file, so a heading renamed while the file still mentions the old name
-elsewhere is not reported. The counts and greps dated 2026-09-26, here and in
-the references, are re-run, not trusted, once the code they counted has changed.
+`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-frontend-code-standards`
+and read the text it prints at each anchored line against the claim beside
+that anchor. It reports every path, anchor and command here or in the
+references that no longer resolves, but an anchor whose cited text has moved
+to another line passes as long as its line number is still inside the file,
+and only reading that text shows it now points at something else.
+
+The checker's check (e) reports a section name quoted after a path or a skill
+name, such as `.claude/CLAUDE.md` ("Surgical changes"), only once the name
+occurs nowhere in the target, so a heading renamed while the target still
+mentions the old name elsewhere passes. After an edit to a file a quoted name
+points into, open each section this skill quotes from it and confirm it still
+says what this skill uses it for. The counts and greps dated 2026-09-26, here and in the
+references, are re-run, not trusted, once the code they counted has changed.

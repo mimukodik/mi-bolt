@@ -437,10 +437,10 @@ Done means:
   `backend/services/commerce/src/test/resources/catalog/catalog.json`, priced
   between the old and the new value), the tests asserting the old value
   updated, all green; and decision 0010 or a new record updated. Where that
-  catalogue has no such cart, say that the case is missing and why, rather
-  than adding a variant to it in the same change;
-  [references/testing.md](references/testing.md) says which values it cannot
-  bracket.
+  catalogue has no such cart as loaded, never add a variant to it in the same
+  change: [references/testing.md](references/testing.md) says how a test gets
+  one for its own run, and when to say instead that the case is missing and
+  why.
 - **Anything the UI displays**: also a real-browser pass on the backend-backed
   build, per `.claude/rules/browser-verification.md`.
 
@@ -491,8 +491,9 @@ Check every path, anchor and command here with:
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-commerce-backend
 ```
 
-Add `--show-anchors` to print each anchored line, then read whether it still
-says what this skill claims; the script checks that a line exists, not what it
-says. Run it again after any edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`
-or a file under `.claude/rules/`: its check (e) reports a section this skill
-cites by name that was renamed or removed.
+Run it with `--show-anchors` after an edit to the root `CLAUDE.md`,
+`.claude/CLAUDE.md`, a file under `.claude/rules/`, or any file this skill or
+its references cite by line or section name, listed above or not, and read each
+cited line and section there against the claim beside it: a shifted `path:N`
+passes while the file is that long, a bare `:N` after a path is neither checked
+nor printed, and a renamed section passes while its old name is still in the file.
