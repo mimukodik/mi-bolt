@@ -19,19 +19,20 @@ the stores, the Signal Forms helpers, the image upload, the Material and Tailwin
 in-page mock backend in `frontend/projects/admin/src/mocks/` and the spec harness in
 `frontend/projects/admin/src/testing/`.
 
-Hand these to the skill that owns them:
+These belong to the skill that owns them:
 
 - **The contract and the generated client.** A new field, parameter, operation or error code,
   regenerating or drift-checking the clients, the admin tag list in
   `frontend/ng-openapi-gen.admin.json`, and the operation counts pinned in
-  `frontend/tests/contract/sdk-split.spec.ts:123-126` go to `mibolt-cross-package-changes`. Nothing
-  in `frontend/projects/admin/src/app/api/generated/` is edited by hand
+  `frontend/tests/contract/sdk-split.spec.ts:123-126` belong to `mibolt-cross-package-changes`.
+  Nothing in `frontend/projects/admin/src/app/api/generated/` is edited by hand
   (`frontend/docs/api/README.md:9`).
 - **Server behaviour.** What an `/api/v1/admin/**` operation does, admin security and server-side
-  validation go to `mibolt-commerce-backend`.
-- **The shop apps.** The storefront, demo-payment and `shop-mocks` go to `mibolt-shop-frontend`.
+  validation belong to `mibolt-commerce-backend`.
+- **The shop apps.** The storefront, demo-payment and `shop-mocks` belong to
+  `mibolt-shop-frontend`.
 - **`@mi-bolt/core-api`.** The admin uses only its `resolveApiRoot` and `dismissSplash`; a change
-  to that library goes to `mibolt-cross-package-changes`.
+  to that library belongs to `mibolt-cross-package-changes`.
 
 Consult `mibolt-frontend-code-standards` when a lint or typecheck error appears, or when it is
 unclear whether a pattern is allowed here. Consult `mibolt-verification` before declaring the work
@@ -49,8 +50,13 @@ done; it owns the full check matrix, which this skill does not repeat.
   `frontend/projects/admin/src/app/api/generated/` from the same contract as the shop SDK,
   restricted to the `AdminAuth`, `AdminUsers`, `AdminProducts` and `AdminMedia` tags and without an
   `If-Match` parameter (`frontend/ng-openapi-gen.admin.json:12-13`). Import it by relative path;
-  there is no alias. Call `api.invoke(fn, params, context)`, or `invoke$Response` when a response
-  header such as `ETag` matters. Its product schemas are its own: the edit page reads
+  there is no alias. `api.invoke(fn, params, context)` returns an `Observable` of the response
+  body, and `invoke$Response` an `Observable` of the whole response, for when a response header
+  such as `ETag` matters: the config sets `"promises": false`
+  (`frontend/ng-openapi-gen.admin.json:8`), where the generator's default is a `Promise`
+  (https://github.com/cyclosproject/ng-openapi-gen). Most callers await one through
+  `firstValueFrom`; the product list's page loader and the brand list in `ProductFilters` keep the
+  `Observable`. Its product schemas are its own: the edit page reads
   `AdminProduct` and writes `AdminProductInput`, objects in `contracts/commerce/openapi.yaml`
   separate from the shop's `Product`, so a field for the admin form goes on those two and reaches
   the shop only if `Product` gets it as well.
@@ -213,9 +219,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
   (`frontend/eslint.config.mjs:26-28`), so a dynamic `import()` of the shop SDK or mocks passes
   lint and review is what keeps it out. Code two apps need moves into a library, which is
   `mibolt-cross-package-changes`'s; `mibolt-frontend-code-standards` owns the lint detail.
-- **The Angular conventions** that `mibolt-frontend-code-standards` ("Angular") lists hold here,
-  and the admin follows them throughout: signal inputs and outputs, `computed`, native control
-  flow, `@Service()` for root singletons and Signal Forms among them.
+- **The Angular conventions** that `mibolt-frontend-code-standards` ("Angular") lists hold here.
+  The admin follows five of them throughout: signal inputs and outputs, `computed`, native control
+  flow, `@Service()` for root singletons, and Signal Forms.
 - **Stores never reject.** A new store method that calls the backend returns a tagged union or sets
   a status signal, like the existing ones. Nothing enforces it but review.
 - **Hungarian UI copy, English code.** Validation text comes from
@@ -233,19 +239,21 @@ Each line names a rule and where it is written or enforced; the owner carries th
   tool's documentation for the installed version, with the URL beside the claim, and never by a
   throwaway experiment; `mibolt-frontend-code-standards` ("Framework questions") says where to
   read and what counts as measuring this repository instead.
-- **The design reference is an open question.** `frontend/docs/design/yettel.md:5` calls that
-  document "the mandatory design reference for the MiBolt frontend", yet it never mentions the
-  admin, while `frontend/projects/admin/README.md:5` and
+- **The design reference is an open question.** `mibolt-shop-frontend` ("Design authority")
+  makes `frontend/docs/design/yettel.md` the design reference for every rendered surface, and
+  `frontend/docs/design/yettel.md:5` calls that document "the mandatory design reference for the
+  MiBolt frontend", yet it never mentions the admin, while `frontend/projects/admin/README.md:5` and
   `frontend/projects/admin/README.md:70-72` describe Angular Material with the `azure-blue` theme
   and Tailwind utilities, which is what the admin's code uses. Which of the two governs an admin
   style value is the user's to settle, and this skill does not settle it. A change that needs a new
   style value puts that choice to the user, naming both sources. `mibolt-frontend-code-standards`
   records the same open question as entry C6 of its conflict register, which also names a third,
   pre-implementation source.
-- **End-to-end tests.** The admin has no Playwright spec, and the servers
-  `frontend/playwright.config.ts:26-53` starts are the storefront's and, in CI, demo-payment's,
-  never the admin's; the conventions file `frontend/e2e/seed.spec.ts:62-68` records the admin's
-  sign-in. The admin is verified by unit specs over its mocks and by the browser pass.
+- **End-to-end tests.** The admin has no Playwright spec, and the web server that
+  `frontend/playwright.config.ts:26-53` starts serves the storefront, with demo-payment's build
+  beside it on the CI static server, and never the admin; the conventions file
+  `frontend/e2e/seed.spec.ts:62-68` records the admin's sign-in. The admin is verified by unit
+  specs over its mocks and by the browser pass.
 - **A bug gets a spec** that fails before the fix and passes after it, in the same change, per
   `mibolt-verification` ("Tests and coverage").
 
@@ -366,6 +374,8 @@ Update this skill in the same change when one of these moves:
 - `frontend/projects/admin/src/app/shared/forms/`: the submit, message or server-error helpers;
 - `frontend/projects/admin/src/mocks/`: a handler's order of checks, a scenario, the seed source;
 - `frontend/ng-openapi-gen.admin.json`: the tags or the excluded `If-Match` parameter;
+- `frontend/e2e/` or `frontend/playwright.config.ts`, when a spec or a web server for the admin
+  appears;
 - `frontend/projects/admin/README.md`, and the admin's blocks in `frontend/angular.json` and
   `frontend/eslint.config.mjs`, which the line anchors here point into.
 
@@ -391,8 +401,8 @@ script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers i
 one of those three files, reread them by hand.
 
 Run it as well after any edit to a skill that this skill or its references cite a section of by
-name: today `mibolt-frontend-code-standards`, `mibolt-verification`, `mibolt-workspace-ops`, and
-this skill's own `SKILL.md`, which
+name: today `mibolt-frontend-code-standards`, `mibolt-shop-frontend`, `mibolt-verification`,
+`mibolt-workspace-ops`, and this skill's own `SKILL.md`, which
 [references/admin-architecture.md](references/admin-architecture.md) cites. Its check (e) fails
 only when a cited name no longer occurs anywhere in the cited file or skill, so it cannot see a
 section that kept its name and changed what it says: reread each section this skill or its

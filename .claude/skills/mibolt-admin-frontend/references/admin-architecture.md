@@ -128,7 +128,8 @@ The 401 round trip:
   the generated client leaves the `If-Match` parameter out (`frontend/ng-openapi-gen.admin.json:12`).
 - Archive and restore on the list send the row's `version` quoted, `"<version>"`
   (`frontend/projects/admin/src/app/features/products/list/product-list.store.ts:185-187`). The
-  edit page's save sends the `ETag` its GET returned, read through `invoke$Response`
+  edit page's save sends the `ETag` its GET returned, read from the `Observable` of the whole
+  response that `invoke$Response` returns
   (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:68-90` and
   `frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:115-150`).
 - A 412 means someone else saved first. The list answers it with a snack-bar and `retry()`; the
@@ -166,9 +167,10 @@ The 401 round trip:
 - The overview's four cards each hold a `Loadable<T>` with the kinds `loading`, `ready` and
   `error`. The type is local to
   `frontend/projects/admin/src/app/features/overview/overview.component.ts:62-65`, not shared.
-- Everything that calls the backend injects `AdminApi` and calls `invoke`, or `invoke$Response`
-  where a header such as `ETag` matters, except `MediaUploader`, which builds its upload request
-  itself (section 2). Nothing constructs `AdminApi` with `new`.
+- Everything that calls the backend injects `AdminApi` and calls `invoke`, which returns an
+  `Observable` of the response body, or `invoke$Response`, which returns an `Observable` of the
+  whole response, where a header such as `ETag` matters. The one exception is `MediaUploader`,
+  which builds its upload request itself (section 2). Nothing constructs `AdminApi` with `new`.
 
 ## 7. Locale, icons and the initial bundle
 
