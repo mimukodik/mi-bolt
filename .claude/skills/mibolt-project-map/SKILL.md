@@ -5,8 +5,12 @@ description: "MiBolt monorepo orientation: what an app, library or directory is 
 
 # MiBolt project map
 
-Every path here is relative to the repository root, and every command runs
-from there.
+A path that starts with scripts/, references/, assets/ or agents/, or is
+`SKILL.md`, is relative to this skill's directory; one that starts with a
+MiBolt skill name is relative to the directory that holds the MiBolt skills;
+every other path is relative to the repository root. Every command runs from
+the repository root, except the citation check, whose section says where it
+runs.
 
 ## Scope and hand-offs
 
@@ -19,14 +23,11 @@ whether the MiBolt skills' citations still resolve.
 - Making a change, in any area: the skill the routing table below names. Load
   that skill directly; no MiBolt skill needs this map loaded before it.
 - End-to-end specs under `frontend/e2e/` and the plans under `frontend/specs/`:
-  `playwright-tests`.
-- Committing: `git-commit`. Running a whole task through spawns, gates, commit
-  and pull request: `task-execute-workflow`. Writing to Linear:
-  `linear-conventions`.
-- Generic Angular API guidance: `angular-developer`, vendored unchanged from
-  upstream; the MiBolt skills and `CLAUDE.md` record what this repository
-  enforces and does, and a framework fact is looked up the way
-  `.claude/rules/framework-facts.md` says.
+  outside the MiBolt skills.
+- Generic Angular guidance: outside the MiBolt skills. They record what this
+  repository enforces and does; how Angular and the rest of the frontend
+  toolchain behave is read from their documentation, as
+  `mibolt-frontend-code-standards` ("Framework questions") says.
 
 ## Areas, stack and connections
 
@@ -41,13 +42,12 @@ every tracked sub-area.
 | `frontend/projects/admin/` | the back office, with its own generated client and its own MSW mocks | `mibolt-admin-frontend` |
 | `frontend/projects/shop-api/`, `frontend/projects/core-api/` | the generated shop SDK; the API-root, demo-session and splash helpers the apps share | `mibolt-cross-package-changes` |
 | `frontend/tests/` | the Node contract suite, the MSW harness, the image checks | split three ways; see the coverage register |
-| `frontend/e2e/`, `frontend/specs/` | the Playwright suite and its plans | `playwright-tests` |
+| `frontend/e2e/`, `frontend/specs/` | the Playwright suite and its plans | outside the MiBolt skills |
 | `backend/services/commerce/` | the one Spring Boot service; its requirements live in `backend/docs/` | `mibolt-commerce-backend` |
 | `contracts/commerce/` | the OpenAPI contract, samples, sequence diagrams, `contracts/commerce/kommunikacio.md` | `mibolt-cross-package-changes` |
 | `data/catalog/` | the tracked catalogue: JSON, schema, images | `mibolt-cross-package-changes` |
 | `mise.toml`, `deploy/`, `.github/` | root tasks, compose stack, Helm chart, candidate release, CI | `mibolt-workspace-ops` |
-| `tools/` | the catalogue importer, the dev-server helper, the agent-memory CLI | per sub-directory; see the coverage register |
-| `.claude/` | agent rules, skills, hooks | not product code; its rules load at launch |
+| `tools/` | the catalogue importer, the dev-server helper | per sub-directory; see the coverage register |
 
 **Stack.** Declared versions come from the manifests cited. The lockfile
 column is `frontend/package-lock.json`; the backend has no lockfile, and what
@@ -140,11 +140,6 @@ on 2026-09-26: re-measure it before relying on it.
 | `contracts/commerce/openapi.yaml`, a new or changed endpoint, field, enum or error code, `mise run api:generate`, a red `mise run api:drift`, `frontend/projects/core-api/`, the contract tests, `data/catalog/` | `mibolt-cross-package-changes` |
 | which checks a change needs, a red CI job other than an end-to-end one, the coverage floors, a focused test run, whether a browser pass is required | `mibolt-verification` |
 | a mise task, run mode, port or environment variable, compose, a Dockerfile, nginx, a workflow or path filter, the Helm chart, `tools/dev-server/`, a second stack beside the first | `mibolt-workspace-ops` |
-| writing, repairing or planning a Playwright spec, or a red end-to-end run | `playwright-tests` |
-| generic Angular guidance no MiBolt skill gives (a fact about how Angular behaves comes from the instruments in `.claude/rules/framework-facts.md`) | `angular-developer` |
-| writing to Linear: a comment, a sub-issue, an attachment | `linear-conventions` |
-| making a commit | `git-commit` |
-| running a whole task end to end | `task-execute-workflow` |
 
 A task that spans areas takes the skills in the order its change flows:
 
@@ -163,9 +158,10 @@ A task that spans areas takes the skills in the order its change flows:
    neither places it, read the coverage register.
 2. Confirm the location in the repository before relying on this map:
    `git ls-files <dir>` for what exists, `git grep -n <identifier>` for who uses
-   a symbol, spelled as the repository spells it
-   (`.claude/rules/code-standards.md`, "Grep the identifier as the repository
-   spells it").
+   a symbol. Run every spelling the repository uses before concluding a name
+   has no hits: hyphens in file names, prose and CSS, camelCase or PascalCase
+   in symbols and test ids. Under `frontend/`, `add-to-cart` and `AddToCart`
+   find different files.
 3. Load only the skills the task matches, in the order above.
 
 **Example: the free-shipping threshold shown at checkout.** The value is
@@ -193,10 +189,19 @@ the mocks.
 ## Code rules
 
 This skill carries none. Consult `mibolt-frontend-code-standards` when
-writing or reviewing TypeScript, templates or styles under `frontend/`, and
-`mibolt-backend-code-standards` when writing or reviewing Java or Gradle code
-under `backend/`. The workspace rules in `.claude/rules/code-standards.md` and
-the Angular conventions in `CLAUDE.md` are loaded at launch.
+writing or reviewing TypeScript, templates or styles under `frontend/`, the
+Angular conventions included, and `mibolt-backend-code-standards` when writing
+or reviewing Java or Gradle code under `backend/`. The rules that hold in every
+area are each stated once:
+
+- the name of a script or a script directory: `mibolt-workspace-ops`
+  ("Naming");
+- a path written into a committed file: `mibolt-workspace-ops` ("No
+  machine-specific paths");
+- running a Python tool: `mibolt-workspace-ops` ("Python tools");
+- removing a component, route, filter or feature:
+  `mibolt-frontend-code-standards` ("Removed features");
+- tests, coverage and the checks before a commit: `mibolt-verification`.
 
 ## What a change can reach
 
@@ -211,9 +216,9 @@ generated clients are regenerated, never edited by hand.
 
 Which checks a change needs, with their commands, prerequisites and side
 effects, is `mibolt-verification`'s. A change that reaches a rendered surface
-also gets the real-browser pass in `.claude/rules/browser-verification.md`. To
-list the tasks that exist, run `mise tasks --all`: it is read-only and prints
-the root and area tasks.
+is also verified in a real browser before it is called done,
+`mibolt-verification` ("Browser pass"). To list the tasks that exist, run
+`mise tasks --all`: it is read-only and prints the root and area tasks.
 
 ## References
 
@@ -247,53 +252,36 @@ the root and area tasks.
   connect";
 - a MiBolt skill added, renamed or given a new description: the routing table;
 - a document added, moved or rewritten: the docs index;
-- `.claude/skills/mibolt-project-map/scripts/check-skill-references.mjs`: its
-  header comment and `references/citation-check.md`, with both runs quoted
-  there re-measured.
+- `scripts/check-skill-references.mjs`: its header comment and
+  `references/citation-check.md`, with both runs quoted there re-measured.
 
 **Run the citation check after editing any MiBolt skill, and after moving or
 rewriting a file one cites**, because a cited path, anchor, section name or
-command goes stale silently when the repository moves. Editing the root
-`CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/hooks/CLAUDE.md`, a file under
-`.claude/rules/` or any MiBolt skill, since the skills cite one another by
-section name too, is such a rewrite: run the check with no directory
-argument, so it covers every MiBolt skill. Its check (e) fails a section cited
-there only once the quoted name occurs nowhere in the file, so a section
+command goes stale silently when the repository moves. The skills cite one
+another by section name, so after editing any of them run the check with no
+skill argument, which covers every MiBolt skill. Its check (e) fails a section
+citation only once the quoted name occurs nowhere in the target, so a section
 renamed while its old name survives elsewhere in the file, or rewritten under
-the same name, still passes. After such an edit, also reread each section a
-MiBolt skill cites from the edited file;
-`git grep -n -F '<edited file>' -- '.claude/skills/mibolt-*/*.md'` lists
-every line that names it by path, and with the skill's `mibolt-<name>` in
-place of the file, every line that names that skill. The check is
-`.claude/skills/mibolt-project-map/scripts/check-skill-references.mjs`; it is
-read-only and runs from anywhere inside the checkout.
+the same name, still passes. After rewriting a file that a MiBolt skill cites
+by section name, also reread each section cited from it;
+`git grep -n -F '<edited file>' -- ':(glob)**/mibolt-*/**/*.md'` lists every
+line of the MiBolt skills that names it by path, and with the skill's
+`mibolt-<name>` in place of the file, every line that names that skill.
+
+The check is `scripts/check-skill-references.mjs`. It is read-only, finds the
+repository root itself and runs from anywhere inside the checkout. The
+command below is written as run from this skill's directory; from anywhere
+else, name the script by its path from there.
 
 ```bash
-node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs [--show-anchors] [--no-mise] [<skill-dir> ...]
+node scripts/check-skill-references.mjs [--show-anchors] [--no-mise] [<skill name> ...]
 ```
 
 A plain run passes an anchor whose line now holds other text, as long as the
 file still has that many lines. After an edit to any file this skill or its
 references cite by `path:line`, whether or not the list at the top of this
-section names it, run the check with `--show-anchors` on this skill's
-directory and read each printed line against the sentence that cites it,
-opening the file for the rest of any range the output cuts short after ten
-lines. Its options, output format, exit codes, and the citation forms it can
-read are in `references/citation-check.md`.
-
-**Where the set lives.** The MiBolt skills are project skills under
-`.claude/skills/`, which Claude Code loads
-(https://code.claude.com/docs/en/skills). Codex scans `.agents/skills`
-directories, and its documentation names no `.claude/skills` location
-(https://learn.chatgpt.com/docs/build-skills, redirected from
-https://developers.openai.com/codex/skills/), so Codex does not see this set.
-Keep the one copy here, with no duplicate and no symlink, so there is nothing
-to drift. Each skill's `agents/openai.yaml` comes from the skill-creator's
-initialisation step and has no reader in this location. After any edit to a
-skill, not only to its description, read that file against the skill (this
-skill's `default_prompt` names the worked example), and only if it no longer
-matches, regenerate it with the `skill-creator` skill's
-`generate_openai_yaml.py`, passing `display_name`, `short_description` and
-`default_prompt` as `--interface key=value`: the script fills a missing
-`display_name` or `short_description` with a generic value and writes no
-`default_prompt` it was not given.
+section names it, run the check with `--show-anchors` on this skill,
+`mibolt-project-map`, and read each printed line against the sentence that
+cites it, opening the file for the rest of any range the output cuts short
+after ten lines. Its options, output format, exit codes, and the citation
+forms it can read are in `references/citation-check.md`.

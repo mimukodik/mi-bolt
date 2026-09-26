@@ -17,8 +17,6 @@ of the current apps.
 |---|---|---|---|
 | `README.md` | install, the run modes, ports (`README.md:229-239`), the stack and order-flow diagrams, the root command reference | English | the command table at `README.md:352-372` omits `mise run deploy:check`, which `mise.toml:100-102` defines |
 | `docs/monorepo.md` | the folder map, the root commands, the CI component filters | English | its command table at `docs/monorepo.md:30-50` omits the same task |
-| `CLAUDE.md` | Angular and TypeScript conventions and the accessibility override | English | an instruction file, loaded at launch |
-| `.claude/CLAUDE.md`, `.claude/rules/` | how agents work here: commands, commits, browser verification, framework facts, the design authority | English | loaded at launch; rules, not product documentation |
 
 ## Frontend
 
@@ -27,13 +25,12 @@ of the current apps.
 | `frontend/README.md` | the six projects, every npm script, the mock and real-backend configurations, tests, the CI jobs | English | `frontend/README.md:63` describes `fixtures:catalog:check` as "Proving the committed fixture matches the source catalogue, as CI does", and `frontend/scripts/build-catalog-fixture.mjs:15` calls that script the CI entry point; no workflow or mise task runs it, and the only comparison CI's contract suite makes between the fixture and the source catalogue is the product count (`frontend/tests/contract/schema.spec.ts:512-513`) |
 | `frontend/projects/admin/README.md` | the admin app's commands, mock backend and styling | English | not checked line by line |
 | `frontend/docs/api/README.md` | SDK generation, the shop and admin SDK split, the catalogue fixture | English | matches `frontend/ng-openapi-gen.json` and `frontend/ng-openapi-gen.admin.json` |
-| `frontend/docs/design/yettel.md`, `frontend/docs/design/yettel/` | colour, type, radii and component recipes, with the captured yettel.hu source; the design authority named in `.claude/CLAUDE.md` ("Design authority") | English | the document never mentions the admin app |
+| `frontend/docs/design/yettel.md`, `frontend/docs/design/yettel/` | colour, type, radii and component recipes, with the captured yettel.hu source; the design authority for every rendered surface, `mibolt-shop-frontend` ("Design authority") | English | the document never mentions the admin app |
 | `frontend/docs/design/README.md` | the entry to the design reference | English | records that the HTML prototype was removed on 2026-09-22 |
 | `frontend/docs/lint-relaxations.md` | which lint rules were relaxed, why, and how to reinstate one | English | — |
 | `frontend/docs/README.md` | the entry to the design and execution documents | English | written before implementation: "not a finished Angular application" (`frontend/docs/README.md:17`) |
 | `frontend/docs/spec/` | the planning package the apps were built from: architecture, components, screens, acceptance, test scenarios, test strategy, sources, technology decisions, execution rules | English | written before implementation: `frontend/docs/spec/architecture.md:3`, `frontend/docs/spec/execution-rules.md:3`, `frontend/docs/spec/acceptance.md:3` and `frontend/docs/spec/test-scenarios.md:3` describe an app not yet built; `frontend/docs/spec/testing.md:3` records the end-to-end reinstatement of 2026-09-22 while `frontend/docs/spec/testing.md:5` still says the package holds no completed app; the coverage floors in `frontend/docs/spec/testing.md:9` match `frontend/angular.json` |
-| `frontend/docs/briefs/` | archived runner briefs from 2026-09-20 | English | "a reference, not a rule" (`frontend/docs/briefs/README.md:8`); the next line names a rule file that no longer exists under `.claude/rules/` |
-| `frontend/e2e/seed.spec.ts`, `frontend/specs/` | the end-to-end conventions file and the test plans, both owned by the `playwright-tests` skill | English | `frontend/specs/README.md` is a one-line stub beside the plan files |
+| `frontend/e2e/seed.spec.ts`, `frontend/specs/` | the end-to-end conventions file and the test plans | English | `frontend/specs/README.md` is a one-line stub beside the plan files |
 
 ## Contract
 

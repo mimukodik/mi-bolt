@@ -16,7 +16,7 @@ Paths are relative to the repository root.
 - [Contract, generation and catalogue data](#contract-generation-and-catalogue-data)
 - [Backend](#backend)
 - [Deploy, CI and tools](#deploy-ci-and-tools)
-- [Harness and excluded areas](#harness-and-excluded-areas)
+- [Excluded areas](#excluded-areas)
 
 ## How to read a row
 
@@ -46,7 +46,6 @@ Paths are relative to the repository root.
 | `mise.toml`, `.gitignore`, `.gitattributes` | root task graph, tool pins, ignore and line-ending rules | `mibolt-workspace-ops` | full | — |
 | `README.md`, `docs/monorepo.md` | install and run-mode guide, ports, command and CI-filter tables | `mibolt-workspace-ops` for the tables; this skill's docs index for reading | full | both command tables omit `mise run deploy:check`, which `mise.toml:100-102` defines |
 | `.editorconfig` | editor settings | `mibolt-workspace-ops` for the file; the formatting facts sit in `mibolt-frontend-code-standards` and `mibolt-backend-code-standards` | full | — |
-| `CLAUDE.md` | Angular and TypeScript conventions, the accessibility override | existing instruction file, loaded at launch; `mibolt-frontend-code-standards` points at it | full | — |
 
 ## Frontend workspace configuration
 
@@ -63,7 +62,7 @@ Paths are relative to the repository root.
 | `frontend/scripts/build-check.mjs` with `frontend/scripts/fixtures/`, `frontend/scripts/check-app-boot.mjs`, `frontend/scripts/check-dist-free-of.mjs`, `frontend/scripts/check-budgets.mjs`, `frontend/scripts/coverage-summary.mjs` | build checks | `mibolt-verification` | headers | the full bodies; no npm script, mise task or workflow runs `frontend/scripts/check-budgets.mjs`; no npm script, mise task or workflow feeds the two sample build logs in `frontend/scripts/fixtures/` to the build check's `--input` option (`frontend/scripts/build-check.mjs:21-25`); `mibolt-verification` documents running it on them by hand |
 | `frontend/scripts/build-catalog-fixture.mjs` and its output `frontend/docs/api/fixtures/catalog.json` | catalogue fixture generator | `mibolt-cross-package-changes` | header | — |
 | `frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` | static serving | `mibolt-workspace-ops` | header | — |
-| `frontend/playwright.config.ts`, `frontend/e2e/`, `frontend/specs/` | end-to-end suite, conventions file and test plans | `playwright-tests` | fixtures full | the spec bodies |
+| `frontend/playwright.config.ts`, `frontend/e2e/`, `frontend/specs/` | end-to-end suite, conventions file and test plans | none: end-to-end work is outside the MiBolt skills | fixtures full | the spec bodies |
 
 ## Storefront
 
@@ -73,7 +72,7 @@ Paths are relative to the repository root.
 | the `home`, `not-found`, `demo-sign-in` and `primitives-showcase` folders of `frontend/projects/storefront/src/app/features/` | utility pages | `mibolt-shop-frontend` | names only | their contents |
 | `frontend/projects/storefront/src/app/core/navigation/`, `frontend/projects/storefront/src/app/layouts/`, `frontend/projects/storefront/src/app/shared/`, `frontend/projects/storefront/src/styles/` | chrome, UI primitives, helpers, design tokens (values from `frontend/docs/design/yettel.md`) | `mibolt-shop-frontend` | sampled | 11 of the 12 primitive folders under `frontend/projects/storefront/src/app/shared/ui/`, `frontend/projects/storefront/src/styles/primitives.css`, any consumer of `cartStorageKey` and `ordersStorageKey` from `frontend/projects/storefront/src/environments/` |
 | the storefront `test` target in `frontend/angular.json`, `frontend/projects/storefront/vitest.config.ts` | test and coverage settings | `mibolt-verification` | full | — |
-| `frontend/projects/storefront/public/`, except `media/`, which has its own row under the catalogue data | the storefront's static files: the fonts, the favicon, the placeholder and four product illustrations under `assets/`, and `mockServiceWorker.js`, which the development builds of all three apps serve (`frontend/angular.json:72-77`, `frontend/angular.json:184-189`, `frontend/angular.json:309-312`) | `mibolt-shop-frontend` | names only | — |
+| `frontend/projects/storefront/public/`, except `media/`, which has its own row under the catalogue data | the storefront's static files: the fonts, the favicon, the placeholder and four product illustrations under `frontend/projects/storefront/public/assets/`, and `mockServiceWorker.js`, which the development builds of all three apps serve (`frontend/angular.json:72-77`, `frontend/angular.json:184-189`, `frontend/angular.json:309-312`) | `mibolt-shop-frontend` | names only | — |
 
 ## Shop libraries, demo payment and core-api
 
@@ -96,11 +95,10 @@ Paths are relative to the repository root.
 
 | Area | Responsibility | Owner | Depth | Unknowns |
 |---|---|---|---|---|
-| `frontend/docs/design/yettel.md`, `frontend/docs/design/yettel/` | design authority for rendered surfaces | existing rule (`.claude/CLAUDE.md`, "Design authority"); `mibolt-shop-frontend` consumes it | existence | whether it binds the admin and demo-payment apps: `.claude/CLAUDE.md` names it the reference for every rendered surface, while the document never mentions the admin app, which uses Angular Material's azure-blue theme |
+| `frontend/docs/design/yettel.md`, `frontend/docs/design/yettel/` | design authority for every rendered surface | `mibolt-shop-frontend` ("Design authority") | existence | whether it binds the admin and demo-payment apps in practice: it is the reference for every rendered surface, yet the document never mentions the admin app, which uses Angular Material's azure-blue theme (`frontend/projects/admin/src/material-theme.scss:13`) |
 | `frontend/README.md`, `frontend/docs/README.md`, `frontend/docs/spec/`, `frontend/projects/admin/README.md`, `frontend/docs/design/README.md`, `frontend/docs/design/asset-manifest.json`, `frontend/docs/design/assets/` | frontend documents; the demo device illustrations the design README describes, with their manifest | this skill's docs index | partial | currency, recorded per document in the docs index |
 | `frontend/docs/api/README.md` | SDK and fixture documentation | `mibolt-cross-package-changes` | full | — |
 | `frontend/docs/lint-relaxations.md` | lint relaxation history | `mibolt-frontend-code-standards` | full | — |
-| `frontend/docs/briefs/` | archived runner briefs | excluded: "a reference, not a rule" (`frontend/docs/briefs/README.md:8`) | — | — |
 
 ## Contract, generation and catalogue data
 
@@ -121,7 +119,7 @@ Paths are relative to the repository root.
 | Java conventions across `backend/services/commerce/src/`: naming, logging, nulls, formatting, `Clock`, money | observed code patterns | `mibolt-backend-code-standards` | measured by grep | whether the tab-versus-space conflict with `.editorconfig` is intended |
 | `backend/README.md`, `backend/docs/02-backend.md` §4 invariants and §8 decisions, `backend/docs/04-adatbazis.md`, `backend/docs/decisions/`, the service under `backend/services/commerce/src/main/`, the test harness under `backend/services/commerce/src/test/`, `backend/services/commerce/scripts/smoke.sh` | service behaviour: domains, security, errors, data and migrations, configuration | `mibolt-commerce-backend` | mostly full; 16 of 22 decisions by title only; 1 of 11 changesets in full; the admin package code not read | CORS configuration, `WebMvcConfig`, the run order of `DemoAccessBootstrap`, JUnit 5.11.4 versus 6.0.3 on the test classpath, `variantSlug` uniqueness in the migrations, the admin package internals, the test counts recorded in decision 0011 |
 | `backend/services/commerce/build.gradle:141-218` | unit, integration and JaCoCo gates | `mibolt-verification` | full | — |
-| `backend/mise.toml`, `backend/services/commerce/Dockerfile`, `backend/services/commerce/Dockerfile.dockerignore`, `backend/gradlew`, `backend/gradlew.bat`, `backend/gradle/wrapper/`, `backend/services/commerce/gradle/wrapper/gradle-wrapper.properties`, `backend/.gitattributes`, `backend/.gitignore`, `backend/docs/06-uzembe-helyezes.md` | area tasks, image, the Gradle wrapper, manual server deployment; `backend/services/commerce/gradle/wrapper/gradle-wrapper.properties` is a tracked symlink to `backend/gradle/wrapper/gradle-wrapper.properties`, which commit `30985558` added so spring-tools finds the commerce Gradle wrapper (MIM-412) | `mibolt-workspace-ops` | full, except the deployment document | `backend/docs/06-uzembe-helyezes.md` not read in full |
+| `backend/mise.toml`, `backend/services/commerce/Dockerfile`, `backend/services/commerce/Dockerfile.dockerignore`, `backend/gradlew`, `backend/gradlew.bat`, `backend/gradle/wrapper/`, `backend/services/commerce/gradle/wrapper/gradle-wrapper.properties`, `backend/.gitattributes`, `backend/.gitignore`, `backend/docs/06-uzembe-helyezes.md` | area tasks, image, the Gradle wrapper, manual server deployment; `backend/services/commerce/gradle/wrapper/gradle-wrapper.properties` is a tracked symlink to `backend/gradle/wrapper/gradle-wrapper.properties`, added in commit `30985558` | `mibolt-workspace-ops` | full, except the deployment document | `backend/docs/06-uzembe-helyezes.md` not read in full |
 | `backend/settings.gradle`, `backend/services/commerce/build.gradle:1-37` | the one Gradle subproject, the plugin versions, the Java toolchain, the declared dependencies | `mibolt-commerce-backend`, as files | full | the resolved dependency graph, which has no lockfile |
 
 ## Deploy, CI and tools
@@ -130,16 +128,10 @@ Paths are relative to the repository root.
 |---|---|---|---|---|
 | `deploy/compose.yaml`, `deploy/compose.sh`, `deploy/stack.sh`, `deploy/.env.example`, `deploy/helm/mi-bolt/`, `deploy/candidate/`, `deploy/tests/` | the container stack, the per-worktree stack, the Helm chart, candidate build and release | `mibolt-workspace-ops` | documents and compose full | the Helm templates, `deploy/helm/mi-bolt/values.schema.json`, the Python bodies under `deploy/candidate/` and `deploy/tests/`, `deploy/stack.sh` beyond its header |
 | `.github/components.yml`, `.github/workflows/` | CI pipeline and path filters | `mibolt-workspace-ops` for the content; `mibolt-verification` maps jobs to local commands | 7 of 11 workflow files full | `.github/workflows/smoke.yml` beyond its first job; `.github/workflows/preview-smoke.yml`, `.github/workflows/close-bolt-preview.yml` and `.github/workflows/stable-smoke.yml` read for their triggers only |
-| `tools/mise.toml`, `tools/package.json`, `tools/package-lock.json`, `tools/tsconfig.json`, `tools/dev-server/`, `tools/install-spring-tools-mcp.sh` | the tools workspace wiring and dev tooling | `mibolt-workspace-ops`, the manifest, lockfile and tsconfig as files | full / partial | — |
-| `tools/agent-memory/`, `tools/agent-memory.ts` | the shared-memory CLI | excluded: `.claude/CLAUDE.md` ("Shared memory") owns it | sampled | — |
+| `tools/dev-server/`, `tools/mise.toml`, `tools/package.json`, `tools/package-lock.json`, `tools/tsconfig.json` | the dev-server helper, and the tools workspace that installs, typechecks and tests it and the catalogue importer | `mibolt-workspace-ops`, the manifest, lockfile and tsconfig as files | full / partial | — |
 
-## Harness and excluded areas
+## Excluded areas
 
 | Area | Responsibility | Owner | Depth | Unknowns |
 |---|---|---|---|---|
-| `.claude/CLAUDE.md`, `.claude/rules/` | the agents' operating rules | excluded: rules, not the product; loaded at launch, pointed at and never copied | full | — |
-| `.claude/agents/`, `.claude/hooks/`, `.claude/settings.json`, `.claude/shared-memory/`, `.claude/retrospectives/`, the skills under `.claude/skills/` that are not MiBolt's | the agent harness | excluded: not the product | names only | — |
-| `.claude/skills/playwright-tests/` | the end-to-end workflow skill | existing skill, a routing target | partial | — |
-| `.mcp.json` | the MCP server registry | excluded | names only | — |
 | `.idea/` | IDE settings | excluded | — | — |
-| the `mibolt-*` skills under `.claude/skills/` | whether their citations still resolve | this skill, through `.claude/skills/mibolt-project-map/scripts/check-skill-references.mjs` | — | whether an anchored line still says what a skill claims, which a reader judges |
