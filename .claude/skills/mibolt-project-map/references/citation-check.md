@@ -138,11 +138,12 @@ directories and instruction-file names, assistant, vendor and model names,
 the words for handing work to another agent, agent definition names, the
 tool-protocol prefix and acronym, a browser-automation server's name,
 assistant tool names, and the names of skills and tooling outside the MiBolt
-set. The list itself lives only in the script's header comment; writing its
-entries here would fail this file. There is no exemption marker and no flag
-that turns it off, so a forbidden name fails in a code block, in a quotation
-and as an example of what not to write alike. The skill's scripts and the
-metadata file under `agents/` are not scanned.
+set. The list is written out in the script's header comment and enforced by
+the pattern list in its code; writing its entries here would fail this file.
+There is no exemption marker and no flag that turns it off, so a forbidden
+name fails in a code block, in a quotation and as an example of what not to
+write alike. The skill's scripts and the metadata file under `agents/` are not
+scanned.
 
 ## Output and exit codes
 
@@ -166,14 +167,14 @@ $ node scripts/check-skill-references.mjs --show-anchors mibolt-project-map
 ANCHOR SKILL.md:169 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
   50: mibolt.checkout.free-shipping-threshold-huf=30000
 ...
-mibolt-project-map: 475 checked, 0 FAIL, 0 UNVERIFIED
+mibolt-project-map: 483 checked, 0 FAIL, 0 UNVERIFIED
 
 $ node scripts/check-skill-references.mjs --no-mise mibolt-project-map
 UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
 ...
 UNVERIFIED references/citation-check.md:36 mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 475 checked, 0 FAIL, 12 UNVERIFIED
+mibolt-project-map: 483 checked, 0 FAIL, 12 UNVERIFIED
 ```
 
 ## Write citations the checker can read

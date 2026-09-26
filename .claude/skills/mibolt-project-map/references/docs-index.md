@@ -7,9 +7,8 @@ currency column means no mismatch was found, not that every line was
 checked.
 
 Where a document and the code or config disagree, the code and config are
-what runs. Name the gap in the report rather than fixing the document as a
-side change, and do not quote a pre-implementation document as a description
-of the current apps.
+what runs, and the document is out of date on that point. Do not quote a
+pre-implementation document as a description of the current apps.
 
 ## Workspace
 

@@ -1,8 +1,10 @@
 # Coverage register
 
-Every tracked area of the repository, what it is responsible for, which skill
+Every tracked area of the project, what it is responsible for, which skill
 owns it or why none does, how deeply it was mapped, and what is still unknown.
-Paths are relative to the repository root.
+A tracked path that serves how work on the repository is done, rather than the
+project itself, deliberately has no row. Paths are relative to the repository
+root, except `SKILL.md`, which is this skill's own file.
 
 ## Contents
 
@@ -35,9 +37,10 @@ Paths are relative to the repository root.
   Open the file before claiming anything about it, and do not describe a
   *sampled* or *headers* area as fully understood.
 - **A path that matches no row** falls under the closest parent directory that
-  has a row here or in the layout table of `SKILL.md`. If neither has one, the
-  area is uncovered: say so in the report, and treat it as a reason to update
-  this register.
+  has a row here or in the layout table of `SKILL.md`. If neither has one, open
+  it: a path that is part of the project is not mapped yet, which is a reason
+  to update this register, and one that only serves how the work is done stays
+  out of it.
 
 ## Workspace root
 
@@ -62,7 +65,7 @@ Paths are relative to the repository root.
 | `frontend/scripts/build-check.mjs` with `frontend/scripts/fixtures/`, `frontend/scripts/check-app-boot.mjs`, `frontend/scripts/check-dist-free-of.mjs`, `frontend/scripts/check-budgets.mjs`, `frontend/scripts/coverage-summary.mjs` | build checks | `mibolt-verification` | headers | the full bodies; no npm script, mise task or workflow runs `frontend/scripts/check-budgets.mjs`; no npm script, mise task or workflow feeds the two sample build logs in `frontend/scripts/fixtures/` to the build check's `--input` option (`frontend/scripts/build-check.mjs:21-25`); `mibolt-verification` documents running it on them by hand |
 | `frontend/scripts/build-catalog-fixture.mjs` and its output `frontend/docs/api/fixtures/catalog.json` | catalogue fixture generator | `mibolt-cross-package-changes` | header | — |
 | `frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` | static serving | `mibolt-workspace-ops` | header | — |
-| `frontend/playwright.config.ts`, `frontend/e2e/`, `frontend/specs/` | end-to-end suite, conventions file and test plans | none: end-to-end work is outside the MiBolt skills | fixtures full | the spec bodies |
+| `frontend/playwright.config.ts`, `frontend/e2e/`, `frontend/specs/` | end-to-end suite, conventions file and test plans | none for the specs and the plans, whose writing is outside the MiBolt skills; `mibolt-frontend-code-standards` for the lint rules that reach `frontend/e2e/` and `frontend/playwright.config.ts`, and for `frontend/e2e/seed.spec.ts` and `frontend/e2e/fixtures/` as code; `mibolt-verification` for the end-to-end coverage floor in `frontend/e2e/coverage-thresholds.json` | fixtures full | the spec bodies |
 
 ## Storefront
 
@@ -128,7 +131,7 @@ Paths are relative to the repository root.
 |---|---|---|---|---|
 | `deploy/compose.yaml`, `deploy/compose.sh`, `deploy/stack.sh`, `deploy/.env.example`, `deploy/helm/mi-bolt/`, `deploy/candidate/`, `deploy/tests/` | the container stack, the per-worktree stack, the Helm chart, candidate build and release | `mibolt-workspace-ops` | documents and compose full | the Helm templates, `deploy/helm/mi-bolt/values.schema.json`, the Python bodies under `deploy/candidate/` and `deploy/tests/`, `deploy/stack.sh` beyond its header |
 | `.github/components.yml`, `.github/workflows/` | CI pipeline and path filters | `mibolt-workspace-ops` for the content; `mibolt-verification` maps jobs to local commands | 7 of 11 workflow files full | `.github/workflows/smoke.yml` beyond its first job; `.github/workflows/preview-smoke.yml`, `.github/workflows/close-bolt-preview.yml` and `.github/workflows/stable-smoke.yml` read for their triggers only |
-| `tools/dev-server/`, `tools/mise.toml`, `tools/package.json`, `tools/package-lock.json`, `tools/tsconfig.json` | the dev-server helper, and the tools workspace that installs, typechecks and tests it and the catalogue importer | `mibolt-workspace-ops`, the manifest, lockfile and tsconfig as files | full / partial | — |
+| `tools/dev-server/`, `tools/mise.toml`, `tools/package.json`, `tools/package-lock.json`, `tools/tsconfig.json` | the dev-server helper and its test, and the tools workspace, which installs the dependencies of that test and of the catalogue importer, typechecks both and runs that test; the importer has no tests | `mibolt-workspace-ops`, the manifest, lockfile and tsconfig as files | full / partial | — |
 
 ## Excluded areas
 

@@ -32,7 +32,7 @@ whether the MiBolt skills' citations still resolve.
 ## Areas, stack and connections
 
 **Layout.** Each area splits further; the coverage register has a row for
-every tracked sub-area.
+every tracked sub-area of the project.
 
 | Path | What it holds | Owner |
 |---|---|---|
@@ -42,7 +42,7 @@ every tracked sub-area.
 | `frontend/projects/admin/` | the back office, with its own generated client and its own MSW mocks | `mibolt-admin-frontend` |
 | `frontend/projects/shop-api/`, `frontend/projects/core-api/` | the generated shop SDK; the API-root, demo-session and splash helpers the apps share | `mibolt-cross-package-changes` |
 | `frontend/tests/` | the Node contract suite, the MSW harness, the image checks | split three ways; see the coverage register |
-| `frontend/e2e/`, `frontend/specs/` | the Playwright suite and its plans | outside the MiBolt skills |
+| `frontend/e2e/`, `frontend/specs/` | the Playwright suite and its plans | the specs and plans are outside the MiBolt skills; see the coverage register |
 | `backend/services/commerce/` | the one Spring Boot service; its requirements live in `backend/docs/` | `mibolt-commerce-backend` |
 | `contracts/commerce/` | the OpenAPI contract, samples, sequence diagrams, `contracts/commerce/kommunikacio.md` | `mibolt-cross-package-changes` |
 | `data/catalog/` | the tracked catalogue: JSON, schema, images | `mibolt-cross-package-changes` |
@@ -159,9 +159,9 @@ A task that spans areas takes the skills in the order its change flows:
 2. Confirm the location in the repository before relying on this map:
    `git ls-files <dir>` for what exists, `git grep -n <identifier>` for who uses
    a symbol. Run every spelling the repository uses before concluding a name
-   has no hits: hyphens in file names, prose and CSS, camelCase or PascalCase
-   in symbols and test ids. Under `frontend/`, `add-to-cart` and `AddToCart`
-   find different files.
+   has no hits: hyphens in file names, prose, CSS and `data-testid` values,
+   camelCase or PascalCase in symbols. Under `frontend/`, `add-to-cart` and
+   `AddToCart` find different files.
 3. Load only the skills the task matches, in the order above.
 
 **Example: the free-shipping threshold shown at checkout.** The value is
@@ -223,11 +223,11 @@ is also verified in a real browser before it is called done,
 ## References
 
 - [references/coverage-register.md](references/coverage-register.md): every
-  tracked area with its responsibility, its owner or the reason it has none,
-  how deeply it was mapped, and what is unknown. **Read when** a path matches
-  nothing in the layout table, when the routing table does not settle who owns
-  something, before calling an area fully understood, or when updating any
-  MiBolt skill.
+  tracked area of the project with its responsibility, its owner or the reason
+  it has none, how deeply it was mapped, and what is unknown. **Read when** a
+  path matches nothing in the layout table, when the routing table does not
+  settle who owns something, before calling an area fully understood, or when
+  updating any MiBolt skill.
 - [references/docs-index.md](references/docs-index.md): the authoritative
   document for each area, its language, and where it no longer matches the
   code. **Read when** the answer is in a document rather than in code, or
