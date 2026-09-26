@@ -61,7 +61,8 @@
   },
   "includeCoAuthoredBy": false,
   "env": {
-    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "48"
   },
   "feedbackDrafts": "off",
   "outputStyle": "Concise",
@@ -73,5 +74,5 @@
     "spring-tools",
     "exa",
     "docmost"
-  ]
+  ],  "plansDirectory": ".claude/plans"
 }
