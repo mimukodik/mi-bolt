@@ -23,8 +23,8 @@ skills from its own location: every directory whose name starts with
   one ends with `not a skill directory: <arg>`.
 - `--show-anchors` also prints the current text of every line an anchor
   points at, up to ten lines per range, and never changes the exit code.
-- `--no-mise` skips mise and reports every `mise run` token and every bare
-  task name UNVERIFIED.
+- `--no-mise` skips mise and reports every `mise run` command it reads and
+  every bare task name UNVERIFIED.
 
 ## What it checks
 
@@ -61,6 +61,21 @@ path. Any other token goes to the first of these rules that fits it:
    must match at least one path. A token with a colon, no slash and no line
    anchor, such as `backend:docker`, is a mise task name instead. A token that
    fits none of the three rules is not checked at all.
+
+**Where a command is read.** A command is one of six forms: `mise run` and a
+task, `npm --prefix frontend run` or `npm --prefix tools run` and a script,
+the Gradle form above, `node` and a script path, or `uv run` then `python` and
+a script path. It is read in two places. One is a backticked token that begins
+with one of those forms, wherever the token sits, a fenced code block
+included. The other is a line of a fenced code block, opened by three or more
+backticks or tildes, with or without a language tag: its leading whitespace
+and an optional `$ ` prompt are removed, and a line ending in `\` is joined
+with the next line of the same block and reported at the line it starts on.
+The result is skipped as a placeholder or a glob, with no report and no count,
+when it holds `<` or `*`, and ignored when it begins with none of the six
+forms, a bare task name included. A path, by contrast, is read only from a
+backticked token: an unbackticked path on a fenced line is checked only as the
+script path of a command there.
 
 The script path of a `node` or `uv run ... python` command, the first word
 after `node` or `python` that is not an option, goes through rules 1 and 2 and
@@ -151,14 +166,14 @@ $ node scripts/check-skill-references.mjs --show-anchors mibolt-project-map
 ANCHOR SKILL.md:169 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
   50: mibolt.checkout.free-shipping-threshold-huf=30000
 ...
-mibolt-project-map: 472 checked, 0 FAIL, 0 UNVERIFIED
+mibolt-project-map: 475 checked, 0 FAIL, 0 UNVERIFIED
 
 $ node scripts/check-skill-references.mjs --no-mise mibolt-project-map
 UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
 ...
 UNVERIFIED references/citation-check.md:36 mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 472 checked, 0 FAIL, 12 UNVERIFIED
+mibolt-project-map: 475 checked, 0 FAIL, 12 UNVERIFIED
 ```
 
 ## Write citations the checker can read
@@ -171,10 +186,16 @@ mibolt-project-map: 472 checked, 0 FAIL, 12 UNVERIFIED
   holding a `<name>` placeholder is checked as a literal path, the script path
   in a `node` or `uv run` command is resolved by the rules above, and a
   placeholder task or script name is checked as a real one. Put a template in
-  a fenced code block instead, with no backticks around its tokens: no check
-  skips a fenced block, but the path and command checks read only backticked
-  tokens, while the hygiene check and check (f) read every line and check (e)
-  reads every backticked target followed by a quoted name, so a
+  a fenced code block instead, with no backticks around its tokens, and write
+  each placeholder in angle brackets, as in `<name>`. An unbackticked path
+  there is checked only as the script path of a command, and a command there
+  is skipped whole when `<` or `*` appears on any of its lines, continuation
+  lines included, while a placeholder written any other way, an ellipsis or a
+  bare word, is checked as a real name. The skip takes the whole command, so
+  a script path in front of the placeholder goes unchecked with it: backtick
+  that path once in the text as well, as `SKILL.md` does for this checker.
+  The hygiene check and check (f) read every line, fenced or not, and check
+  (e) reads every backticked target followed by a quoted name, so a
   section-citation template, which needs its backticks, keeps a placeholder in
   its target, as the template under the section-citation bullet below does.
   Cite a command that runs from another directory, such as a script in
