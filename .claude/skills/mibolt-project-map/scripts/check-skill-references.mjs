@@ -51,14 +51,36 @@
 //       or `/var`), `/var/folders/` (also after `/private`) and `file://` are
 //       reported as FAIL wherever a path starts with them: at the start of a
 //       line, or after whitespace or one of ` ' " ( [ { < > = : ; , |.
+//   (e) section names: after collapsing each run of whitespace (newlines
+//       included, since a citation can wrap across lines) to one space, find
+//       every citation of either shape: `<target>` ("<name>" (backticked
+//       target, optional `'s`, a space, `(`, a double-quoted name) or
+//       `<target>`, "<name>" (backticked target, a comma, a space, a
+//       double-quoted name); only the first quoted name right after the
+//       target counts. `<target>` is resolved, in this order: as a `.md`
+//       path the way (b) resolves a path token (repo-relative), and when
+//       that does not exist, relative to the skill directory (so `SKILL.md`
+//       and `references/x.md` resolve inside the skill); or, when it is a
+//       skill name `mibolt-<name>`, as that skill's SKILL.md plus all its
+//       references/*.md, concatenated. The check passes when the name,
+//       itself already whitespace-collapsed, occurs as a substring of the
+//       whitespace-collapsed target text (case-sensitive; headings, bold
+//       lead-ins and table cells all count); it fails otherwise, reason
+//       `section name not found in <target>`. A target that does not
+//       resolve is not a section failure (check (b) already reports a
+//       missing path); it is skipped entirely — no report line, no
+//       contribution to "checked".
 //
 // Output (to stdout): one line per finding,
 //   `FAIL|UNVERIFIED <skill-relative-file>:<line> <kind> <token> — <reason>`
-// followed by one summary line per skill,
+// (for kind `section`, `<token>` is `<target> "<name>"`), followed by one
+// summary line per skill,
 //   `<skill>: <n> checked, <f> FAIL, <u> UNVERIFIED`
-// "checked" counts every individual (a)/(b)/(c) check plus every hygiene
+// "checked" counts every individual (a)/(b)/(c)/(e) check plus every hygiene
 // match found (a hygiene match is itself the unit of a hygiene check, since
-// there is no separate notion of a hygiene check that passed).
+// there is no separate notion of a hygiene check that passed); a section
+// citation whose target does not resolve counts toward neither "checked",
+// FAIL nor UNVERIFIED.
 //
 // Diagnostics and usage/prerequisite errors go to stderr.
 //
@@ -337,6 +359,95 @@ const HYGIENE_PATTERNS = [
   { token: 'file://', re: /file:\/\// },
 ];
 
+// Collapses every run of whitespace (newlines included) in `text` to a
+// single space, and returns, alongside the collapsed string, an index map
+// from each collapsed-string offset back to the original-string offset it
+// came from (a whitespace run maps to the offset of its first character).
+function collapseWhitespace(text) {
+  let collapsed = '';
+  const indexMap = [];
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    if (/\s/.test(text[i])) {
+      const start = i;
+      while (i < n && /\s/.test(text[i])) i += 1;
+      collapsed += ' ';
+      indexMap.push(start);
+    } else {
+      indexMap.push(i);
+      collapsed += text[i];
+      i += 1;
+    }
+  }
+  return { collapsed, indexMap };
+}
+
+function buildLineOffsets(text) {
+  const offsets = [0];
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '\n') offsets.push(i + 1);
+  }
+  return offsets;
+}
+
+function lineNumberAtOffset(offsets, index) {
+  let lo = 0;
+  let hi = offsets.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (offsets[mid] <= index) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo + 1;
+}
+
+// (e) section-name citations: `` `<target>` ("<name>" `` (optionally with a
+// `'s` between the backticked target and the space) or
+// `` `<target>`, "<name>" ``. Matched against the whitespace-collapsed text,
+// so the captured `<name>` group is itself already whitespace-collapsed.
+const SECTION_CITATION_RE = /`([^`]+)`(?:'s)? \("([^"]*)"|`([^`]+)`, "([^"]*)"/g;
+
+function classifySectionTarget(target) {
+  if (target.startsWith('mibolt-') && !target.includes('/') && !target.endsWith('.md')) {
+    return 'skill';
+  }
+  return 'path';
+}
+
+// Resolves a `.md`-path (or any other path) section target the way check
+// (b) resolves a path token (repo-relative, anchor stripped), and when that
+// does not exist, relative to the skill directory being checked (so
+// `SKILL.md` and `references/x.md` resolve inside the skill). Returns the
+// whitespace-collapsed text of the resolved file, or null when neither
+// resolution exists.
+function resolveSectionPathText(target, repoRoot, skillDir, presentPaths) {
+  const { base } = splitAnchor(target);
+  const repoResolved = path.resolve(repoRoot, base);
+  let resolved = null;
+  if (existsSync(repoResolved) && presentPaths.has(path.relative(repoRoot, repoResolved))) {
+    resolved = repoResolved;
+  } else {
+    const skillResolved = path.resolve(skillDir, base);
+    if (existsSync(skillResolved) && presentPaths.has(path.relative(repoRoot, skillResolved))) {
+      resolved = skillResolved;
+    }
+  }
+  if (resolved === null) return null;
+  return collapseWhitespace(readFileSync(resolved, 'utf8')).collapsed;
+}
+
+// Resolves a `mibolt-<name>` skill-name section target to the
+// whitespace-collapsed, concatenated text of that skill's SKILL.md plus all
+// its references/*.md. Returns null when that skill directory does not
+// exist.
+function resolveSectionSkillTargetText(target, repoRoot) {
+  const targetSkillDir = path.join(repoRoot, '.claude', 'skills', target);
+  if (!existsSync(path.join(targetSkillDir, 'SKILL.md'))) return null;
+  const files = collectSkillFiles(targetSkillDir);
+  return files.map((f) => collapseWhitespace(readFileSync(f, 'utf8')).collapsed).join(' ');
+}
+
 function checkFile(absPath, skillDir, repoRoot, ctx, options) {
   const relToSkill = path.relative(skillDir, absPath);
   const content = readFileSync(absPath, 'utf8');
@@ -536,6 +647,36 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
       }
     }
   });
+
+  // (e) section-name citations: scanned on the whole file's
+  // whitespace-collapsed text, since a citation can wrap across lines, so
+  // this runs once per file rather than inside the per-line loop above.
+  const { collapsed, indexMap } = collapseWhitespace(content);
+  const lineOffsets = buildLineOffsets(content);
+  SECTION_CITATION_RE.lastIndex = 0;
+  let citationMatch;
+  while ((citationMatch = SECTION_CITATION_RE.exec(collapsed))) {
+    const target = citationMatch[1] ?? citationMatch[3];
+    const name = citationMatch[2] ?? citationMatch[4];
+    const lineNo = lineNumberAtOffset(lineOffsets, indexMap[citationMatch.index]);
+
+    const targetText =
+      classifySectionTarget(target) === 'skill'
+        ? resolveSectionSkillTargetText(target, repoRoot)
+        : resolveSectionPathText(target, repoRoot, skillDir, ctx.presentPaths);
+    if (targetText === null) continue; // does not resolve; check (b) covers a missing path
+
+    checked += 1;
+    if (!targetText.includes(name)) {
+      findings.push({
+        status: 'FAIL',
+        line: lineNo,
+        kind: 'section',
+        token: `${target} "${name}"`,
+        reason: `section name not found in ${target}`,
+      });
+    }
+  }
 
   return { findings, infoLines, checked, relToSkill };
 }
