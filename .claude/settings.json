@@ -77,5 +77,31 @@
     "spring-tools",
     "exa",
     "docmost"
-  ],  "plansDirectory": ".claude/plans"
+  ],
+  "plansDirectory": ".claude/plans",
+  "enabledPlugins": {
+    "framed-output@easter-skill-framed-output": true,
+    "git@mi-skill-git": true,
+    "docmost-design@mi-skill-docmost-design": true
+  },
+  "extraKnownMarketplaces": {
+    "easter-skill-framed-output": {
+      "source": {
+        "source": "github",
+        "repo": "EggProject/easter-skill-framed-output"
+      }
+    },
+    "mi-skill-docmost-design": {
+      "source": {
+        "source": "github",
+        "repo": "mimukodik/mi-skill-docmost-design"
+      }
+    },
+    "mi-skill-git": {
+      "source": {
+        "source": "github",
+        "repo": "mimukodik/mi-skill-git"
+      }
+    }
+  }
 }
