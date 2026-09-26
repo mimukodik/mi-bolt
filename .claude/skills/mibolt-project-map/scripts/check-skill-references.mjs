@@ -57,19 +57,37 @@
 //       target, optional `'s`, a space, `(`, a double-quoted name) or
 //       `<target>`, "<name>" (backticked target, a comma, a space, a
 //       double-quoted name); only the first quoted name right after the
-//       target counts. `<target>` is resolved, in this order: as a `.md`
-//       path the way (b) resolves a path token (repo-relative), and when
-//       that does not exist, relative to the skill directory (so `SKILL.md`
-//       and `references/x.md` resolve inside the skill); or, when it is a
-//       skill name `mibolt-<name>`, as that skill's SKILL.md plus all its
-//       references/*.md, concatenated. The check passes when the name,
-//       itself already whitespace-collapsed, occurs as a substring of the
-//       whitespace-collapsed target text (case-sensitive; headings, bold
-//       lead-ins and table cells all count); it fails otherwise, reason
-//       `section name not found in <target>`. A target that does not
-//       resolve is not a section failure (check (b) already reports a
-//       missing path); it is skipped entirely — no report line, no
-//       contribution to "checked".
+//       target counts. A backticked `<target>` is read as a citation only
+//       when it matches `mibolt-<name>` (a skill name) or is a path, meaning
+//       it contains a `/` or its last segment has a file extension (a dot
+//       followed by 1-10 alphanumerics, as in `SKILL.md` or `mise.toml`);
+//       any other token followed by a quoted phrase, such as a flag or a
+//       bare value, is not a citation and is skipped with no report and no
+//       count. `<target>` is resolved, in this order: as a file path
+//       (any file, not only `.md`) the way (b) resolves a path token
+//       (repo-relative), and when that does not exist, relative to the skill
+//       directory (so `SKILL.md` and `references/x.md` resolve inside the
+//       skill); or, when it is a skill name `mibolt-<name>`, as that skill's
+//       SKILL.md plus all its references/*.md, concatenated. Four cases:
+//       - the target resolves to a directory: reported UNVERIFIED, reason
+//         "section target is a directory"; the name is not checked.
+//       - the target is a `mibolt-<name>` skill name with no such skill
+//         (no `.claude/skills/<name>/SKILL.md`): reported FAIL, reason
+//         "no such skill".
+//       - the target is a path that resolves neither repo-relative nor
+//         skill-relative: skipped entirely (no report line, no contribution
+//         to "checked") when its first path segment is a top-level entry of
+//         `git ls-files` (check (b) already reports that same token) or when
+//         the target contains `<` or `*` (a placeholder or a glob, as in a
+//         documentation template); otherwise reported FAIL, reason "section
+//         target not found".
+//       - the target resolves to a file: the check passes when the name,
+//         itself already whitespace-collapsed, occurs as a substring of the
+//         whitespace-collapsed target text (case-sensitive; headings, bold
+//         lead-ins and table cells all count); it fails otherwise, reason
+//         `section name not found in <target>`.
+//       Every case above except the two silent skips counts toward
+//       "checked", whether it reports FAIL, UNVERIFIED, or nothing (a pass).
 //
 // Output (to stdout): one line per finding,
 //   `FAIL|UNVERIFIED <skill-relative-file>:<line> <kind> <token> — <reason>`
@@ -78,9 +96,9 @@
 //   `<skill>: <n> checked, <f> FAIL, <u> UNVERIFIED`
 // "checked" counts every individual (a)/(b)/(c)/(e) check plus every hygiene
 // match found (a hygiene match is itself the unit of a hygiene check, since
-// there is no separate notion of a hygiene check that passed); a section
-// citation whose target does not resolve counts toward neither "checked",
-// FAIL nor UNVERIFIED.
+// there is no separate notion of a hygiene check that passed); the two
+// silent-skip cases in (e) count toward neither "checked", FAIL nor
+// UNVERIFIED.
 //
 // Diagnostics and usage/prerequisite errors go to stderr.
 //
@@ -408,19 +426,26 @@ function lineNumberAtOffset(offsets, index) {
 // so the captured `<name>` group is itself already whitespace-collapsed.
 const SECTION_CITATION_RE = /`([^`]+)`(?:'s)? \("([^"]*)"|`([^`]+)`, "([^"]*)"/g;
 
+const SKILL_NAME_RE = /^mibolt-[a-z0-9-]+$/;
+const PATH_TARGET_EXTENSION_RE = /\.[A-Za-z0-9]{1,10}$/;
+
+// A citation target is a skill name when it matches `mibolt-<name>`; a path
+// target only when it contains a `/` or its last segment has a file
+// extension (a dot followed by 1-10 alphanumerics, e.g. `SKILL.md`,
+// `mise.toml`); any other token is not a citation at all.
 function classifySectionTarget(target) {
-  if (target.startsWith('mibolt-') && !target.includes('/') && !target.endsWith('.md')) {
-    return 'skill';
-  }
-  return 'path';
+  if (SKILL_NAME_RE.test(target)) return 'skill';
+  if (target.includes('/') || PATH_TARGET_EXTENSION_RE.test(target)) return 'path';
+  return 'none';
 }
 
-// Resolves a `.md`-path (or any other path) section target the way check
-// (b) resolves a path token (repo-relative, anchor stripped), and when that
-// does not exist, relative to the skill directory being checked (so
-// `SKILL.md` and `references/x.md` resolve inside the skill). Returns the
-// whitespace-collapsed text of the resolved file, or null when neither
-// resolution exists.
+// Resolves a file-path (any file, not only `.md`) section target the way
+// check (b) resolves a path token (repo-relative, anchor stripped), and when
+// that does not exist, relative to the skill directory being checked (so
+// `SKILL.md` and `references/x.md` resolve inside the skill). Returns
+// `{ found: false }` when neither resolution exists, `{ found: true,
+// isDirectory: true }` when the resolved target is a directory, or
+// `{ found: true, text }` with the whitespace-collapsed file text.
 function resolveSectionPathText(target, repoRoot, skillDir, presentPaths) {
   const { base } = splitAnchor(target);
   const repoResolved = path.resolve(repoRoot, base);
@@ -433,8 +458,9 @@ function resolveSectionPathText(target, repoRoot, skillDir, presentPaths) {
       resolved = skillResolved;
     }
   }
-  if (resolved === null) return null;
-  return collapseWhitespace(readFileSync(resolved, 'utf8')).collapsed;
+  if (resolved === null) return { found: false };
+  if (statSync(resolved).isDirectory()) return { found: true, isDirectory: true };
+  return { found: true, text: collapseWhitespace(readFileSync(resolved, 'utf8')).collapsed };
 }
 
 // Resolves a `mibolt-<name>` skill-name section target to the
@@ -659,20 +685,68 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
     const target = citationMatch[1] ?? citationMatch[3];
     const name = citationMatch[2] ?? citationMatch[4];
     const lineNo = lineNumberAtOffset(lineOffsets, indexMap[citationMatch.index]);
+    const citationToken = `${target} "${name}"`;
+    const targetKind = classifySectionTarget(target);
+    if (targetKind === 'none') continue; // not a citation: a flag or a bare value
 
-    const targetText =
-      classifySectionTarget(target) === 'skill'
-        ? resolveSectionSkillTargetText(target, repoRoot)
-        : resolveSectionPathText(target, repoRoot, skillDir, ctx.presentPaths);
-    if (targetText === null) continue; // does not resolve; check (b) covers a missing path
+    if (targetKind === 'skill') {
+      const targetText = resolveSectionSkillTargetText(target, repoRoot);
+      checked += 1;
+      if (targetText === null) {
+        findings.push({
+          status: 'FAIL',
+          line: lineNo,
+          kind: 'section',
+          token: citationToken,
+          reason: 'no such skill',
+        });
+      } else if (!targetText.includes(name)) {
+        findings.push({
+          status: 'FAIL',
+          line: lineNo,
+          kind: 'section',
+          token: citationToken,
+          reason: `section name not found in ${target}`,
+        });
+      }
+      continue;
+    }
 
-    checked += 1;
-    if (!targetText.includes(name)) {
+    const result = resolveSectionPathText(target, repoRoot, skillDir, ctx.presentPaths);
+    if (!result.found) {
+      // Same first-segment test as (b) (line 574-576 above): when it is a
+      // top-level repo entry, (b) already reports this same backticked
+      // token, so this stays silent; a placeholder/glob target is also
+      // silent since it is not meant to resolve.
+      const firstSegment = target.split('/')[0].split(':')[0];
+      if (ctx.topLevelEntries.has(firstSegment)) continue;
+      if (target.includes('<') || target.includes('*')) continue;
+      checked += 1;
       findings.push({
         status: 'FAIL',
         line: lineNo,
         kind: 'section',
-        token: `${target} "${name}"`,
+        token: citationToken,
+        reason: 'section target not found',
+      });
+      continue;
+    }
+
+    checked += 1;
+    if (result.isDirectory) {
+      findings.push({
+        status: 'UNVERIFIED',
+        line: lineNo,
+        kind: 'section',
+        token: citationToken,
+        reason: 'section target is a directory',
+      });
+    } else if (!result.text.includes(name)) {
+      findings.push({
+        status: 'FAIL',
+        line: lineNo,
+        kind: 'section',
+        token: citationToken,
         reason: `section name not found in ${target}`,
       });
     }
