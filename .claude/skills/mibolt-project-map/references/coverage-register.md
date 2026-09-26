@@ -37,9 +37,10 @@ root, except `SKILL.md`, which is this skill's own file.
   Open the file before claiming anything about it, and do not describe a
   *sampled* or *headers* area as fully understood.
 - **A path that matches no row** falls under the closest parent directory that
-  has a row here or in the layout table of `SKILL.md`. If neither has one, open
-  it: a path that is part of the project is not mapped yet, which is a reason
-  to update this register, and one that only serves how the work is done stays
+  has a row here or in the layout table of `SKILL.md`. If neither has one, or
+  the row it falls under only sends the reader back to this register, open it:
+  a path that is part of the project is not mapped yet, which is a reason to
+  update this register, and one that only serves how the work is done stays
   out of it.
 
 ## Workspace root
@@ -65,7 +66,7 @@ root, except `SKILL.md`, which is this skill's own file.
 | `frontend/scripts/build-check.mjs` with `frontend/scripts/fixtures/`, `frontend/scripts/check-app-boot.mjs`, `frontend/scripts/check-dist-free-of.mjs`, `frontend/scripts/check-budgets.mjs`, `frontend/scripts/coverage-summary.mjs` | build checks | `mibolt-verification` | headers | the full bodies; no npm script, mise task or workflow runs `frontend/scripts/check-budgets.mjs`; no npm script, mise task or workflow feeds the two sample build logs in `frontend/scripts/fixtures/` to the build check's `--input` option (`frontend/scripts/build-check.mjs:21-25`); `mibolt-verification` documents running it on them by hand |
 | `frontend/scripts/build-catalog-fixture.mjs` and its output `frontend/docs/api/fixtures/catalog.json` | catalogue fixture generator | `mibolt-cross-package-changes` | header | — |
 | `frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` | static serving | `mibolt-workspace-ops` | header | — |
-| `frontend/playwright.config.ts`, `frontend/e2e/`, `frontend/specs/` | end-to-end suite, conventions file and test plans | none for the specs and the plans, whose writing is outside the MiBolt skills; `mibolt-frontend-code-standards` for the lint rules that reach `frontend/e2e/` and `frontend/playwright.config.ts`, and for `frontend/e2e/seed.spec.ts` and `frontend/e2e/fixtures/` as code; `mibolt-verification` for the end-to-end coverage floor in `frontend/e2e/coverage-thresholds.json` | fixtures full | the spec bodies |
+| `frontend/playwright.config.ts`, `frontend/e2e/`, `frontend/specs/` | end-to-end suite, conventions file and test plans | none for the specs, the plans and the suite's own settings in `frontend/playwright.config.ts`, its projects and web servers among them, which are outside the MiBolt skills; `mibolt-frontend-code-standards` for the lint rules that reach `frontend/e2e/` and `frontend/playwright.config.ts`, and for `frontend/e2e/seed.spec.ts` and `frontend/e2e/fixtures/` as code; `mibolt-verification` for the end-to-end coverage floor in `frontend/e2e/coverage-thresholds.json` | fixtures full | the spec bodies |
 
 ## Storefront
 
@@ -135,6 +136,6 @@ root, except `SKILL.md`, which is this skill's own file.
 
 ## Excluded areas
 
-| Area | Responsibility | Owner | Depth | Unknowns |
-|---|---|---|---|---|
-| `.idea/` | IDE settings | excluded | — | — |
+No row: a tracked path that only serves how the work is done, such as the IDE
+settings under `.idea/`, stays out of this register, as "How to read a row"
+says for a path that matches no row.

@@ -167,14 +167,14 @@ $ node scripts/check-skill-references.mjs --show-anchors mibolt-project-map
 ANCHOR SKILL.md:169 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
   50: mibolt.checkout.free-shipping-threshold-huf=30000
 ...
-mibolt-project-map: 483 checked, 0 FAIL, 0 UNVERIFIED
+mibolt-project-map: 484 checked, 0 FAIL, 0 UNVERIFIED
 
 $ node scripts/check-skill-references.mjs --no-mise mibolt-project-map
 UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
 ...
 UNVERIFIED references/citation-check.md:36 mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 483 checked, 0 FAIL, 12 UNVERIFIED
+mibolt-project-map: 484 checked, 0 FAIL, 12 UNVERIFIED
 ```
 
 ## Write citations the checker can read
