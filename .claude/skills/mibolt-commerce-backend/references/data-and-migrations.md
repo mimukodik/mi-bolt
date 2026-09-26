@@ -106,21 +106,21 @@ until it is reset; resetting it is `mibolt-workspace-ops`.
 
 ## The changelog check script
 
-`.claude/skills/mibolt-commerce-backend/scripts/check-liquibase-changelog.py`,
+`scripts/check-liquibase-changelog.py`, in this skill's directory, is
 read-only: it reads the changelog YAML and runs only `git rev-parse` and
 `git diff --name-status`. Run it from the repository root of the checkout to
-check; it finds the root with `git rev-parse --show-toplevel` from the working
-directory.
+check, naming the script by its path from there; it finds the root with
+`git rev-parse --show-toplevel` from the working directory.
 
 ```bash
 uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \
-  .claude/skills/mibolt-commerce-backend/scripts/check-liquibase-changelog.py \
+  scripts/check-liquibase-changelog.py \
   --base origin/main
 ```
 
-- `--base <git-ref>` is optional. Pass the branch this work was cut from;
-  `.claude/rules/code-standards.md` ("Pre-existing") says how to name it.
-  It compares the working tree against the merge base of `<base>` and
+- `--base <git-ref>` is optional. Pass the branch this work was cut from,
+  `origin/main` for work cut straight from `main`. It compares the working
+  tree against the merge base of `<base>` and
   `HEAD` (`git diff --name-status --no-renames --merge-base <base>`), so
   committed, staged and unstaged edits count alike, a changeset this branch
   added stays new however often it is edited, and a renamed applied
@@ -176,13 +176,12 @@ FAIL applied changeset modified: backend/services/commerce/src/main/resources/db
 
 For the first, append the printed include block. The second,
 `applied changeset modified`, is also what the script prints for an applied
-changeset that was deleted or renamed. Either way, where the change is this
-work's own, put the file back by hand as it was at the merge base, its content,
-name and place, since `.claude/rules/session-lifecycle.md` ("Nothing is undone
-with git") rules out a git restore; then add the intended schema change, if
-any, as a new changeset. Where it is not, as with an edit a parallel session
-left in the tree, leave the file as it is and report it: that section keeps
-another's work in the tree until the user says otherwise.
+changeset that was deleted or renamed. Either way, where the edit belongs to
+the change in hand, put the file back as it was at the merge base, its
+content, name and place, then add the intended schema change, if any, as a new
+changeset. The script reads the working tree, so an edit that belongs to no
+part of the change in hand fails it as well; leave that file as it is and
+report it rather than reverting it.
 
 ## Schema validation at start, and H2 against PostgreSQL
 

@@ -141,7 +141,7 @@ consumed, so contract drift is caught independently of the generated code.
   requires, and `fieldErrors` paths that really point into the body
   (`:382-395`).
 - A bug fix comes with a test seen failing first; that rule and the coverage
-  floors belong to `mibolt-verification`.
+  floors belong to `mibolt-verification` ("Tests and coverage").
 
 ## smoke.sh
 
@@ -160,6 +160,6 @@ running backend, `BASE` defaulting to the local `/api/v1` (`:5`). It walks:
   1 MB answered 413, and sign-out (`:101-126`). This is the only run of the
   real `/api/v1` admin matcher and the real multipart limit (`:101-102`).
 
-It needs a running backend, so the orchestrator runs it, not a spawned agent;
-how and when is `mibolt-verification`. CI runs it in the `postgres-smoke` job
+It starts no backend of its own; how and when it runs is
+`mibolt-verification`'s. CI runs it in the `postgres-smoke` job
 against an empty PostgreSQL (`.github/workflows/backend.yml:175-187`).

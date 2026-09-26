@@ -12,10 +12,14 @@ description: >-
 
 # MiBolt commerce backend
 
-The Spring Boot service under `backend/services/commerce/`. Every path below
-is relative to the repository root unless its sentence names the directory it
-sits in, and every command runs from the repository root. The requirement
-documents are Hungarian;
+The Spring Boot service under `backend/services/commerce/`. A path below that
+starts with `scripts/` or `references/` is relative to this skill's directory,
+one that starts with a MiBolt skill name is relative to the directory that
+holds the MiBolt skills, and every other path is relative to the repository
+root unless its sentence names the directory it sits in. Every command runs
+from the repository root (`mibolt-workspace-ops`, "Where commands run"), and a
+script path in one that falls under either of the first two rules is given
+from the root when the command is run. The requirement documents are Hungarian;
 [references/invariants-index.md](references/invariants-index.md) is the
 English index into them.
 
@@ -26,9 +30,8 @@ its test harness, its decision records, `backend/settings.gradle`, and the
 plugin, toolchain, repositories and dependencies blocks at
 `backend/services/commerce/build.gradle:1-37`, which section 2 describes.
 Choosing or moving a plugin or dependency version is not inside, and no MiBolt
-skill carries it
-(`.claude/skills/mibolt-project-map/references/coverage-register.md`, "How to
-read a row"). Outside, and where each case goes:
+skill carries it (`mibolt-project-map/references/coverage-register.md`, "How
+to read a row"). Outside, and where each case goes:
 
 - **The contract and everything generated from it**:
   `contracts/commerce/openapi.yaml`, its samples,
@@ -274,10 +277,12 @@ A stored value adds a migration.
    and `frontend/docs/spec/test-scenarios.md:82-87`; and the Playwright plans under
    `frontend/specs/` and specs under `frontend/e2e/`, which pick products
    against the cash-on-delivery ceiling, often through a literal such as
-   `300_000`, and whose changes the `playwright-tests` skill owns. Several
-   copies carry only the number, so list them by name and by value,
-   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':!.claude' ':!frontend/docs/design/yettel'`,
-   and set aside every hit whose number means something else: a price, a timeout, or a longer number that contains it.
+   `300_000`. Several copies carry only the number, so list them by name and
+   by value,
+   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':(exclude,glob)**/mibolt-*/**' ':!frontend/docs/design/yettel'`,
+   whose first exclusion keeps the MiBolt skills' own quotations of the value
+   out, and set aside every hit whose number means something else: a price, a
+   timeout, a length, or a longer number that contains it.
 
 **A migration.**
 
@@ -382,13 +387,13 @@ Owned by `mibolt-backend-code-standards`, one line each:
   `backend/services/commerce/scripts/smoke.sh` in the same change
   ([references/testing.md](references/testing.md)).
 - **Coverage.** A new class counts against a per-class floor as well as the
-  total; the numbers are `mibolt-verification`'s.
+  total; the numbers are `mibolt-verification`'s ("Tests and coverage").
 
 ## 7. Verification
 
 Commands, from the repository root:
 
-- `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python .claude/skills/mibolt-commerce-backend/scripts/check-liquibase-changelog.py --base origin/main`:
+- `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python scripts/check-liquibase-changelog.py --base origin/main`:
   the changelog check, read-only. Pass the branch this work was cut from as
   `--base`. Exit 0 no FAIL, 1 a FAIL, 2 a usage or
   prerequisite error. Needs uv, git 2.30 or later, and PyYAML 6.0.2 fetched
@@ -401,28 +406,15 @@ Commands, from the repository root:
   does it anyway.
 - `backend/gradlew -p backend :services:commerce:build`: the full gate, unit
   and integration tests, PMD and coverage; when to run it and how to read it
-  is `mibolt-verification`.
+  is `mibolt-verification` ("Gates before a commit").
 
 The Gradle tasks need the Java 21 that the root `mise.toml:13` pins, and write
-under the module's `build/` directory. `smoke.sh` needs a running backend, so
-the orchestrator runs it, not a spawned agent.
+under the module's `build/` directory. `smoke.sh` starts no backend of its
+own: it runs against one that is already up.
 
-A run of the changelog check on this repository, `--base HEAD`:
-
-```text
-OK every master include resolves to a file
-OK every file under changes/ is included
-...
-OK no applied changeset under changes/ was modified or deleted since HEAD
-...
-next changeset: 0012
-new file: backend/services/commerce/src/main/resources/db/changelog/changes/0012-<description>.yaml
-append to db.changelog-master.yaml:
-  - include:
-      file: db/changelog/changes/0012-<description>.yaml
-```
-
-The full output and what each FAIL means are in
+The changelog check ends by printing the next changeset number, `0012` today,
+the new file's path and the include block to append to the master changelog.
+A full run and what each FAIL means are in
 [references/data-and-migrations.md](references/data-and-migrations.md).
 
 Done means:
@@ -441,7 +433,7 @@ Done means:
   [references/testing.md](references/testing.md) says how a test gets one for
   its own run, and when to say instead that the case is missing and why.
 - **Anything the UI displays**: also a real-browser pass on the backend-backed
-  build, per `.claude/rules/browser-verification.md`.
+  build, per `mibolt-verification` ("Browser pass").
 
 ## 8. References
 
@@ -477,8 +469,8 @@ Update this skill in the same change when any of these moves:
   `backend/services/commerce/src/test/resources/application-test.properties`
   or `backend/services/commerce/src/test/resources/catalog/catalog.json`;
 - a new domain package, or a class named here moving or being renamed;
-- a new changeset (the changeset count, and the next number in the output
-  excerpts here and in the references);
+- a new changeset (the changeset count, and the next number stated in
+  section 7 and in the references' output excerpts);
 - `ErrorCode` (the count of 26) or the handlers in `ProblemAdvice`;
 - the three filters or `AdminSecurityConfig`;
 - `backend/services/commerce/scripts/smoke.sh`;
@@ -487,12 +479,12 @@ Update this skill in the same change when any of these moves:
 Check every path, anchor and command here with:
 
 ```bash
-node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-commerce-backend
+node mibolt-project-map/scripts/check-skill-references.mjs mibolt-commerce-backend
 ```
 
-Run it with `--show-anchors` after an edit to the root `CLAUDE.md`,
-`.claude/CLAUDE.md`, a file under `.claude/rules/`, or any file this skill or
-its references cite by line or section name, listed above or not, and read each
-cited line and section there against the claim beside it: a shifted `path:N`
-passes while the file is that long, a bare `:N` after a path is neither checked
-nor printed, and a renamed section passes while its old name is still in the file.
+Run it with `--show-anchors` after an edit to any file this skill or its
+references cite by line or section name, listed above or not, a MiBolt skill
+cited by section name included, and read each cited line and section there
+against the claim beside it: a shifted `path:N` passes while the file is that
+long, a bare `:N` after a path is neither checked nor printed, and a renamed
+section passes while its old name is still in the file.
