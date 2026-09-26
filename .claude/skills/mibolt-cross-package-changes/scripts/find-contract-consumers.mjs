@@ -1,0 +1,354 @@
+#!/usr/bin/env node
+/**
+ * find-contract-consumers.mjs
+ *
+ * Purpose: given a name from the commerce OpenAPI contract (a schema, an
+ * operation, a property, or an enum value), find every place in the repo
+ * that is a candidate consumer of it, sorted into fixed buckets by area, so
+ * a contract change does not miss a consumer. Answering this by hand takes
+ * several greps with different spellings (exact, kebab-case file names,
+ * get/set accessors, upper/lower enum case) and then sorting the hits by
+ * hand; this script does both in one pass.
+ *
+ * Prerequisites: a git checkout of this repo; git; Node 26.
+ *
+ * Command (run from the repo root):
+ *   node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs \
+ *     --kind schema|property|enum|operation <Name>
+ *
+ * Exit codes:
+ *   0 - <Name> is present in the contract as <kind>, whether or not any
+ *       consumer bucket has a hit.
+ *   1 - <Name> is not present in the contract as <kind>.
+ *   2 - usage error (missing/bad --kind, bad <Name> spelling) or layout
+ *       drift (a bucket root no longer exists on disk, or the repo/git
+ *       environment itself is broken).
+ *
+ * Read-only guarantee: this script only runs `git grep` and `git ls-files`,
+ * via execFileSync with argument arrays (never a shell string), plus plain
+ * file reads with node:fs. No writes, no network. `.claude/` is excluded
+ * from every repo-wide search, so a sibling skill's draft text is never
+ * counted as a consumer.
+ *
+ * Hits are candidates, not confirmed consumers: a word match such as
+ * `getCart` also matches unrelated code such as an entity getter
+ * `CartItem.getCart`. Confirm each hit by opening it.
+ */
+
+import { execFileSync } from 'node:child_process';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+const VALID_KINDS = ['schema', 'property', 'enum', 'operation'];
+const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+const BUCKET_LABELS = {
+  1: 'contract',
+  2: 'generated shop SDK',
+  3: 'generated admin client',
+  4: 'storefront',
+  5: 'demo-payment',
+  6: 'core-api',
+  7: 'admin app',
+  8: 'admin mocks',
+  9: 'shop mocks',
+  10: 'contract tests',
+  11: 'e2e',
+  12: 'backend main',
+  13: 'backend test',
+  14: 'catalogue data and fixture',
+  15: 'docs',
+  16: 'other',
+};
+
+// Bucket roots, checked for existence up front (contract §4.7, "Buckets").
+// One entry per bucket id; each root is repo-root-relative.
+const BUCKET_ROOTS = {
+  1: [
+    'contracts/commerce/openapi.yaml',
+    'contracts/commerce/kommunikacio.md',
+    'contracts/commerce/samples',
+    'contracts/commerce/sequences',
+  ],
+  2: ['frontend/projects/shop-api/src/generated'],
+  3: ['frontend/projects/admin/src/app/api/generated'],
+  4: ['frontend/projects/storefront/src'],
+  5: ['frontend/projects/demo-payment/src'],
+  6: ['frontend/projects/core-api/src'],
+  7: ['frontend/projects/admin/src'],
+  8: ['frontend/projects/admin/src/mocks'],
+  9: ['frontend/projects/shop-mocks/src'],
+  10: ['frontend/tests/contract'],
+  11: ['frontend/e2e', 'frontend/specs'],
+  12: ['backend/services/commerce/src/main'],
+  13: ['backend/services/commerce/src/test'],
+  14: ['data/catalog', 'frontend/docs/api/fixtures'],
+  15: ['backend/docs', 'frontend/docs'],
+  // 16 (other) is the catch-all; it has no root of its own.
+};
+
+// Path classifiers in priority order (most specific first), so a path under
+// two candidate roots (e.g. the admin generated client and admin mocks are
+// both under the admin app tree) lands in the more specific bucket.
+const PATH_CLASSIFIERS = [
+  [1, (p) =>
+    p === 'contracts/commerce/openapi.yaml' ||
+    p === 'contracts/commerce/kommunikacio.md' ||
+    p.startsWith('contracts/commerce/samples/') ||
+    p.startsWith('contracts/commerce/sequences/')],
+  [2, (p) => p.startsWith('frontend/projects/shop-api/src/generated/')],
+  [3, (p) => p.startsWith('frontend/projects/admin/src/app/api/generated/')],
+  [8, (p) => p.startsWith('frontend/projects/admin/src/mocks/')],
+  [7, (p) => p.startsWith('frontend/projects/admin/src/')],
+  [4, (p) => p.startsWith('frontend/projects/storefront/src/')],
+  [5, (p) => p.startsWith('frontend/projects/demo-payment/src/')],
+  [6, (p) => p.startsWith('frontend/projects/core-api/src/')],
+  [9, (p) => p.startsWith('frontend/projects/shop-mocks/src/')],
+  [10, (p) => p.startsWith('frontend/tests/contract/')],
+  [11, (p) => p.startsWith('frontend/e2e/') || p.startsWith('frontend/specs/')],
+  [12, (p) => p.startsWith('backend/services/commerce/src/main/')],
+  [13, (p) => p.startsWith('backend/services/commerce/src/test/')],
+  [14, (p) =>
+    p.startsWith('data/catalog/') ||
+    p.startsWith('frontend/docs/api/fixtures/')],
+  [15, (p) => p.startsWith('backend/docs/') || p.startsWith('frontend/docs/')],
+];
+
+const CONTRACT_FILE = 'contracts/commerce/openapi.yaml';
+const NOT_SEARCHED_FOOTER =
+  'not searched: backend generated sources under ' +
+  'backend/services/commerce/build/generated/openapi (untracked, regenerated by the build)';
+const CANDIDATES_FOOTER =
+  'hits are candidates: confirm each ' +
+  '(a word match such as getCart also matches the entity getter CartItem.getCart)';
+
+function usageError(message) {
+  process.stderr.write(`${message}\n`);
+  process.exit(2);
+}
+
+function fatal(message) {
+  process.stderr.write(`${message}\n`);
+  process.exit(2);
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// PascalCase/camelCase -> kebab-case, e.g. "PriceRange" -> "price-range",
+// "getCart" -> "get-cart". Matches ng-openapi-gen's file naming.
+function toKebabCase(name) {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+    .toLowerCase();
+}
+
+// camelCase property -> PascalCase accessor suffix, e.g. "amount" -> "Amount".
+function toPascalCase(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function runGit(repoRoot, args) {
+  try {
+    return execFileSync('git', args, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch (error) {
+    // `git grep` exits 1 when it finds nothing; that is not a failure here.
+    if (error.status === 1 && typeof error.stdout === 'string') {
+      return error.stdout;
+    }
+    fatal(`git ${args.join(' ')} failed: ${error.message}`);
+  }
+}
+
+function parseGrepOutput(output) {
+  const hits = [];
+  for (const line of output.split('\n')) {
+    if (line === '') continue;
+    const match = line.match(/^(.+?):(\d+):(.*)$/s);
+    if (!match) continue;
+    hits.push({ file: match[1], line: Number(match[2]), text: match[3] });
+  }
+  return hits;
+}
+
+function firstLine(repoRoot, relPath) {
+  try {
+    const content = readFileSync(join(repoRoot, relPath), 'utf8');
+    const nl = content.indexOf('\n');
+    return nl === -1 ? content : content.slice(0, nl);
+  } catch {
+    return '';
+  }
+}
+
+function gitGrepWord(repoRoot, pattern, pathspecs) {
+  const output = runGit(repoRoot, ['grep', '-n', '-I', '-w', '-F', '-e', pattern, '--', ...pathspecs]);
+  return parseGrepOutput(output);
+}
+
+function gitLsFiles(repoRoot, patterns) {
+  const output = runGit(repoRoot, ['ls-files', '--', ...patterns]);
+  return output
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((file) => ({ file, line: 1, text: firstLine(repoRoot, file) }));
+}
+
+function checkBucketRoots(repoRoot) {
+  for (const roots of Object.values(BUCKET_ROOTS)) {
+    for (const root of roots) {
+      if (!existsSync(join(repoRoot, root))) {
+        fatal(`bucket root missing: ${root}; the layout changed, update the script`);
+      }
+    }
+  }
+}
+
+function checkMembership(repoRoot, kind, name) {
+  const content = readFileSync(join(repoRoot, CONTRACT_FILE), 'utf8');
+  const escaped = escapeRegExp(name);
+  if (kind === 'schema') {
+    const byRef = content.includes(`#/components/schemas/${name}`);
+    const byKeyLine = new RegExp(`^ {4}${escaped}:\\s*$`, 'm').test(content);
+    return byRef || byKeyLine;
+  }
+  if (kind === 'operation') {
+    return new RegExp(`^\\s*operationId:\\s*${escaped}\\s*$`, 'm').test(content);
+  }
+  // property and enum: a whole word.
+  return new RegExp(`\\b${escaped}\\b`).test(content);
+}
+
+const WHOLE_REPO_PATHSPECS = ['.', ':!.claude'];
+
+function gatherHits(repoRoot, kind, name) {
+  const hits = [];
+
+  if (kind === 'schema') {
+    hits.push(...gitGrepWord(repoRoot, name, ['contracts']));
+    hits.push(...gitLsFiles(repoRoot, [
+      `contracts/commerce/samples/${name}.json`,
+      `contracts/commerce/samples/${name}.*.json`,
+    ]));
+    const kebab = toKebabCase(name);
+    hits.push(...gitGrepWord(repoRoot, `models/${kebab}`, WHOLE_REPO_PATHSPECS));
+    hits.push(...gitGrepWord(repoRoot, `api.model.${name};`, WHOLE_REPO_PATHSPECS));
+  } else if (kind === 'operation') {
+    hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
+    const kebab = toKebabCase(name);
+    hits.push(...gitLsFiles(repoRoot, [`*/fn/*/${kebab}.ts`]));
+  } else if (kind === 'property') {
+    const pascal = toPascalCase(name);
+    hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
+    hits.push(...gitGrepWord(repoRoot, `get${pascal}`, WHOLE_REPO_PATHSPECS));
+    hits.push(...gitGrepWord(repoRoot, `set${pascal}`, WHOLE_REPO_PATHSPECS));
+  } else if (kind === 'enum') {
+    hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
+    const upper = name.toUpperCase();
+    const lower = name.toLowerCase();
+    if (upper !== name) hits.push(...gitGrepWord(repoRoot, upper, WHOLE_REPO_PATHSPECS));
+    if (lower !== name) hits.push(...gitGrepWord(repoRoot, lower, WHOLE_REPO_PATHSPECS));
+  }
+
+  const seen = new Set();
+  const deduped = [];
+  for (const hit of hits) {
+    const key = `${hit.file}:${hit.line}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(hit);
+  }
+  return deduped;
+}
+
+function classify(file) {
+  if (file.startsWith('.claude/')) return null;
+  for (const [id, test] of PATH_CLASSIFIERS) {
+    if (test(file)) return id;
+  }
+  return 16;
+}
+
+function bucketHits(hits) {
+  const buckets = new Map();
+  for (let id = 1; id <= 16; id++) buckets.set(id, []);
+  for (const hit of hits) {
+    const id = classify(hit.file);
+    if (id === null) continue;
+    buckets.get(id).push(hit);
+  }
+  for (const list of buckets.values()) {
+    list.sort((a, b) => (a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1));
+  }
+  return buckets;
+}
+
+function report(buckets) {
+  const lines = [];
+  const emptyLabels = [];
+  for (let id = 1; id <= 16; id++) {
+    const hits = buckets.get(id);
+    const label = BUCKET_LABELS[id];
+    if (hits.length === 0) {
+      emptyLabels.push(`${id}. ${label}`);
+      continue;
+    }
+    lines.push(`${id}. ${label} (${hits.length})`);
+    for (const hit of hits) {
+      const text = hit.text.length > 160 ? hit.text.slice(0, 160) : hit.text;
+      lines.push(`  ${hit.file}:${hit.line}: ${text}`);
+    }
+  }
+  lines.push('');
+  lines.push(`empty buckets: ${emptyLabels.length ? emptyLabels.join(', ') : 'none'}`);
+  lines.push(NOT_SEARCHED_FOOTER);
+  lines.push(CANDIDATES_FOOTER);
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
+function main() {
+  const argv = process.argv.slice(2);
+  if (argv.length !== 3 || argv[0] !== '--kind') {
+    usageError(
+      'usage: find-contract-consumers.mjs --kind schema|property|enum|operation <Name>',
+    );
+  }
+  const [, kind, name] = argv;
+  if (!VALID_KINDS.includes(kind)) {
+    usageError(`--kind must be one of ${VALID_KINDS.join('|')}, got: ${kind}`);
+  }
+  if (!NAME_PATTERN.test(name)) {
+    usageError(`<Name> must match ${NAME_PATTERN}, got: ${name}`);
+  }
+
+  // Run from the repo root (prerequisite); bucket roots and the contract
+  // file are resolved relative to it. Kept as process.cwd() rather than
+  // `git rev-parse --show-toplevel` so the only git subcommands this script
+  // ever runs are `grep` and `ls-files`, per the read-only guarantee above.
+  const repoRoot = process.cwd();
+  if (!existsSync(join(repoRoot, '.git'))) {
+    fatal(`not a git checkout: ${repoRoot} has no .git; run this from the repo root`);
+  }
+
+  checkBucketRoots(repoRoot);
+
+  if (!checkMembership(repoRoot, kind, name)) {
+    process.stderr.write(
+      `${name} is not in the contract as a ${kind}; for a new one, use an existing sibling as the template (references/contract-change-chain.md)\n`,
+    );
+    process.exit(1);
+  }
+
+  const hits = gatherHits(repoRoot, kind, name);
+  const buckets = bucketHits(hits);
+  report(buckets);
+  process.exit(0);
+}
+
+main();

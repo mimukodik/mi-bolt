@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Backend Code Standards"
+  short_description: "Java and PMD rules for the MiBolt backend"
+  default_prompt: "Use $mibolt-backend-code-standards to check this service change against the backend rules."
