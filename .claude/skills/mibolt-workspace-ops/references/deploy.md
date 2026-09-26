@@ -87,7 +87,7 @@ robots file, its place in `frontend/Dockerfile`, the snippet's `X-Robots-Tag`,
 and that every location outside `/api/` includes the snippet.
 `npm --prefix frontend run test:contract` runs them, because its config
 collects `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:18`). Change
-a template rule and its spec in the same commit.
+a template rule and its spec in the same change.
 
 ## What pins the Compose build definition
 

@@ -157,9 +157,9 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    Both tables list the other 19 root tasks; `mise run deploy:check`
    (`mise.toml:100-102`) is in neither.
 6. When the workspace as a whole should pass it, add it to `verify`'s `depends`
-   (`mise.toml:67-74`). `verify` also runs checks outside the product, and a
-   run can leave a tracked file outside the change modified, so read
-   `git status` after it.
+   (`mise.toml:67-74`). What a `verify` run writes, a tracked file outside the
+   change included, is listed in `mibolt-verification` ("What a check writes
+   or starts").
 7. CI never runs a root task, so a check that CI should run also needs a step
    in its workflow; [references/ci-cd.md](references/ci-cd.md) has the shape.
    The edit itself still runs component workflows in CI, because every
@@ -240,10 +240,10 @@ argument to Compose. Then match the symptom in the table at the end of
 Run every command from the repository root, in the form its area takes:
 
 - a root task as `mise run` and its name, such as `mise run stack`; `mise tasks`
-  lists them with their descriptions. The area tasks behind them, `setup`,
-  `lint`, `test` and `build` in each of `frontend/`, `backend/` and `tools/`
-  and `check` in `contracts/`, are listed by `mise tasks --all` and run by
-  their full name, such as `mise run //frontend:build`;
+  lists them with their descriptions. The area tasks behind them, among them
+  `setup`, `lint`, `test` and `build` in each of `frontend/`, `backend/` and
+  `tools/` and `check` in `contracts/`, are listed by `mise tasks --all` and
+  run by their full name, such as `mise run //frontend:build`;
 - a script of the Angular workspace as `npm --prefix frontend run` and its
   name, such as `npm --prefix frontend run test:contract`, and one of `tools/`
   the same way, such as `npm --prefix tools run typecheck`;
@@ -259,10 +259,13 @@ npx finds its project by walking up from the directory it runs in to the first
 one holding a `package.json` or a `node_modules`
 (https://docs.npmjs.com/cli/v11/configuring-npm/folders), and the repository
 root has no `package.json`, so run there it misses the `node_modules` under
-`frontend/` and runs whatever other copy it finds, which need not be the
-version the workspace pins (measured 2026-09-26: `npx --no -- eslint --version`
-printed v10.10.0 in `frontend/` and v10.11.0 at the root). The package manager
-is npm (`frontend/package.json:37`); there is no `pnpm`.
+`frontend/` and runs a copy from outside the workspace, one that npx installs
+into npm's cache when it has none
+(https://docs.npmjs.com/cli/v11/commands/npx), which need not be the version
+the workspace pins (measured 2026-09-26: `npx --no -- eslint --version`
+printed v10.10.0 in `frontend/` and v10.11.0 at the root, from a copy already
+in npm's cache). The package manager is npm (`frontend/package.json:37`);
+there is no `pnpm`.
 
 A task, npm script or Gradle task that `mise tasks --all`, the "scripts" block
 of `frontend/package.json` or `tools/package.json`, or the Gradle build does
@@ -434,7 +437,7 @@ Check the cited paths, anchors and commands with
 `node mibolt-project-map/scripts/check-skill-references.mjs mibolt-workspace-ops`;
 add `--show-anchors` to print each anchored line's current text, so a reader
 can judge whether it still says what this skill claims. Run the checker again
-after an edit to `mibolt-verification`, whose "Browser pass" section this
-skill cites by name: its check (e) fails such a citation only once the name
-occurs nowhere in that skill, so also reread the section against the sentence
-here that cites it.
+after an edit to `mibolt-verification`, whose "Browser pass" and "What a check
+writes or starts" sections this skill cites by name: its check (e) fails such a
+citation only once the name occurs nowhere in that skill, so also reread each
+section against the sentence here that cites it.
