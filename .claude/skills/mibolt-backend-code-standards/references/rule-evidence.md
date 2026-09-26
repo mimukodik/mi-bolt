@@ -3,8 +3,9 @@
 The evidence behind the rules in `SKILL.md`: for each one, the line that states
 it, what enforces it, an example in the code, and the exceptions that exist
 today. The §9 forbidden list, with each line's enforcement, is in `SKILL.md`
-and is not repeated here. Paths are repository-relative. Counts were measured
-on 2026-09-26; section 7 gives the commands that reproduce them.
+and is not repeated here. `SKILL.md` is this skill's own; every other path is
+repository-relative. Counts were measured on 2026-09-26; section 7 gives the
+commands that reproduce them.
 
 ## Contents
 

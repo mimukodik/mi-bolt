@@ -5,10 +5,14 @@ description: "Fixing PMD violations or compile errors in MiBolt backend Java, re
 
 # MiBolt backend code standards
 
-Every path here is relative to the repository root, and every command runs
-from there. `backend/docs/02-backend.md` and `backend/docs/04-adatbazis.md` are
-written in Hungarian: the anchors point at their lines, and the English here
-summarises them without replacing them.
+A path that starts with `references/`, or is `SKILL.md`, is relative to this
+skill's directory; one that starts with a MiBolt skill name is relative to the
+directory that holds the MiBolt skills; every other path is relative to the
+repository root. Every command runs from the repository root
+(`mibolt-workspace-ops` ("Where commands run")), with any script path in it
+read by those same rules. `backend/docs/02-backend.md` and
+`backend/docs/04-adatbazis.md` are written in Hungarian: the anchors point at
+their lines, and the English here summarises them without replacing them.
 
 ## 1. Scope and hand-offs
 
@@ -99,9 +103,9 @@ google-java-format, Error Prone, NullAway, JSpecify or Lombok appears in any
    backend has neither (observed; no document forbids them), and a rule that
    is wrong for this codebase is changed in the ruleset through a decision
    (section 6) instead.
-4. Rerun `mise run //backend:lint` until it exits 0. Load
-   `mibolt-verification` before naming any other check the change needs: this
-   skill does not say which they are.
+4. Rerun `mise run //backend:lint` until it exits 0. The other checks a
+   change must pass are in `mibolt-verification` ("Gates before a commit");
+   this skill does not list them.
 
 **Fixing a compile error:** the main-code types under
 `com.example.mi_bolt_backend.api` are generated from the contract before every
@@ -121,9 +125,12 @@ section 5.
 2. Walk the review-only and observed rules in section 5, which PMD cannot
    catch. [The reference](references/rule-evidence.md) gives each one's
    source, an example and today's exceptions.
-3. Walk the §9 list at the end of section 5.
+3. Walk the §9 list at the end of section 5. A path written into code,
+   configuration or a test follows
+   `mibolt-workspace-ops` ("No machine-specific paths").
 4. Run `mise run //backend:lint` for the enforced part, and report every
-   finding with its tag.
+   finding with its tag. A finding in a file the diff does not touch is
+   judged by `mibolt-verification` ("Pre-existing failures").
 
 ## 5. The rules
 
@@ -261,8 +268,8 @@ line, with its enforcement:
 - A test built on the Docker database (`:451-452`). Review-only, as above.
 - Getting around the coverage floor by counting generated code, or switching
   it off (`:453`). Review of the JaCoCo block in
-  `backend/services/commerce/build.gradle`; the numbers belong to
-  `mibolt-verification`.
+  `backend/services/commerce/build.gradle`; the floors and their numbers are
+  in `mibolt-verification` ("Tests and coverage").
 - An undocumented decision, or a silent departure from these documents
   (`:454`). Review-only; the decision workflow belongs to
   `mibolt-commerce-backend`.
@@ -271,11 +278,12 @@ line, with its enforcement:
 
 - **A change to `backend/config/pmd/ruleset.xml` or to
   `backend/services/commerce/build.gradle:220-245` is a decision.** Record it
-  as an amendment to decision 0009 or as a new decision in the same session,
-  as §8 requires (`backend/docs/02-backend.md:405-434`); how a decision is
-  written belongs to `mibolt-commerce-backend`. A rule added to the ruleset
-  also applies to the existing code, so fix what it finds before the gate goes
-  green, as 0009's amendment did.
+  as an amendment to decision 0009 or as a new decision, together with the
+  change rather than afterwards, as §8 requires
+  (`backend/docs/02-backend.md:405-434`); how a decision is written belongs to
+  `mibolt-commerce-backend`. A rule added to the ruleset also applies to the
+  existing code, so fix what it finds before the gate goes green, as 0009's
+  amendment did.
 - **`pmdMain` skips the generated `com.example.mi_bolt_backend.api` package;
   `pmdTest` does not** (`backend/services/commerce/build.gradle:240-245`). A
   hand-written test placed in that package is linted like any other.
@@ -300,8 +308,9 @@ line, with its enforcement:
 - `backend/gradlew -p backend :services:commerce:pmdMain :services:commerce:pmdTest`:
   the same two tasks without mise, as `backend/README.md:99` gives them.
 - `backend/gradlew -p backend :services:commerce:build`: the full gate, which
-  compiles and runs the tests, PMD and the coverage check. When to run it and
-  what it leaves behind belongs to `mibolt-verification`.
+  compiles and runs the tests, PMD and the coverage check. When it must pass
+  is in `mibolt-verification` ("Gates before a commit"), and what it leaves
+  behind is in the same skill.
 
 ## 8. References
 
@@ -336,7 +345,7 @@ Update this skill in the same change as any of these:
   rule above.
 
 Then run
-`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-backend-code-standards`,
+`node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-backend-code-standards`,
 and run it as well after an edit anywhere in a file this skill or its
 reference cites by line, including the Java sources the reference cites for
 its examples: a line added or removed above a cited block moves the block off
@@ -348,8 +357,8 @@ ten lines ends in `... (+N more lines)`, so read its rest in the file. Sections
 already named; the checker neither checks nor prints those, so read each in
 that file.
 Re-run the measurement commands in the reference to refresh the counts. Run
-the checker as well after an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`
-or any file under `.claude/rules/`: its check (e) reports a section name cited
-from one of them that no longer occurs anywhere in that file, so also reread
-each section this skill cites from the edited file. What each check proves is
-in `.claude/skills/mibolt-project-map/references/citation-check.md`.
+the checker as well after an edit to `mibolt-verification` or
+`mibolt-workspace-ops`, the skills this one cites sections of by name: its
+check (e) reports a cited section name that no longer occurs anywhere in that
+skill, so also reread each section this skill cites from the edited one. What
+each check proves is in `mibolt-project-map/references/citation-check.md`.
