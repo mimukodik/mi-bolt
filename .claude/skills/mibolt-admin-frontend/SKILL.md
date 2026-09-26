@@ -35,7 +35,7 @@ These belong to the skill that owns them:
   to that library belongs to `mibolt-cross-package-changes`.
 
 Consult `mibolt-frontend-code-standards` when a lint or typecheck error appears, or when it is
-unclear whether a pattern is allowed here. Consult `mibolt-verification` before declaring the work
+unclear whether a pattern is allowed here. Consult `mibolt-verification` before calling a change
 done; it owns the full check matrix, which this skill does not repeat.
 
 ## How the admin is built
@@ -52,11 +52,11 @@ done; it owns the full check matrix, which this skill does not repeat.
   `If-Match` parameter (`frontend/ng-openapi-gen.admin.json:12-13`). Import it by relative path;
   there is no alias. `api.invoke(fn, params, context)` returns an `Observable` of the response
   body, and `invoke$Response` an `Observable` of the whole response, for when a response header
-  such as `ETag` matters: the config sets `"promises": false`
-  (`frontend/ng-openapi-gen.admin.json:8`), where the generator's default is a `Promise`
-  (https://github.com/cyclosproject/ng-openapi-gen). Most callers await one through
+  such as `ETag` matters. Both return an `Observable` because the config sets
+  `"promises": false` (`frontend/ng-openapi-gen.admin.json:8`); the generator's default is a
+  `Promise` (https://github.com/cyclosproject/ng-openapi-gen). Most callers await one through
   `firstValueFrom`; the product list's page loader and the brand list in `ProductFilters` keep the
-  `Observable`. Its product schemas are its own: the edit page reads
+  `Observable`. The client's product schemas are its own: the edit page reads
   `AdminProduct` and writes `AdminProductInput`, objects in `contracts/commerce/openapi.yaml`
   separate from the shop's `Product`, so a field for the admin form goes on those two and reaches
   the shop only if `Product` gets it as well.
@@ -236,9 +236,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
   markup as it stands, roles included, which is not extending it
   ([references/product-form.md](references/product-form.md), section 8).
 - **Framework questions** about Angular, Angular Material, Vitest or MSW are answered from that
-  tool's documentation for the installed version, with the URL beside the claim, and never by a
-  throwaway experiment; `mibolt-frontend-code-standards` ("Framework questions") says where to
-  read and what counts as measuring this repository instead.
+  tool's documentation for the installed major version, with the URL beside the claim, and never
+  by a throwaway experiment; `mibolt-frontend-code-standards` ("Framework questions") says where
+  to read and what counts as measuring this repository instead.
 - **The design reference is an open question.** `mibolt-shop-frontend` ("Design authority")
   makes `frontend/docs/design/yettel.md` the design reference for every rendered surface, and
   `frontend/docs/design/yettel.md:5` calls that document "the mandatory design reference for the
@@ -299,8 +299,9 @@ before a commit"); the admin adds its own build checks, below.
   starting at `src/app/` selects no spec, and the run then fails with "No tests found matching the
   following patterns". Run a new pattern with `--list-tests` first: it prints the spec files the
   pattern selects without building or running anything, and exits 0 even when it prints none, so
-  read the list rather than the exit status. `mibolt-verification` ("Iterate with focused runs")
-  owns why the paths resolve this way and why a focused run passes `--coverage=false`.
+  read the list rather than the exit status. `mibolt-verification` ("From a diff to green
+  checks", step 3) owns why the paths resolve this way and why a focused run passes
+  `--coverage=false`.
 - **The full unit suite**, `npm --prefix frontend run test`, runs every project with coverage on.
   It writes the admin's report to `coverage/admin/` in `frontend/`
   (`frontend/projects/admin/vitest.config.ts:6`) and holds the admin to the floor in
@@ -389,8 +390,8 @@ that line against what the text says about it:
 node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-admin-frontend
 ```
 
-The script's path resolves as the paths rule at the top of this skill says, and the script runs
-from anywhere in the repository.
+Run it from the directory that holds the MiBolt skills: the paths rule at the top of this skill
+makes the script's path relative to that directory.
 
 A range longer than ten lines ends in `... (+N more lines)`, so read its rest in the file. The
 script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers in sections
