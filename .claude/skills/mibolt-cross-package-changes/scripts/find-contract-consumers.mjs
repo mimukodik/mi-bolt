@@ -12,7 +12,8 @@
  *
  * Prerequisites: a git checkout of this repo; git; Node 26.
  *
- * Command (path relative to this skill's directory; run from the repo root):
+ * Command (run from the repository root; the script path below is relative
+ *   to this skill's directory, so give it as seen from the root):
  *   node scripts/find-contract-consumers.mjs \
  *     --kind schema|property|enum|operation <Name>
  *
