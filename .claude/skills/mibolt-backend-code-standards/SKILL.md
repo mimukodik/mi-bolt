@@ -342,9 +342,11 @@ reference cites by line, including the Java sources the reference cites for
 its examples: a line added or removed above a cited block moves the block off
 its anchor, and the check fails only once an anchor runs past the end of its
 file. It must exit 0. Settle each `UNVERIFIED` line by hand, and read each
-anchored line it prints against the claim made about it. Sections 2 and 5
-and the reference often write an anchor bare, as `:N` after a path already
-named; the checker neither checks nor prints those, so read each in that file.
+anchored line it prints against the claim made about it; a range longer than
+ten lines ends in `... (+N more lines)`, so read its rest in the file. Sections
+2 and 5 and the reference often write an anchor bare, as `:N` after a path
+already named; the checker neither checks nor prints those, so read each in
+that file.
 Re-run the measurement commands in the reference to refresh the counts. Run
 the checker as well after an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`
 or any file under `.claude/rules/`: its check (e) reports a section name cited

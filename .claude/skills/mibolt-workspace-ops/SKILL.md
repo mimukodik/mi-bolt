@@ -368,8 +368,10 @@ edit one of those, or any other file this skill or its references cite by
 it prints from that file against the claim beside it, opening the file for the
 rest of a range it cuts short: the checker passes an anchor as long as its line
 number stays inside the file, however far the text it pointed at has moved.
-Where this skill names the edited file without an anchor, nothing is printed
-for it, so reread what this skill and its references say about that file.
+Where this skill names the edited file without an anchor, or covers it only
+through a directory, as it covers `deploy/helm/mi-bolt/templates/ingress.yaml`,
+nothing is printed for it, so reread what this skill and its references say
+about that file and about each directory above it.
 
 Check the cited paths, anchors and commands with
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-workspace-ops`;

@@ -198,10 +198,11 @@ Each line names a rule and where it is written or enforced; the owner carries th
   already carries the type: the generated `invoke<P, R>` returns an `Observable<R>` of the
   operation's own response type, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>`
   (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`), so what they emit needs
-  neither an `as` nor a guard. Otherwise narrow with a guard: `isRecord`, `isProblem`, or a local
-  literal-union guard like those at
+  neither an `as` nor a guard. An `as` that narrows becomes a guard: `isRecord`, `isProblem`, or a
+  local literal-union guard like those at
   `frontend/projects/admin/src/app/features/products/list/product-list.query.ts:67-83`.
-  `mibolt-frontend-code-standards` owns the lint detail, and where `satisfies` replaces an `as`.
+  `mibolt-frontend-code-standards` owns the lint detail, what replaces an `as` that widens, and
+  where `satisfies` replaces one.
 - **No shop SDK, no shop mocks, no other app.** Importing `@mi-bolt/api/*`, `@mi-bolt/mocks/*`,
   anything under `shop-api`, or anything from `storefront` or `demo-payment` is a lint error here
   (`frontend/eslint.config.mjs:392-407`). A dynamic `import()` is linted only for the app segments
@@ -372,15 +373,18 @@ that line against what the text says about it:
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-admin-frontend
 ```
 
-The script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers in sections
+A range longer than ten lines ends in `... (+N more lines)`, so read its rest in the file. The
+script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers in sections
 4, 5, 7 and 8 of [references/product-form.md](references/product-form.md), which point into
 `frontend/projects/admin/src/mocks/products-write.handlers.ts`,
 `frontend/projects/admin/src/mocks/products-read.handlers.ts` and
 `frontend/projects/admin/src/app/features/products/list/product-list.query.ts`; after an edit to
 one of those three files, reread them by hand.
 
-Run it as well after any edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`, a file under
-`.claude/rules/` or the `mibolt-verification` skill, since this skill cites sections of each by
-name. Its check (e) fails only when a cited name no longer occurs anywhere in the cited file or
-skill, so it cannot see a section that kept its name and changed what it says: reread each
-section this skill cites from what was edited, against what this skill uses it for.
+Run it as well after any edit to a file or skill that this skill or its references cite a
+section of by name: today the root `CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/`, the
+`mibolt-verification` skill, and this skill's own `SKILL.md`, which
+[references/admin-architecture.md](references/admin-architecture.md) cites. Its check (e) fails
+only when a cited name no longer occurs anywhere in the cited file or skill, so it cannot see a
+section that kept its name and changed what it says: reread each section this skill or its
+references cite from what was edited, against what they use it for.

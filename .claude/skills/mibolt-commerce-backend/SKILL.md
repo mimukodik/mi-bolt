@@ -276,8 +276,8 @@ A stored value adds a migration.
    against the cash-on-delivery ceiling, often through a literal such as
    `300_000`, and whose changes the `playwright-tests` skill owns. Several
    copies carry only the number, so list them by name and by value,
-   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':!.claude'`,
-   and set aside the hits where the number is a price rather than this value.
+   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':!.claude' ':!frontend/docs/design/yettel'`,
+   and set aside every hit whose number means something else: a price, a timeout, or a longer number that contains it.
 
 **A migration.**
 
@@ -437,10 +437,9 @@ Done means:
   `backend/services/commerce/src/test/resources/catalog/catalog.json`, priced
   between the old and the new value), the tests asserting the old value
   updated, all green; and decision 0010 or a new record updated. Where that
-  catalogue has no such cart as loaded, never add a variant to it in the same
-  change: [references/testing.md](references/testing.md) says how a test gets
-  one for its own run, and when to say instead that the case is missing and
-  why.
+  catalogue has no such cart as loaded, never edit it in the same change:
+  [references/testing.md](references/testing.md) says how a test gets one for
+  its own run, and when to say instead that the case is missing and why.
 - **Anything the UI displays**: also a real-browser pass on the backend-backed
   build, per `.claude/rules/browser-verification.md`.
 

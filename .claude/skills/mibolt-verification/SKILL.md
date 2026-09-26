@@ -423,8 +423,9 @@ it moves the anchor, and the checker below fails a moved anchor only once it
 falls past the end of its file. So after an edit to any file this skill or its
 references cite by `path:line`, whether or not the list above names it, run
 the checker below with `--show-anchors` and read each line it prints against
-the claim beside it. Whether a file you edited is cited by line is one search,
-run from the repository root:
+the claim beside it; a range longer than ten lines ends in
+`... (+N more lines)`, so read its rest in the file. Whether a file you edited
+is cited by line is one search, run from the repository root:
 
 ```bash
 grep -rn '<path>:[0-9]' .claude/skills/mibolt-verification
@@ -449,6 +450,6 @@ Check every path, anchor and command cited here with:
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-verification
 ```
 
-Add `--show-anchors` to print the current text of every cited line; whether
-that text still says what this skill claims is for you to judge, since the
-script cannot.
+Add `--show-anchors` to print the current text of each cited line, up to ten
+per range; whether that text still says what this skill claims is for you to
+judge, since the script cannot.

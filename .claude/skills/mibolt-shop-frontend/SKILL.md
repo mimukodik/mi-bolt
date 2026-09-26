@@ -129,8 +129,8 @@ states most of them in one place:
   threshold or the cash-on-delivery ceiling, is the server's too: no
   storefront source holds one (observed), and a page that needs a figure
   the SDK does not carry gets it through a contract change first (Workflows
-  step 3), never from a number written into the storefront or read from
-  `shop-mocks`.
+  step 3, once step 2 has found no screen-spec decision against it), never
+  from a number written into the storefront or read from `shop-mocks`.
 - Every cart and checkout write carries `If-Match` bound to the cart version
   at dispatch time, not at click time. `CartMutationQueue` serialises cart
   writes and `CheckoutFacade` serialises its own; both share the cart's
@@ -456,11 +456,12 @@ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claud
 It exits 0 when nothing fails, and an anchor whose line has moved still
 passes while its line number stays inside the file. Add `--show-anchors` to
 print each anchored line, and read whether it still says what this skill
-claims; the script cannot judge that. Run it also after any edit to a file
-this skill or its references cite a section of by name: root `CLAUDE.md`,
-`.claude/CLAUDE.md`, a file under `.claude/rules/`, `frontend/README.md` or
-a file of the `mibolt-verification` skill. The script fails a cited name
-only once it occurs nowhere in the file or skill cited. It cannot tell
-whether a section that kept its name still says what this skill uses it
-for, so re-read each section this skill or its references cite from the
-edited file.
+claims; the script cannot judge that. A range longer than ten lines ends in
+`... (+N more lines)`, so read its rest in the file. Run it also after any
+edit to a file this skill or its references cite a section of by name: root
+`CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/`,
+`frontend/README.md` or a file of the `mibolt-verification` skill. The script
+fails a cited name only once it occurs nowhere in the file or skill cited. It
+cannot tell whether a section that kept its name still says what this skill
+uses it for, so re-read each section this skill or its references cite from
+the edited file.

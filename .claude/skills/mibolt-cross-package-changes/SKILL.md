@@ -398,13 +398,15 @@ Check every path, anchor and command cited here with
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-cross-package-changes`.
 Run it with `--show-anchors` after an edit to any file this skill or its
 references cite by line, whether or not the list above names it, and judge
-whether each anchored line still says what the skill claims: an anchor passes
-as long as it stays inside its file, however far the text under it moved.
+whether each anchored line still says what the skill claims, opening the file
+for the rest of any range the output cuts short after ten lines: an anchor
+passes as long as it stays inside its file, however far the text under it
+moved.
 `git grep -n '<path>:[0-9]' -- .claude/skills/mibolt-cross-package-changes`
-lists the anchors into one file. Run it again after any edit to the root
-`CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/` or any other
-file this skill cites a section of by name, and open the sections this skill
-cites there, because check (e) still passes a renamed section whose old name
-occurs elsewhere in the file
+lists the anchors into one file. Run the checker again after any edit to the
+root `CLAUDE.md`, `.claude/CLAUDE.md`, a file under `.claude/rules/` or any
+other file this skill cites a section of by name, and open the sections this
+skill cites there, because check (e) still passes a renamed section whose old
+name occurs elsewhere in the file
 (`.claude/skills/mibolt-project-map/references/citation-check.md`, "What it
 checks").

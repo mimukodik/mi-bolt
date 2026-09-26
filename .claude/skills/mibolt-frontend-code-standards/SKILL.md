@@ -196,15 +196,17 @@ register entry takes the entry out and states the rule in section 5.
 After such a change, run
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-frontend-code-standards`
 and read the text it prints at each anchored line against the claim beside
-that anchor. It reports every path, anchor and command here or in the
-references that no longer resolves, but an anchor whose cited text has moved
-to another line passes as long as its line number is still inside the file,
-and only reading that text shows it now points at something else.
+that anchor; a range longer than ten lines ends in `... (+N more lines)`, so
+read its rest in the file. It reports every path, anchor and command here or
+in the references that no longer resolves, but an anchor whose cited text has
+moved to another line passes as long as its line number is still inside the
+file, and only reading that text shows it now points at something else.
 
 The checker's check (e) reports a section name quoted after a path or a skill
 name, such as `.claude/CLAUDE.md` ("Surgical changes"), only once the name
 occurs nowhere in the target, so a heading renamed while the target still
 mentions the old name elsewhere passes. After an edit to a file a quoted name
-points into, open each section this skill quotes from it and confirm it still
-says what this skill uses it for. The counts and greps dated 2026-09-26, here and in the
-references, are re-run, not trusted, once the code they counted has changed.
+points into, open each section this skill or its references quote from it and
+confirm it still says what they use it for. The counts and greps dated
+2026-09-26, here and in the references, are re-run, not trusted, once the code
+they counted has changed.

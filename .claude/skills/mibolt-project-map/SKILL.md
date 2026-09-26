@@ -254,15 +254,17 @@ the root and area tasks.
 **Run the citation check after editing any MiBolt skill, and after moving or
 rewriting a file one cites**, because a cited path, anchor, section name or
 command goes stale silently when the repository moves. Editing the root
-`CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/hooks/CLAUDE.md` or a file under
-`.claude/rules/` is such a rewrite: run the check with no directory argument,
-so it covers every MiBolt skill. Its check (e) fails a section cited there
-only once the quoted name occurs nowhere in the file, so a section renamed
-while its old name survives elsewhere in the file, or rewritten under the same
-name, still passes. After such an edit, also reread each section a MiBolt
-skill cites from the edited file;
+`CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/hooks/CLAUDE.md`, a file under
+`.claude/rules/` or any MiBolt skill, since the skills cite one another by
+section name too, is such a rewrite: run the check with no directory
+argument, so it covers every MiBolt skill. Its check (e) fails a section cited
+there only once the quoted name occurs nowhere in the file, so a section
+renamed while its old name survives elsewhere in the file, or rewritten under
+the same name, still passes. After such an edit, also reread each section a
+MiBolt skill cites from the edited file;
 `git grep -n -F '<edited file>' -- '.claude/skills/mibolt-*/*.md'` lists
-every line that names it. The check is
+every line that names it by path, and with the skill's `mibolt-<name>` in
+place of the file, every line that names that skill. The check is
 `.claude/skills/mibolt-project-map/scripts/check-skill-references.mjs`; it is
 read-only and runs from anywhere inside the checkout.
 
@@ -274,9 +276,10 @@ A plain run passes an anchor whose line now holds other text, as long as the
 file still has that many lines. After an edit to any file this skill or its
 references cite by `path:line`, whether or not the list at the top of this
 section names it, run the check with `--show-anchors` on this skill's
-directory and read each printed line against the sentence that cites it. Its
-options, output format, exit codes, and the citation forms it can read are in
-`references/citation-check.md`.
+directory and read each printed line against the sentence that cites it,
+opening the file for the rest of any range the output cuts short after ten
+lines. Its options, output format, exit codes, and the citation forms it can
+read are in `references/citation-check.md`.
 
 **Where the set lives.** The MiBolt skills are project skills under
 `.claude/skills/`, which Claude Code loads

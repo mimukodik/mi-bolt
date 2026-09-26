@@ -122,10 +122,12 @@ mibolt-project-map: 401 checked, 0 FAIL, 11 UNVERIFIED
   after `node`, or after `python` in a `uv run` line, that is not an option is
   taken as a script path from the repository root, and a placeholder task or
   script name is checked as a real one. Put a template in a fenced code block
-  instead: the path and command checks read only backticked tokens, while the
-  hygiene check and check (e) read every line, fenced blocks included, so a
-  section-citation template keeps a placeholder in its target, as the
-  template under the section-citation bullet below does. Cite a command that
+  instead, with no backticks around its tokens: no check skips a fenced block,
+  but the path and command checks read only backticked tokens, while the
+  hygiene check reads every line and check (e) reads every backticked target
+  followed by a quoted name, so a section-citation template, which needs its
+  backticks, keeps a placeholder in its target, as the template under the
+  section-citation bullet below does. Cite a command that
   runs from another directory, such as a script in `frontend/package.json`, by
   its `path:line` anchor rather than backticking the command.
 - Backtick only a path a fresh checkout holds: a tracked path, or a new file no
@@ -162,8 +164,10 @@ mibolt-project-map: 401 checked, 0 FAIL, 11 UNVERIFIED
 - The checker cannot tell whether an anchored line still says what the skill
   claims, and check (e) confirms only that a quoted name still occurs
   somewhere in its target. Run it with `--show-anchors` after a change to a
-  cited file, read the printed lines against the sentences that cite them, and
-  reread each cited section the same way.
+  cited file, read the printed lines against the sentences that cite them,
+  opening the file for the rest of any range the output cuts short after ten
+  lines, which it marks with `... (+N more lines)`, and reread each cited
+  section the same way.
 - Write every anchor as `path:line` wherever it should be checked. An anchor
   written without its path, as `:N`, `(line N)` or `(lines N-M)` after a path
   the sentence already names, is neither checked nor printed by
