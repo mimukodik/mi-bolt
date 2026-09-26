@@ -90,7 +90,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 - **Test policy** (`frontend/eslint.config.mjs:35-65`, applied at `frontend/eslint.config.mjs:453-472`): `only`, `skip`, `todo`, `fails`, `skipIf` and `runIf` are banned as a property, as a computed key, and when destructured, on `projects/**/*.spec.ts` and `tests/**/*.ts`.
 - **Coverage pragmas** (`frontend/eslint.config.mjs:473-484`): a comment containing `v8 ignore`, `istanbul ignore` or `c8 ignore` anywhere is an error in `projects/`, `tests/` and `e2e/`.
 - **`frontend/tests/`** keeps `no-explicit-any` (from `recommended`) but runs no type-aware rule, so `strict-boolean-expressions` and the `no-unsafe-*` rules do not reach it.
-- **`frontend/e2e/` and `frontend/playwright.config.ts`** (`frontend/eslint.config.mjs:343-384`): `recommended` presets, type-aware parsing, `playwright/no-focused-test`, `playwright/no-skipped-test` allowing the conditional `test.skip(condition, reason)`, `test` imported from `e2e/fixtures/coverage` rather than `@playwright/test` (lifted inside `e2e/fixtures/**`), and no `page.reload()` or `waitForTimeout()`. The specs are written only by the `playwright-test-*` agents (`.claude/rules/code-standards.md:146`).
+- **`frontend/e2e/` and `frontend/playwright.config.ts`** (`frontend/eslint.config.mjs:343-384`): `recommended` presets, type-aware parsing, `playwright/no-focused-test`, `playwright/no-skipped-test` allowing the conditional `test.skip(condition, reason)`, `test` imported from `e2e/fixtures/coverage` rather than `@playwright/test` (lifted inside `e2e/fixtures/**`), and no `page.reload()` or `waitForTimeout()`. The specs are written only by the `playwright-test-*` agents (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests").
 
 ## 6. Templates
 
@@ -104,18 +104,18 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 
 | Rule in `CLAUDE.md` | Checked by |
 | --- | --- |
-| avoid `any` (`CLAUDE.md:7`) | `no-explicit-any` in every linted TypeScript file except `e2e/seed.spec.ts` (section 1); `$any()` by the template `no-any` |
-| standalone, no `standalone: true` (`CLAUDE.md:11-12`) | `prefer-standalone` reports `standalone: false` only; `standalone: true` is written only |
-| no explicit `OnPush` (`CLAUDE.md:13`) | written only: `allowExplicitOnPush` is true |
-| no `@HostBinding` or `@HostListener` (`CLAUDE.md:16`) | written only |
-| `input()` and `output()` (`CLAUDE.md:26`) | `@Input()` by `prefer-signals`; `@Output()` written only |
-| `model()`, `computed()`, `linkedSignal()` (`CLAUDE.md:27-29`) | written only |
-| inline templates for small components (`CLAUDE.md:30`) | written only, and a recorded conflict with the code |
-| Signal Forms, else reactive forms (`CLAUDE.md:31-32`) | written only |
-| no `ngClass`, `ngStyle` or `CommonModule` (`CLAUDE.md:33-35`) | written only |
-| native control flow (`CLAUDE.md:48`) | `template/prefer-control-flow` |
-| `@Service` for new singletons (`CLAUDE.md:56`) | written only |
-| `inject()` (`CLAUDE.md:57`) | `prefer-inject` |
+| avoid `any` (`CLAUDE.md`, "TypeScript Best Practices") | `no-explicit-any` in every linted TypeScript file except `e2e/seed.spec.ts` (section 1); `$any()` by the template `no-any` |
+| standalone, no `standalone: true` (`CLAUDE.md`, "Angular Best Practices") | `prefer-standalone` reports `standalone: false` only; `standalone: true` is written only |
+| no explicit `OnPush` (`CLAUDE.md`, "Angular Best Practices") | written only: `allowExplicitOnPush` is true |
+| no `@HostBinding` or `@HostListener` (`CLAUDE.md`, "Angular Best Practices") | written only |
+| `input()` and `output()` (`CLAUDE.md`, "Components") | `@Input()` by `prefer-signals`; `@Output()` written only |
+| `model()`, `computed()`, `linkedSignal()` (`CLAUDE.md`, "Components") | written only |
+| inline templates for small components (`CLAUDE.md`, "Components") | written only, and a recorded conflict with the code |
+| Signal Forms, else reactive forms (`CLAUDE.md`, "Components") | written only |
+| no `ngClass`, `ngStyle` or `CommonModule` (`CLAUDE.md`, "Components") | written only |
+| native control flow (`CLAUDE.md`, "Templates") | `template/prefer-control-flow` |
+| `@Service` for new singletons (`CLAUDE.md`, "Services") | written only |
+| `inject()` (`CLAUDE.md`, "Services") | `prefer-inject` |
 
 `git grep -nE 'standalone:|ChangeDetectionStrategy|@HostBinding|@HostListener|@Input\(|@Output\(|ngClass|ngStyle|CommonModule' -- frontend/projects ':!**/generated/**'`,
 run from the repository root on 2026-09-26, printed nothing and exited 1, so

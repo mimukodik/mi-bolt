@@ -113,7 +113,7 @@ run them only when your task hands you that step.
   committed: after a contract change, running it before staging the new
   output fails by design. In CI, where the checkout has nothing staged, it
   means "the committed clients match the committed contract". Where it runs is
-  in SKILL.md, "What fails when a step is skipped".
+  in `SKILL.md`, "What fails when a step is skipped".
 - The script name itself is pinned: renaming or removing `api:generate` in
   `frontend/package.json` fails `frontend/tests/contract/schema.spec.ts:613-630`.
 

@@ -286,10 +286,10 @@ One line each; the source named owns the rule.
   text**; `title` and `detail` are English developer text
   (`contracts/commerce/kommunikacio.md:192-205`).
 - **Grep an identifier as the repository spells it**
-  (`.claude/rules/code-standards.md:119`); the finder does this for contract
-  names.
+  (`.claude/rules/code-standards.md`, "Grep the identifier as the repository
+  spells it"); the finder does this for contract names.
 - **A cut feature leaves nothing behind in any layer**
-  (`.claude/rules/code-standards.md:125`).
+  (`.claude/rules/code-standards.md`, "A cut feature leaves nothing behind").
 - **Name a sample after its schema**, with an optional case part
   (`contracts/check-samples.sh:1-4`).
 - **When `prepareOpenApiSpec` fails, update the replacement its message
@@ -304,7 +304,8 @@ One line each; the source named owns the rule.
   `data/catalog/catalog.json` can make needs no importer run
   ([references/catalog-data.md](references/catalog-data.md), section 2).
 - **Only the `playwright-test-*` agents write end-to-end specs**
-  (`.claude/rules/code-standards.md:146`).
+  (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents
+  write end-to-end tests").
 
 ## What fails when a step is skipped
 
@@ -396,4 +397,6 @@ Update this skill and its references in the same change as any of these:
 Check every path, anchor and command cited here with
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-cross-package-changes`;
 add `--show-anchors` to see the text each anchor points at, and judge whether
-it still says what this skill claims.
+it still says what this skill claims. Run it again after any edit to the root
+`CLAUDE.md`, `.claude/CLAUDE.md` or a file under `.claude/rules/`: its check
+(e) reports a section this skill cites by name that was renamed or removed.

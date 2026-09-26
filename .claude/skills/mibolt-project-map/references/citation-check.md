@@ -35,12 +35,31 @@ Gradle task, written in the form
 runs it or `.github/workflows/backend.yml` calls it, and is reported
 UNVERIFIED otherwise; UNVERIFIED is not a pass.
 
+Check (e), as the header numbers it, reads section-name citations. After
+collapsing every run of whitespace, newlines included, to one space, so a
+citation can wrap across lines, it finds each citation of either shape: a
+backticked target, an optional `'s`, a space, an opening parenthesis and a
+double-quoted name; or a backticked target, a comma, a space and a
+double-quoted name. Only the first quoted name right after the target counts.
+The target is resolved, in this order, as a `.md` path the way the path check
+resolves one, from the repository root and, when that does not exist, from
+the skill's own directory, so `SKILL.md` and `references/x.md` resolve inside
+the skill; or, when it is a skill name such as `mibolt-verification`, as that
+skill's `SKILL.md` and all its `references/*.md` read as one text. The
+citation passes when the name, its whitespace collapsed the same way, occurs
+as a substring of the target's collapsed text, case-sensitively, so a heading,
+a bold lead-in and a table cell all count; otherwise it fails with
+`section name not found in <target>`. A target that does not resolve is
+skipped entirely: it prints no line and adds nothing to the counts.
+
 ## Output and exit codes
 
 It prints one line per finding, in the form
 `FAIL|UNVERIFIED <skill-relative-file>:<line> <kind> <token> — <reason>`, then
-one summary line per skill. It exits 0 when nothing failed, 1 on any FAIL,
-and 2 on a usage or prerequisite error: an unknown option, a directory that is
+one summary line per skill. For kind `section` the token is the target
+followed by the quoted name, and the line is the one the target starts on. It
+exits 0 when nothing failed, 1 on any FAIL, and 2 on a usage or prerequisite
+error: an unknown option, a directory that is
 not a MiBolt skill, a working directory outside a git checkout, or mise
 missing or failing without `--no-mise`. Each of those is settled before the
 first line is printed, so an exit 2 comes with nothing on stdout; the message
@@ -55,14 +74,14 @@ $ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --sh
 ANCHOR SKILL.md:173 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
   50: mibolt.checkout.free-shipping-threshold-huf=30000
 ...
-mibolt-project-map: 384 checked, 0 FAIL, 0 UNVERIFIED
+mibolt-project-map: 396 checked, 0 FAIL, 0 UNVERIFIED
 
 $ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --no-mise .claude/skills/mibolt-project-map
 UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
 ...
 UNVERIFIED references/citation-check.md:30 mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 384 checked, 0 FAIL, 11 UNVERIFIED
+mibolt-project-map: 396 checked, 0 FAIL, 11 UNVERIFIED
 ```
 
 ## Write citations the checker can read
@@ -88,6 +107,25 @@ mibolt-project-map: 384 checked, 0 FAIL, 11 UNVERIFIED
   which the checker does not read as a repository path, or cite the
   configuration line that defines it. A glob must match such a file or a
   directory.
+- Cite a section of another file by its name, in one of the two shapes check
+  (e) reads, and copy the name verbatim, backticks included, from a heading, a
+  bold lead-in or a table cell of the target as it is now. A citation into the
+  root `CLAUDE.md`, `.claude/CLAUDE.md` or a file under `.claude/rules/` is by
+  section name, never by a line anchor: those files are rewritten section by
+  section, and an anchor into one keeps passing after its line has moved to
+  other text, while a name that is gone fails. The target is a file, never a
+  directory, which has no text to search. A misspelt skill name or
+  skill-relative path does not resolve and is not a token the path check
+  reads, so it is skipped without a line: copy the target as carefully as the
+  name.
+
+  ```text
+  `<file or mibolt-skill>` ("<section name>")
+  (`<file or mibolt-skill>`, "<section name>")
+  ```
+
 - The checker cannot tell whether an anchored line still says what the skill
-  claims. Run it with `--show-anchors` after a change to a cited file, and
-  read the printed lines against the sentences that cite them.
+  claims, and check (e) confirms only that a quoted name still occurs
+  somewhere in its target. Run it with `--show-anchors` after a change to a
+  cited file, read the printed lines against the sentences that cite them, and
+  reread each cited section the same way.

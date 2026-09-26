@@ -55,12 +55,16 @@ Everything else goes elsewhere:
   lines 80, `perFile: false`. Each project writes its own report inside
   `frontend/`: `coverage/unit/` for the storefront
   (`frontend/projects/storefront/vitest.config.ts:6`), `coverage/<project>/`
-  for the other four. The builder hands `coverageInclude`, which names every
-  source file of the project, to Vitest's `coverage.include`
+  for the other four. Each target's `coverageInclude` names every `.ts` file
+  under the project's `src/`, and its `coverageExclude` takes some back out
+  (`frontend/angular.json:116-117` for the storefront); no project's
+  `vitest.config.ts` sets either. The builder hands both to Vitest's
+  `coverage.include` and `coverage.exclude`
   (`src/builders/unit-test/runners/vitest/plugins.js` of `@angular/build`),
-  and Vitest then reports every file it names, loaded by a test or not
-  (https://vitest.dev/guide/coverage). So a source file no test loads,
-  typically a new one with no spec, lowers its project's aggregate.
+  and Vitest then reports every file they select, loaded by a test or not
+  (https://v4.vitest.dev/guide/coverage). So a source file no test loads,
+  such as a new file with no spec that no tested file imports, lowers its
+  project's aggregate.
 - **Contract suite.** `test:contract` runs Vitest in Node over
   `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:16-22`) and
   collects no coverage. `ng test` discovers no spec under `frontend/tests/`
@@ -72,10 +76,17 @@ Everything else goes elsewhere:
   and shop-mocks specs (for one,
   `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts:21`),
   so a change to either needs the unit suite too.
-- **Lint and format.** `ng lint` runs each project's `lintFilePatterns`; the
-  storefront's also take in `tests/**/*.ts`, `e2e/**/*.ts` and
-  `playwright.config.ts` (`frontend/angular.json:132-138`). `format:check` is
-  `prettier --check .`.
+- **Lint and format.** `lint` is `ng lint`, which runs each project's
+  `lintFilePatterns`; the storefront's also take in `tests/**/*.ts`,
+  `e2e/**/*.ts` and `playwright.config.ts` (`frontend/angular.json:132-138`).
+  `format:check` is `prettier --check .`. Both check every file their
+  configuration reaches in `frontend/`, not only the changed ones, and are
+  what CI's `lint` job runs (`.github/workflows/frontend.yml:34`,
+  `.github/workflows/frontend.yml:37`), as `npm --prefix frontend run lint`
+  and `npm --prefix frontend run format:check` locally. Before a commit the
+  gate (`.claude/rules/code-standards.md`, "A subagent's green report is not
+  a run") checks only the changed files, with `npx eslint` and
+  `npx prettier --check` run from `frontend/` on the lists step 1 prints.
 - **Builds.** `build` builds the storefront alone (`frontend/package.json:12`);
   `build:payment` and `build:admin` build the other two apps. `build:check`
   builds the storefront for production and exits 1 on any output line
@@ -155,10 +166,11 @@ Start from the changed-paths script in step 1 below; it reads
 `.github/components.yml`, `.github/workflows/ci.yml` and the triggered
 workflows live. `mise tasks --all` lists every root and area task, and
 `frontend/README.md` ("npm scripts") describes every frontend script. The
-canonical examples are the pre-commit gate list at
-`.claude/rules/code-standards.md:100-106`, `frontend/mise.toml:8-21` (exactly
-what `//frontend:test` and `//frontend:build` run), and
-`backend/services/commerce/build.gradle:141-245` (every backend gate).
+canonical examples are the pre-commit gate list in
+`.claude/rules/code-standards.md` ("A subagent's green report is not a run"),
+`frontend/mise.toml:8-21` (exactly what `//frontend:test` and
+`//frontend:build` run), and `backend/services/commerce/build.gradle:141-245`
+(every backend gate).
 
 ## From a diff to green checks
 
@@ -230,11 +242,12 @@ what `//frontend:test` and `//frontend:build` run), and
 2. **Pick the local checks.** Look the changed paths up in
    [references/command-matrix.md](references/command-matrix.md). The floor is
    the gate list the orchestrator runs before every commit
-   (`.claude/rules/code-standards.md:100`); in a terminal its unit run takes
-   `-- --no-watch`, as step 4 says. Its frontend build is `build`, which
-   builds the storefront alone, so an admin or demo-payment change also needs
-   that app's build, dist check and boot check, which CI's `build` job runs.
-   What each command needs and what it writes or starts is in
+   (`.claude/rules/code-standards.md`, "A subagent's green report is not a
+   run"); in a terminal its unit run takes `-- --no-watch`, as step 4 says.
+   Its frontend build is `build`, which builds the storefront alone, so an
+   admin or demo-payment change also needs that app's build, dist check and
+   boot check, which CI's `build` job runs. What each command needs and what
+   it writes or starts is in
    [references/commands.md](references/commands.md).
 
 3. **Iterate with focused runs.** They are faster, and the frontend ones write
@@ -271,7 +284,7 @@ what `//frontend:test` and `//frontend:build` run), and
      (https://angular.dev/tools/cli#boolean-options).
    - One contract spec: `npm --prefix frontend run test:contract -- sdk-split`
      runs only the files whose path contains `sdk-split`
-     (https://vitest.dev/guide/filtering).
+     (https://v4.vitest.dev/guide/filtering).
    - One backend class:
      `backend/gradlew -p backend :services:commerce:test --tests CartServiceTest`.
      A class annotated `@IntegrationTest` runs only under `integrationTest`:
@@ -301,23 +314,27 @@ what `//frontend:test` and `//frontend:build` run), and
 One line each; the file named is the one that binds.
 
 - The orchestrator runs the pre-commit gate list itself and reads the exit
-  codes; a subagent's green report is not a run:
-  `.claude/rules/code-standards.md:100`.
+  codes: `.claude/rules/code-standards.md` ("A subagent's green report is not
+  a run").
 - A red check is pre-existing only when the merge-base diff does not list the
   failing file and the working tree does not show it as changed:
-  `.claude/rules/code-standards.md:89`.
+  `.claude/rules/code-standards.md` ("Pre-existing").
 - Every bug fix ships with a test measured red before and green after, in the
-  same commit: `.claude/rules/code-standards.md:74`.
-- Coverage is an aggregate floor per project, not a per-line gate, and its
-  exclusions live in configuration, never in ignore comments:
-  `.claude/rules/code-standards.md:49`, `.claude/rules/code-standards.md:112`.
+  same commit: `.claude/rules/code-standards.md` ("Every bug still gets a
+  test").
+- Coverage is an aggregate floor per project, not a per-line gate; only a
+  layer a unit test cannot reach is excluded from it, in the coverage
+  configuration and never by an ignore comment:
+  `.claude/rules/code-standards.md` ("Coverage is an aggregate floor here, not
+  a per-line gate", and the entry opening "Layers a unit test cannot reach").
 - Every user-visible change gets a `real-browser-sonnet` pass; servers are the
   orchestrator's: `.claude/rules/browser-verification.md`.
 - The coverage report, the generated clients, a dev server's port and the
   database are shared between agents running at once:
   `.claude/rules/parallel-spawns.md` ("What a batch shares").
 - Only the `playwright-test-*` agents write end-to-end specs:
-  `.claude/rules/code-standards.md:146`.
+  `.claude/rules/code-standards.md` ("Only the `playwright-test-*` agents
+  write end-to-end tests").
 - How Vitest, Gradle or Playwright behave is read from their documentation,
   not probed: `.claude/rules/framework-facts.md`.
 
@@ -395,8 +412,8 @@ and `backend/services/commerce/scripts/smoke.sh`; `.github/workflows/*.yml` or
 `.github/components.yml`; the headers of the scripts in `frontend/scripts/`
 cited in this skill, with the logs in `frontend/scripts/fixtures/`; the two
 test files cited for side effects, `.claude/hooks/session-start/hook.test.ts`
-and `tools/dev-server/dev-server.test.ts`; and the lines of
-`.claude/rules/code-standards.md` cited in this skill. A workflow or `mise`
+and `tools/dev-server/dev-server.test.ts`; and the entries of
+`.claude/rules/code-standards.md` this skill names. A workflow or `mise`
 task that starts running `fixtures:catalog:check`, `check-budgets.mjs` or the
 hook checks ends their "Not wired to anything" entry.
 
@@ -404,6 +421,11 @@ The changed-paths script reads the CI files live and needs no edit when a
 component or job changes, unless `.github/components.yml` gains a pattern
 beyond `**`, `*`, `?` and literals: it then exits 2 with
 `unsupported pattern <p> in .github/components.yml` and has to be extended.
+
+An edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`,
+`.claude/hooks/CLAUDE.md` or any file under `.claude/rules/` means re-running
+the checker below: its check (e) reports a section this skill cites by name
+that was renamed or removed.
 
 Check every path, anchor and command cited here with:
 

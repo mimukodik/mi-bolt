@@ -169,7 +169,14 @@ edit are both covered, and ask through `openConfirm`
 (`frontend/projects/admin/src/app/shared/confirm-dialog/confirm-dialog.ts:55`), the admin's one
 confirmation dialog. Read [references/product-form.md](references/product-form.md), section 1,
 first: the form's `dirty()` misses row edits, and a successful create navigates away without
-resetting the form.
+resetting the form. The guard also runs when the app itself leaves for the login page after the
+session is gone, on a 401
+(`frontend/projects/admin/src/app/core/auth/unauthorized.interceptor.ts:28-33`) and on sign-out
+(`frontend/projects/admin/src/app/layout/shell.component.ts:99-102`), where a cancel keeps the
+edits on a page that can no longer save them. It never runs on a reload, a closed tab or a typed
+URL, which only a `beforeunload` listener catches, and that shows the browser's own dialog, not
+`openConfirm` (https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event). Which
+of these the warning covers is the user's to settle; ask before building it.
 
 **Handle a new error code.** Read it inside the store with `problemOf(error)?.code`, add a kind to
 the store's result union, give the page a branch for that kind, and put any field-level text in
@@ -187,10 +194,14 @@ Each line names a rule and where it is written or enforced; the owner carries th
 
 - **No type assertion, `as const` aside.** ESLint enforces it for the admin
   (`frontend/eslint.config.mjs:389-391`), stricter than for the rest of the workspace; the written
-  rule is `.claude/rules/code-standards.md:17-20`. Narrow with a guard: `isRecord`, `isProblem`, or
-  a local literal-union guard like those at
+  rule is `.claude/rules/code-standards.md` ("Strict generics"). First check whether a generic
+  already carries the type: the generated `invoke<P, R>` returns the operation's own response
+  type, and `invoke$Response<P, R>` returns it inside `StrictHttpResponse<R>`
+  (`frontend/projects/admin/src/app/api/generated/admin-api.ts:45-57`), so what they return needs
+  neither an `as` nor a guard. Otherwise narrow with a guard: `isRecord`, `isProblem`, or a local
+  literal-union guard like those at
   `frontend/projects/admin/src/app/features/products/list/product-list.query.ts:67-83`.
-  `mibolt-frontend-code-standards` owns the lint detail.
+  `mibolt-frontend-code-standards` owns the lint detail, and where `satisfies` replaces an `as`.
 - **No shop SDK, no shop mocks, no other app.** Importing `@mi-bolt/api/*`, `@mi-bolt/mocks/*`,
   anything under `shop-api`, or anything from `storefront` or `demo-payment` is a lint error here
   (`frontend/eslint.config.mjs:392-407`). A dynamic `import()` is linted only for the app segments
@@ -210,7 +221,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
   focus only minimally, because it will never be a live app! no screen reader will ever read it!"
   The admin already carries ARIA and focus code: `role="alert"` in `adm-control-error`, focus moved
   to a title before a reload removes the focused button, `SubmitAttempt` focusing the first invalid
-  control, and the list's row and cell roles. Neither extend it nor remove it. A new list column
+  control, and the list's row and cell roles. Neither extend it nor remove it as a side change; it
+  leaves with an element or a feature the task itself removes, per
+  `.claude/rules/code-standards.md` ("A cut feature leaves nothing behind"). A new list column
   copies its neighbours' markup as it stands, roles included, which is not extending it
   ([references/product-form.md](references/product-form.md), section 8).
 - **Framework questions** are answered through the instruments in
@@ -227,9 +240,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
   pre-implementation source.
 - **End-to-end tests.** The admin has no Playwright spec; it is verified by unit specs over its
   mocks and by the browser pass. Only the `playwright-test-*` agents write one
-  (`.claude/rules/code-standards.md:146`).
+  (`.claude/rules/code-standards.md`, "Only the `playwright-test-*` agents write end-to-end tests").
 - **A bug gets a spec** that fails before the fix and passes after it
-  (`.claude/rules/code-standards.md:74`).
+  (`.claude/rules/code-standards.md`, "Every bug still gets a test in the same commit as its fix").
 
 ## What else a change reaches
 
@@ -260,7 +273,7 @@ Each line names a rule and where it is written or enforced; the owner carries th
 
 Run everything from the repository root. The dev servers are the orchestrator's to start
 (`.claude/rules/session-lifecycle.md`, "Tools and startup"), and so are the gates before a commit
-(`.claude/rules/code-standards.md:100`).
+(`.claude/rules/code-standards.md`, "A subagent's green report is not a run").
 
 - **Focused specs** while working:
 
@@ -268,19 +281,13 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   npm --prefix frontend run ng -- test admin --include '**/product-form.schema.spec.ts' --coverage=false --watch=false
   ```
 
-  For a whole directory, use a glob such as `'**/products/list/*.spec.ts'`, keeping the `**/`
-  prefix and the quotes, which keep the shell from expanding it. A spec path or a directory
-  written from `frontend/`, such as `projects/admin/src/app/features/products/list`, works too.
-  Never write the path from the project root: https://angular.dev/cli/test documents `--include`
-  as relative to the project root, but the installed `@angular/build` 22.1.8 strips a leading
-  `projects/admin/src/` and resolves the rest against the project's source root
-  (`normalizePattern` in `test-discovery.js`), so a `src/app/...` path selects no spec, and a run
-  then fails with "No tests found matching the following patterns". Run a new pattern with
-  `--list-tests` first: it prints the spec files the pattern selects without building or running
-  anything, and exits 0 even when it prints none, so read the list rather than the exit status. Pass
-  `--coverage=false`: the admin's `test` target turns coverage on (`frontend/angular.json:365`),
-  and its thresholds are set for the whole project (`frontend/angular.json:374-380`), which a
-  focused run does not exercise.
+  Give `--include` a spec path or a directory as seen from `frontend/`, such as
+  `projects/admin/src/app/features/products/list`, or a quoted glob starting with `**/`; a path
+  starting at `src/app/` selects no spec, and the run then fails with "No tests found matching the
+  following patterns". Run a new pattern with `--list-tests` first: it prints the spec files the
+  pattern selects without building or running anything, and exits 0 even when it prints none, so
+  read the list rather than the exit status. `mibolt-verification` ("Iterate with focused runs")
+  owns why the paths resolve this way and why a focused run passes `--coverage=false`.
 - **The full unit suite**, `npm --prefix frontend run test`, runs every project and writes the
   coverage report that every agent in the checkout shares
   (`.claude/rules/parallel-spawns.md`, "What a batch shares"). It is the orchestrator's before a
@@ -288,10 +295,11 @@ Run everything from the repository root. The dev servers are the orchestrator's 
 - **Build checks.** The gate's `npm --prefix frontend run build` builds the storefront alone
   (`frontend/package.json:12`), so every admin change also runs the admin's own, as
   `mibolt-verification` lists them: `npm --prefix frontend run build:admin` writes the production
-  build, `npm --prefix frontend run check:admin-dist` then reads it and exits 2 when there is none,
-  and `npm --prefix frontend run check:admin-boot` starts `ng serve admin` on port 4299 and checks
-  that the mock worker is served under `/admin/`; `check:payment-boot` uses the same port, so the
-  two never run at once (`frontend/scripts/check-app-boot.mjs:17-19`).
+  build to `dist/admin/` in `frontend/`, `npm --prefix frontend run check:admin-dist` then reads it
+  and exits 2 when there is none, and `npm --prefix frontend run check:admin-boot` starts
+  `ng serve admin` on port 4299 and checks that the mock worker is served under `/admin/`;
+  `check:payment-boot` uses the same port, so no two boot checks run at once, whichever app each
+  serves (`frontend/scripts/check-app-boot.mjs:17-19`).
 - **Lint and format** of the changed files: the commands are `mibolt-frontend-code-standards`'s.
 - **The browser pass** is mandatory for anything a person sees, per
   `.claude/rules/browser-verification.md`. The orchestrator serves the admin with `mise run admin`
@@ -301,7 +309,11 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   reach the negative states with `?mi-scenario=empty-catalog`, `list-error`, `save-conflict` or
   `upload-error`. On the real backend, the first start on a database with no admin creates one and
   prints its password once in the backend log, unless `MIBOLT_ADMIN_INITIAL_PASSWORD` chose it
-  (`frontend/projects/admin/README.md:49-55`).
+  (`frontend/projects/admin/README.md:49-55`). No scenario answers 401 to a signed-in page, so on
+  the mock only the guard's half of the 401 round trip can be driven: reload a protected page,
+  which empties the in-memory mock database and signs the admin out, and sign in again to land
+  back on it through `vissza`. The interceptor's half is pinned by
+  `frontend/projects/admin/src/app/core/auth/unauthorized.interceptor.spec.ts`.
 
 The change is done when the specs beside every changed file pass, a fixed bug has a spec that
 failed first, the mocks answer the new shape, and the browser pass has exercised the change.
@@ -354,3 +366,7 @@ against what the text says about it:
 ```bash
 node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs --show-anchors .claude/skills/mibolt-admin-frontend
 ```
+
+Run it as well after any edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or a file under
+`.claude/rules/`: its check (e) reports a section this skill cites by name that was renamed or
+removed.

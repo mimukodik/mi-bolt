@@ -182,8 +182,9 @@ options come back and never invents a free-shipping default
 while the shop mocks keep their own copy of the value
 (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:64`): both are
 `mibolt-shop-frontend`'s. Changing the value is `mibolt-commerce-backend`'s
-("A fee, threshold or other configuration value"), which lists every copy
-outside the backend, the shop mocks' among them.
+("A fee, threshold or other configuration value"), which names the copies
+outside the backend, the shop mocks' among them, and gives the `git grep`
+that finds the ones it does not name.
 Showing the threshold itself on the checkout page changes the response shape:
 `mibolt-cross-package-changes` for the contract and the regenerated clients,
 then `mibolt-commerce-backend`, then `mibolt-shop-frontend` for the page and
@@ -248,8 +249,12 @@ the root and area tasks.
 - a document added, moved or rewritten: the docs index.
 
 **Run the citation check after editing any MiBolt skill, and after moving or
-rewriting a file one cites**, because a cited path, anchor or command goes
-stale silently when the repository moves. The check is
+rewriting a file one cites**, because a cited path, anchor, section name or
+command goes stale silently when the repository moves. Editing the root
+`CLAUDE.md`, `.claude/CLAUDE.md` or a file under `.claude/rules/` is such a
+rewrite: run the check with no directory argument, so it covers every MiBolt
+skill, and its check (e) reports a section a skill cites there that was
+renamed or removed, as a quoted name the file no longer contains. The check is
 `.claude/skills/mibolt-project-map/scripts/check-skill-references.mjs`; it is
 read-only and runs from anywhere inside the checkout.
 
@@ -268,6 +273,10 @@ directories, and its documentation names no `.claude/skills` location
 https://developers.openai.com/codex/skills/), so Codex does not see this set.
 Keep the one copy here, with no duplicate and no symlink, so there is nothing
 to drift. Each skill's `agents/openai.yaml` comes from the skill-creator's
-initialisation step and has no reader in this location; when a skill's
-description changes, regenerate that file with the `skill-creator` skill's
-`generate_openai_yaml.py`.
+initialisation step and has no reader in this location. When a skill's
+description changes, read that file against the skill, and only if it no
+longer matches, regenerate it with the `skill-creator` skill's
+`generate_openai_yaml.py`, passing `display_name`, `short_description` and
+`default_prompt` as `--interface key=value`: the script fills a missing
+`display_name` or `short_description` with a generic value and writes no
+`default_prompt` it was not given.

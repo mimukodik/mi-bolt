@@ -89,8 +89,8 @@ google-java-format, Error Prone, NullAway, JSpecify or Lombok appears in any
    violation as file, line, rule and PMD's message
    (`backend/services/commerce/build.gradle:224`), as the two lines quoted at
    `backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:144-145` show;
-   `SystemPrintln`'s message is `Usage of System.out/err` (source: the
-   reference, section 8).
+   `SystemPrintln`'s message is `Usage of System.out/err` (source: section 8
+   of [the reference](references/rule-evidence.md)).
 2. Identify the rule. The project's own rules are the first six rules of
    section 5. Any other name is a quickstart rule: read its page in the PMD
    7.24.0 rule index, https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java.html,
@@ -99,8 +99,9 @@ google-java-format, Error Prone, NullAway, JSpecify or Lombok appears in any
    backend has neither (observed; no document forbids them), and a rule that
    is wrong for this codebase is changed in the ruleset through a decision
    (section 6) instead.
-4. Rerun `mise run //backend:lint` until it exits 0. Which other checks the
-   change needs is `mibolt-verification`'s to say.
+4. Rerun `mise run //backend:lint` until it exits 0. Load
+   `mibolt-verification` before naming any other check the change needs: this
+   skill does not say which they are.
 
 **Fixing a compile error:** the main-code types under
 `com.example.mi_bolt_backend.api` are generated from the contract before every
@@ -225,8 +226,10 @@ section 5.
   (SLF4J). Log a 4xx at WARN without a stack trace, and an unexpected
   throwable at ERROR with the exception as the last argument. Wrap each call
   in the matching `isXEnabled()` guard, as every call in main code but one
-  is. PMD demands the guard only on a call that builds its message, and never
-  checks the declaration.
+  is. That guard is the one part of this bullet PMD enforces:
+  `GuardLogStatement` fails an unguarded call that concatenates or calls a
+  method to build its message, and passes one that hands plain variables to
+  `{}` placeholders. PMD never checks the declaration.
 - **Formatting, a conflict:** the Java sources, `build.gradle` and
   `ruleset.xml` are tab-indented, and no Java file has a space-indented code
   line, while `.editorconfig:4-7` sets two-space indentation for every file.
@@ -282,13 +285,15 @@ line, with its enforcement:
   (`backend/mise.toml:5-6`). It needs the Java 21 toolchain the root
   `mise.toml` pins, writes its output into the service's ignored `build/`
   directory, and exits non-zero on any violation (`ignoreFailures = false`,
-  `backend/services/commerce/build.gradle:225`). Done means exit 0. PMD runs
-  only in `pmdMain` and `pmdTest`, and those run only when a command names
-  them, as this task, the next command and CI's `Lint (PMD)` job
-  (`.github/workflows/backend.yml:97-119`) do, or through `check`, which
-  `build` depends on (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html,
+  `backend/services/commerce/build.gradle:225`). Done means exit 0. Gradle
+  runs `pmdMain` and `pmdTest`, the only tasks that run PMD, in two cases: a
+  command names them, as this task, its plain Gradle form below and CI's
+  `Lint (PMD)` job (`.github/workflows/backend.yml:97-119`) do; or a command
+  runs `check`, which `build` depends on, as the full build and CI's
+  `Coverage gate and build` job (`.github/workflows/backend.yml:162-163`) do
+  (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html,
   https://docs.gradle.org/9.7.1/userguide/java_plugin.html). Compiling,
-  `mise run //backend:test` and `bootRun` never run them, so a violation still
+  `mise run //backend:test` and `bootRun` do neither, so a violation still
   compiles and runs locally and first fails at this lint, the full build or
   CI.
 - `backend/gradlew -p backend :services:commerce:pmdMain :services:commerce:pmdTest`:
@@ -320,6 +325,9 @@ Update this skill in the same change as any of these:
   `backend/docs/04-adatbazis.md` §1 or §4.
 - `.editorconfig`, or a formatter or static-analysis plugin added to the
   build.
+- The `lint` task in `backend/mise.toml`, the `lint` or `coverage-gate` job in
+  `.github/workflows/backend.yml`, or the PMD command in `backend/README.md`,
+  which section 7 cites by line.
 - A new domain package under
   `backend/services/commerce/src/main/java/com/example/mi_bolt_backend`, or a
   new class suffix.
@@ -331,4 +339,7 @@ Then check the skill against the repository:
 exits 0 when every path, anchor and command resolves; settle each
 `UNVERIFIED` line it prints by hand. Add `--show-anchors` to read each
 anchored line against the claim made about it, and re-run the measurement
-commands in the reference to refresh the counts.
+commands in the reference to refresh the counts. Run the checker as well after
+an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or any file under
+`.claude/rules/`: its check (e) reports a section this skill cites there that
+was renamed or removed.

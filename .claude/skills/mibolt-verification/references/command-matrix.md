@@ -3,10 +3,10 @@
 Read this when choosing the checks for a concrete diff. Run the changed-paths
 script from `SKILL.md` first: it says which CI jobs the diff triggers. This
 file gives the local side: for each kind of changed path, what to run before
-the commit on top of the gate list at `.claude/rules/code-standards.md:100`,
-and which CI components the path triggers (`.github/components.yml`). Every
-command's working directory, prerequisites and side-effect class are in this
-skill's commands reference.
+the commit on top of the gate list in `.claude/rules/code-standards.md` ("A
+subagent's green report is not a run"), and which CI components the path
+triggers (`.github/components.yml`). Every command's working directory,
+prerequisites and side-effect class are in this skill's commands reference.
 
 Candidate Build (`.github/workflows/candidate.yml`) runs on every pull request
 whatever changed, so no row lists it.

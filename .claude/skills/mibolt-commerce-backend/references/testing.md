@@ -11,6 +11,7 @@ test-method names) belong to `mibolt-backend-code-standards`.
 - [Two test tasks](#two-test-tasks)
 - [Unit tests](#unit-tests)
 - [Integration and API tests](#integration-and-api-tests)
+- [The fixture catalogue](#the-fixture-catalogue)
 - [The contract assertion](#the-contract-assertion)
 - [What the requirement docs ask of the tests](#what-the-requirement-docs-ask-of-the-tests)
 - [smoke.sh](#smokesh)
@@ -76,6 +77,22 @@ own cookie of that name replaces it
 - Filter, advice and interceptor tests run against test-only endpoints in
   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/FixtureControllers.java:31-39`,
   never against a business endpoint.
+
+## The fixture catalogue
+
+`backend/services/commerce/src/test/resources/catalog/catalog.json` is the
+catalogue the `test` profile loads, so every cart an integration test builds
+comes from it. The cheapest variant in stock there costs 299 990 HUF; the one
+cheaper variant, `nokia-105`, has no stock, and adding it to a cart is refused
+with `OUT_OF_STOCK`
+(`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:92-96`).
+So a change between two values that are both below 299 990, such as moving
+the free-shipping threshold (30 000 today) to another value under it, has no
+cart priced between the old and the new value: say that the case is missing
+and why. Adding a fixture variant for it is a change of its own, because
+`listProductsReturnsAllSixEntriesWithFullFacets` in
+`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/catalog/ProductsApiTest.java`
+pins the fixture's entry count, in-stock facet and price range.
 
 ## The contract assertion
 

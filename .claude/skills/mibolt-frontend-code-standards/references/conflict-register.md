@@ -21,7 +21,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 ## C1. The `as` ban: written for every file, linted in admin alone
 
-- **Written**: `as` is forbidden for the whole workspace (`.claude/rules/code-standards.md:17-20`); section 5 of `SKILL.md` says what replaces an `as`, which depends on what the `as` did.
+- **Written**: `as` is forbidden for the whole workspace (`.claude/rules/code-standards.md`, "Strict generics"); section 5 of `SKILL.md` says what replaces an `as`, which depends on what the `as` did.
 - **Linted as written**: `consistent-type-assertions` with `assertionStyle: 'never'` covers `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and two contract files (`frontend/eslint.config.mjs:441-443`), and the comment beside the second says "the older contract suites are not covered yet" (`frontend/eslint.config.mjs:440`). Everywhere else in `projects/` the rule runs at its default options, which accept `x as T` (https://typescript-eslint.io/rules/consistent-type-assertions/), and the rest of `frontend/tests/` and all of `frontend/e2e/` do not run it at all.
 - **Observed**: counted with the TypeScript parser over the tracked `.ts` files, generated clients excluded and `as const` not counted, no non-spec file under `frontend/projects/` holds an assertion. They sit in spec and test code: 2 in storefront specs (for example `frontend/projects/storefront/src/app/features/catalog/catalog-page.spec.ts:1813`), 52 in `shop-mocks` specs (for example `frontend/projects/shop-mocks/src/active-scenario.spec.ts:52`), 55 under `frontend/tests/` (for example `frontend/tests/contract/response-validation.ts:127` and `frontend/tests/contract/operation-matrix.spec.ts:124`), 3 in end-to-end specs and 2 in `frontend/playwright.config.ts`.
 - **Left alone**: the existing assertions, and the lint scope. New code follows the written rule wherever it is, because the narrower lint scope does not narrow the rule.
@@ -35,7 +35,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 ## C3. Inline templates preferred, external templates in use
 
-- **Written**: "Prefer inline templates for small components" (`CLAUDE.md:30`).
+- **Written**: "Prefer inline templates for small components" (`CLAUDE.md`, "Components").
 - **Observed** (non-spec components): the storefront has 57 `templateUrl` components and 1 inline template (`frontend/projects/storefront/src/app/features/checkout/navigation-reason-banner.ts:26`); the admin has 19 and 5 (for example `frontend/projects/admin/src/app/shared/forms/control-error.ts:17`); demo-payment has 2 and none.
 - **Left alone**: existing components, in both directions. No decision is recorded between the written preference and the house pattern; say in the report which one a new small component followed.
 
@@ -60,11 +60,11 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 ## C7. The accessibility override beside the template accessibility lint rules
 
-- **Written**: no work on AXE checks, WCAG AA minimums, keyboard handling or ARIA, and focus handling kept to what a native element gives (`CLAUDE.md:20-21`).
+- **Written**: no work on AXE checks, WCAG AA minimums, keyboard handling or ARIA, and focus handling kept to what a native element gives (`CLAUDE.md`, "Accessibility Requirements").
 - **Linted**: the template block extends `angular.configs.templateAccessibility` (`frontend/eslint.config.mjs:493`), so its eleven rules, `click-events-have-key-events`, `interactive-supports-focus` and `label-has-associated-control` among them, report at error level on every `projects/**/*.html` file and on every inline template, which `angular.processInlineTemplates` (`frontend/eslint.config.mjs:122`) hands to ESLint as a virtual `.html` file under the same glob (https://eslint.org/docs/latest/use/configure/plugins).
-- **Measured**: in the installed angular-eslint 22.5.0, `click-events-have-key-events` skips an inherently interactive element, so a `(click)` on a native `<button>` does not trip it. `CLAUDE.md:21` counts what a native element gives on its own as enough focus handling.
+- **Measured**: in the installed angular-eslint 22.5.0, `click-events-have-key-events` skips an inherently interactive element, so a `(click)` on a native `<button>` does not trip it. `CLAUDE.md` ("Accessibility Requirements") counts what a native element gives on its own as enough focus handling.
 - **Observed**: the code already carries accessibility work the override does not ask for: `frontend/projects/storefront/src/app/a11y-structure.spec.ts`, `frontend/projects/storefront/src/app/app-skip-link.spec.ts`, `role="alert"` at `frontend/projects/admin/src/app/shared/forms/control-error.ts:17`.
-- **Left alone**: that existing code, which is neither extended nor removed as a side change. Both sources bind, and no source says which gives way when they meet: a changed template has to lint clean for the gate in `.claude/rules/code-standards.md:100-103`, and `CLAUDE.md:20` says no work is spent on keyboard handling or ARIA. Where a rule of this preset fails on a changed template and a native element does not clear it, that is a question for the user, and so is any change to the preset.
+- **Left alone**: that existing code, which is neither extended nor removed as a side change. Both sources bind, and no source says which gives way when they meet: a changed template has to lint clean for the gate in `.claude/rules/code-standards.md` ("A subagent's green report is not a run"), and `CLAUDE.md` ("Accessibility Requirements") says no work is spent on keyboard handling or ARIA. Where a rule of this preset fails on a changed template and a native element does not clear it, that is a question for the user, and so is any change to the preset.
 
 ## C8. Two checks that exist and that nothing runs
 

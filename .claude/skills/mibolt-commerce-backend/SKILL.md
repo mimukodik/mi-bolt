@@ -248,12 +248,19 @@ A stored value adds a migration.
    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:59-85`.
 2. Use it in `buildOptions` (`:225-259`).
 3. Update the tests that assert the old value, and add an API case whose
-   outcome differs between the old and the new value where none does yet.
-   The `test` profile does not override `mibolt.checkout.*`, so
-   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutApiTest.java:78-122`
-   sees the real value, while
-   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutServiceTest.java:45-50`
-   passes its own constants. Pin a value in
+   outcome differs between the old and the new value where none does yet;
+   "Done means" in section 7 covers a value the test catalogue cannot
+   bracket. The `test` profile does not override `mibolt.checkout.*`, so
+   every `@IntegrationTest` class sees the real values,
+   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutApiTest.java` and
+   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/order/OrdersApiTest.java`
+   among them. Some carry a value only inside a derived number, such as the
+   total `300480` (299 990 plus the 490 cash-on-delivery fee) or a shipping
+   fee of 0 above the free-shipping threshold; a search for the old value
+   misses those, and `integrationTest` shows them as failures.
+   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutServiceTest.java:45-51`
+   passes its own constants, so a new default leaves it unchanged. Pin a
+   value in
    `backend/services/commerce/src/test/resources/application-test.properties`
    only when a test must not follow the default.
 4. Update the value table in
@@ -263,8 +270,8 @@ A stored value adds a migration.
    (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:59-65`) and
    its spec, `frontend/projects/shop-mocks/src/checkout/checkout-mock.spec.ts`,
    which `mibolt-shop-frontend` keeps in step;
-   `frontend/docs/spec/screens.md:81` and
-   `frontend/docs/spec/components.md:589`; and the Playwright plans under
+   `frontend/docs/spec/screens.md:81`, `frontend/docs/spec/components.md:589`
+   and `frontend/docs/spec/test-scenarios.md:82-87`; and the Playwright plans under
    `frontend/specs/` and specs under `frontend/e2e/`, which pick products
    against the cash-on-delivery ceiling, often through a literal such as
    `300_000`, and whose changes the `playwright-tests` skill owns. Several
@@ -429,7 +436,11 @@ Done means:
   value (for a threshold or ceiling, a cart from the test catalogue,
   `backend/services/commerce/src/test/resources/catalog/catalog.json`, priced
   between the old and the new value), the tests asserting the old value
-  updated, all green; and decision 0010 or a new record updated.
+  updated, all green; and decision 0010 or a new record updated. Where that
+  catalogue has no such cart, say that the case is missing and why, rather
+  than adding a variant to it in the same change;
+  [references/testing.md](references/testing.md) says which values it cannot
+  bracket.
 - **Anything the UI displays**: also a real-browser pass on the backend-backed
   build, per `.claude/rules/browser-verification.md`.
 
@@ -463,8 +474,9 @@ Update this skill in the same change when any of these moves:
 - `backend/docs/02-backend.md` §4 or §8, or `backend/docs/04-adatbazis.md`;
 - a new record under `backend/docs/decisions/` (the next number, 0023, is
   stated in section 5);
-- `backend/services/commerce/src/main/resources/application.properties` or
-  `backend/services/commerce/src/test/resources/application-test.properties`;
+- `backend/services/commerce/src/main/resources/application.properties`,
+  `backend/services/commerce/src/test/resources/application-test.properties`
+  or `backend/services/commerce/src/test/resources/catalog/catalog.json`;
 - a new domain package, or a class named here moving or being renamed;
 - a new changeset (the changeset count, and the next number in the output
   excerpts here and in the references);
@@ -481,4 +493,6 @@ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claud
 
 Add `--show-anchors` to print each anchored line, then read whether it still
 says what this skill claims; the script checks that a line exists, not what it
-says.
+says. Run it again after any edit to the root `CLAUDE.md`, `.claude/CLAUDE.md`
+or a file under `.claude/rules/`: its check (e) reports a section this skill
+cites by name that was renamed or removed.

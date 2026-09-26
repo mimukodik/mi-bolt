@@ -152,7 +152,8 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    pinned in that file and nowhere else (see "Pins" above).
 3. Name it for what it acts on, prefixed by its owner, the way
    `mise run contracts:check` and `mise run api:drift` are named
-   (`.claude/rules/code-standards.md:26`).
+   (`.claude/rules/code-standards.md`, "A name says what it operates on, and
+   who owns it").
 4. Give it a `description`: `mise tasks` prints it, and the two command tables
    repeat it word for word.
 5. Add the same row to `README.md:352-372` and to `docs/monorepo.md:30-50`.
@@ -162,6 +163,10 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    (`mise.toml:67-74`).
 7. CI never runs a root task, so a check that CI should run also needs a step
    in its workflow; [references/ci-cd.md](references/ci-cd.md) has the shape.
+   The edit itself still starts CI, because every `mise.toml` sits inside at
+   least one component's paths in `.github/components.yml`, the root one in
+   four of the five; `mibolt-verification` maps a changed path to the
+   components it starts and the checks to run locally.
 
 Done when `mise tasks` shows the task with its description, both tables carry
 the row, and the checks `mibolt-verification` names for the change pass.
@@ -232,16 +237,19 @@ argument to Compose. Then match the symptom in the table at the end of
 ## Rules that apply here
 
 - **Name a task or a script for what it acts on, prefixed by its owner:**
-  `.claude/rules/code-standards.md:26`.
+  `.claude/rules/code-standards.md` ("A name says what it operates on, and who
+  owns it").
 - **Run a Python tool through uv, pinned in the area's `mise.toml`:**
-  `.claude/rules/code-standards.md:35`. The deploy checks run through uv with
-  no uv pinned at the root: `mise run deploy:check` runs
+  `.claude/rules/code-standards.md` ("A Python tool runs through uv"). The
+  deploy checks run through uv with no uv pinned at the root:
+  `mise run deploy:check` runs
   `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
   (`mise.toml:100-102`), and `.github/workflows/candidate.yml:32-40` runs all
   six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
 - **No machine-specific path in a committed file:**
-  `.claude/rules/code-standards.md:21`. The scripts here find their location at
-  run time, as `deploy/compose.sh:8` and `deploy/stack.sh:29-30` do.
+  `.claude/rules/code-standards.md` ("No machine-specific path in any committed
+  file"). The scripts here find their location at run time, as
+  `deploy/compose.sh:8` and `deploy/stack.sh:29-30` do.
 - **Servers, containers and the database are the orchestrator's:**
   `.claude/rules/session-lifecycle.md` ("Tools and startup").
   `deploy/stack.sh up` starts containers and claims ports the same way the root
@@ -254,10 +262,16 @@ argument to Compose. Then match the symptom in the table at the end of
   `frontend/README.md:30`).
 - **Call Compose through `deploy/compose.sh`,** because the volume guard and
   the `.env` creation live there (`deploy/compose.sh:10-22`).
-- **Leave the default volume alone.** `stop` keeps it (`mise.toml:58-60`),
-  `.github/workflows/smoke.yml` runs `down -v` only on a project of its own,
-  and `deploy/stack.sh` refuses the `mi-bolt-local` project
-  (`deploy/stack.sh:126-131`); removing it removes the developer's data.
+- **Leave the default volume alone unless the user asks for a reset.** `stop`
+  keeps it (`mise.toml:58-60`), `.github/workflows/smoke.yml` runs `down -v`
+  only on a project of its own, and `deploy/stack.sh` refuses the
+  `mi-bolt-local` project (`deploy/stack.sh:126-131`); removing it removes the
+  developer's data. The reset is `deploy/compose.sh down -v`, with no project
+  or volume variable exported, and then a fresh start
+  (`backend/README.md:81-88`). `mibolt-commerce-backend` sends it here for a
+  local database that halts on an edited changeset, and it is also what makes
+  a changed catalogue or `MIBOLT_DEMO_*` value take effect. Running it is the
+  orchestrator's step, as with every mode.
 - **Pin images by digest,** as every base image in both Dockerfiles and the
   PostgreSQL image in `deploy/compose.yaml:10` are. An image's published tag is
   a hash of tracked files (`deploy/candidate/README.md:27-29`), so only a
@@ -339,7 +353,8 @@ This skill goes stale when any of these change: the five `mise.toml` files; the
 `scripts` of `frontend/package.json` and `tools/package.json`; the `serve` and
 `build` targets in `frontend/angular.json` and the `frontend/proxy*.json`
 files; anything under `deploy/` or `.github/`; the two Dockerfiles,
-`frontend/nginx/` and `frontend/tests/web-image/`; `tools/dev-server/`,
+`frontend/.dockerignore`, `frontend/nginx/`, `frontend/tests/web-image/` and
+`frontend/tests/scripts/`; `tools/dev-server/`,
 `frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` and
 `frontend/playwright.config.ts:26-27`; `.gitattributes` and `.gitignore`; the
 ports and command tables in `README.md` and `docs/monorepo.md`, the variable
@@ -350,4 +365,7 @@ edit one of those, reread the lines this skill and its references cite from it.
 Check the cited paths, anchors and commands with
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-workspace-ops`;
 add `--show-anchors` to print each anchored line's current text, so a reader
-can judge whether it still says what this skill claims.
+can judge whether it still says what this skill claims. Run the checker again
+after an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or any file under
+`.claude/rules/`: its check (e) reports a section this skill cites by name that
+was renamed or removed.

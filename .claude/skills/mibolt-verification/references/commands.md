@@ -43,8 +43,8 @@ in `frontend/` (installed by `mise run setup`) and the Node version pinned at
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `npx eslint <files>`, invoked from `frontend/` | `eslint` in `frontend/package.json:68`; the form is `.claude/rules/code-standards.md:100-104` | — | read-only |
-| `npx prettier --check <files>`, invoked from `frontend/` | `prettier` in `frontend/package.json:80`; the form is `.claude/rules/code-standards.md:100-104` | — | read-only |
+| `npx eslint <files>`, invoked from `frontend/` | `eslint` in `frontend/package.json:68`; the form is `.claude/rules/code-standards.md` ("A subagent's green report is not a run") | — | read-only |
+| `npx prettier --check <files>`, invoked from `frontend/` | `prettier` in `frontend/package.json:80`; the form is `.claude/rules/code-standards.md` ("A subagent's green report is not a run") | — | read-only |
 | `npm --prefix frontend run lint` | `frontend/package.json:28` | — | read-only |
 | `npm --prefix frontend run format:check` | `frontend/package.json:30` | — | read-only |
 | `mise run //frontend:lint` (both of the above) | `frontend/mise.toml:5-6` | — | read-only |
@@ -73,7 +73,7 @@ Gradle builds `backend/`. It needs Java 21 (`mise.toml:13`) and no database.
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `backend/gradlew -p backend :services:commerce:build` | Gradle build; the form is `.claude/rules/code-standards.md:104-106` | — | writes local artefacts |
+| `backend/gradlew -p backend :services:commerce:build` | Gradle build; the form is `.claude/rules/code-standards.md` ("A subagent's green report is not a run") | — | writes local artefacts |
 | `mise run //backend:build` (`//backend:test` first) | `backend/mise.toml:11-13` | — | writes local artefacts |
 | `mise run //backend:test` (`test`, then `integrationTest`) | `backend/mise.toml:8-9` | — | writes local artefacts |
 | `backend/gradlew -p backend :services:commerce:test --tests <pattern>` | Gradle `test` task | — | writes local artefacts |

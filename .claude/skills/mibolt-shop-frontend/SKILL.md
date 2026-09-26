@@ -122,7 +122,12 @@ a late answer never overwrites a newer query. There is no state library.
 states most of them in one place:
 
 - The server is authoritative. The checkout summary, `complete` and the cart
-  version come from its answer, and the checkout never recomputes them.
+  version come from its answer, and the checkout never recomputes them. A
+  figure a backend rule decides, such as a delivery fee, the free-shipping
+  threshold or the cash-on-delivery ceiling, is the server's too: no
+  storefront source holds one (observed), and a page that needs one the SDK
+  does not carry gets it through a contract change first (Workflows step 2),
+  never from a number written into the storefront or read from `shop-mocks`.
 - Every cart and checkout write carries `If-Match` bound to the cart version
   at dispatch time, not at click time. `CartMutationQueue` serialises cart
   writes and `CheckoutFacade` serialises its own; both share the cart's
@@ -155,7 +160,7 @@ the identifier as the repository spells it").
 | Order, payment intent, 409, 410, 412 | `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts` |
 | Route, layout or page | `frontend/projects/storefront/src/app/app.routes.ts` |
 | UI primitive | `frontend/projects/storefront/src/app/shared/ui/index.ts` |
-| Shopper-facing sentence | the page that shows it; `describeAddFailure` in `frontend/projects/storefront/src/app/features/product/product-page.ts` builds the add-to-cart refusals |
+| Shopper-facing sentence | the page that shows it; `describeAddFailure` in `frontend/projects/storefront/src/app/features/product/product-page.ts` builds the add-to-cart refusals, the quantity-limit one included; a cart line has no quantity control, so the product page is the only place a shopper meets that limit |
 | Price display | `frontend/projects/storefront/src/app/shared/ui/price-block/price-block.ts` |
 | Product card (catalogue grid, home featured grid, related strip) | `frontend/projects/storefront/src/app/features/catalog/product-card.ts` |
 | Payment page | `frontend/projects/demo-payment/src/app/payment-page.ts` |
@@ -194,10 +199,11 @@ Copy these when you need a pattern:
    (`frontend/docs/spec/screens.md:73`). Not every such decision shows in the
    code, so read the section of the screen you are changing. Raise a
    collision before building rather than settling it either way, because
-   whether the recorded decision or the new request stands is the owner's
-   call. Take no colour, type or size value from the spec: those come from
-   `frontend/docs/design/yettel.md` (`.claude/CLAUDE.md`, "Design
-   authority"), which `frontend/docs/spec/screens.md:7` names too.
+   whether the recorded decision or the new request stands is the product
+   owner's call. Take no colour, type, radius, spacing or recipe value from
+   the spec: those come from `frontend/docs/design/yettel.md`
+   (`.claude/CLAUDE.md`, "Design authority"), which
+   `frontend/docs/spec/screens.md:7` names too.
 4. **Change the layers from the data outwards**: the mock, then the codec or
    facade, then the component, each with its spec beside it; for a bug, write
    the failing spec first. The step lists for a catalogue filter, a
@@ -290,7 +296,10 @@ because they are easy to break in this area.
   change; it leaves with an element or a feature the task itself removes, per
   `.claude/rules/code-standards.md` ("A cut feature leaves nothing behind").
   The template accessibility lint rules still run on every template, so a new
-  or changed template has to lint clean against them (register entry C7).
+  or changed template has to lint clean against them. Put a click on a
+  native `<button>`, which `click-events-have-key-events` accepts without a
+  key handler, and where a rule still fails, ask rather than add keyboard or
+  ARIA code (register entry C7).
 - **Framework questions** are answered with the instruments in
   `.claude/rules/framework-facts.md`, never by a probe. The `angular-developer`
   skill is vendored generic Angular guidance; this skill records what this
@@ -373,6 +382,9 @@ area needs most often:
 - `npm --prefix frontend run test` runs every project and writes its reports
   under `coverage/` in `frontend/`, which parallel runs share
   (`.claude/rules/parallel-spawns.md`, "What a batch shares").
+- `npm --prefix frontend run lint` runs ESLint over every project, templates
+  included, as CI's `lint` job does (`.github/workflows/frontend.yml:34`);
+  the template accessibility rules above report there (register entry C7).
 - `npm --prefix frontend run build` and `npm --prefix frontend run build:payment`
   write `dist/storefront/` and `dist/demo-payment/` in `frontend/`;
   `npm --prefix frontend run check:storefront-dist` and
@@ -436,4 +448,7 @@ node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claud
 
 It exits 0 when nothing fails. Add `--show-anchors` to print each anchored
 line, and read whether it still says what this skill claims; the script
-cannot judge that.
+cannot judge that. Run it also after any edit to root `CLAUDE.md`,
+`.claude/CLAUDE.md` or a file under `.claude/rules/`: this skill cites
+sections of those files by name, and the script reports a cited section that
+was renamed or removed.

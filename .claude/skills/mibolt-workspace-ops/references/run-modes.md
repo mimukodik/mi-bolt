@@ -154,7 +154,7 @@ or the local cache and builds only when it finds none
 image").
 
 **From the main checkout, `deploy/stack.sh` refuses** (exit 2,
-`deploy/stack.sh:72-87`). SKILL.md ("Run a second stack beside the default
+`deploy/stack.sh:72-87`). `SKILL.md` ("Run a second stack beside the default
 one") gives the variables to export, the `deploy/compose.sh` arguments, and
 how to stop that stack without stopping the default `mi-bolt-local` one.
 `.github/workflows/smoke.yml:19-25` sets the project, the volume and the
