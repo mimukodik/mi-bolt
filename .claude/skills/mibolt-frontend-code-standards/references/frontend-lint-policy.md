@@ -90,7 +90,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 - **Test policy** (`frontend/eslint.config.mjs:35-65`, applied at `frontend/eslint.config.mjs:453-472`): `only`, `skip`, `todo`, `fails`, `skipIf` and `runIf` are banned as a property, as a computed key, and when destructured, on `projects/**/*.spec.ts` and `tests/**/*.ts`.
 - **Coverage pragmas** (`frontend/eslint.config.mjs:473-484`): a comment containing `v8 ignore`, `istanbul ignore` or `c8 ignore` anywhere is an error in `projects/`, `tests/` and `e2e/`.
 - **`frontend/tests/`** keeps `no-explicit-any` (from `recommended`) but runs no type-aware rule, so `strict-boolean-expressions` and the `no-unsafe-*` rules do not reach it.
-- **`frontend/e2e/` and `frontend/playwright.config.ts`** (`frontend/eslint.config.mjs:343-384`): `recommended` presets, type-aware parsing, `playwright/no-focused-test`, `playwright/no-skipped-test` allowing the conditional `test.skip(condition, reason)`, `test` imported from `e2e/fixtures/coverage` rather than `@playwright/test` (lifted inside `e2e/fixtures/**`), and no `page.reload()` or `waitForTimeout()`. `e2e/seed.spec.ts` is the conventions file the specs follow rather than a test, and it and `e2e/fixtures/**` are ordinary code.
+- **`frontend/e2e/` and `frontend/playwright.config.ts`** (`frontend/eslint.config.mjs:343-384`): `recommended` presets, type-aware parsing, `playwright/no-focused-test`, `playwright/no-skipped-test` allowing the conditional `test.skip(condition, reason)`, `test` imported from `e2e/fixtures/coverage` rather than `@playwright/test` (lifted inside `e2e/fixtures/**`), and no `page.reload()` or `waitForTimeout()`. `e2e/seed.spec.ts` is the conventions file the specs follow rather than a test.
 
 ## 6. Templates
 
@@ -107,12 +107,15 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 | strict type checking (`SKILL.md`, "Types") | tsc: `strict` and the flags at `frontend/tsconfig.json:6-10` |
 | infer a type where it is obvious (`SKILL.md`, "Types") | `no-inferrable-types` under `projects/`, for an annotation on a number, string or boolean initialiser; `explicit-function-return-type` requires return types, a recorded conflict |
 | avoid `any`, `unknown` when the type is uncertain (`SKILL.md`, "Types") | `no-explicit-any` in every linted TypeScript file except `e2e/seed.spec.ts` (section 1); `$any()` by the template `no-any` |
+| no `as`, `satisfies` only where the value already matches (`SKILL.md`, "Types") | `consistent-type-assertions` with `assertionStyle: 'never'` in `projects/admin/**/*.ts` and two contract files only; elsewhere written only, a recorded conflict (register C1) |
+| existing type guards first, one written when none fits; generic interfaces (`SKILL.md`, "Types") | written only |
 | standalone, no `standalone: true` (`SKILL.md`, "Angular") | `prefer-standalone` reports `standalone: false` only; `standalone: true` is written only |
 | no explicit `OnPush` (`SKILL.md`, "Angular") | written only: `allowExplicitOnPush` is true |
 | no `@HostBinding` or `@HostListener`, the `host` object instead (`SKILL.md`, "Angular") | written only |
 | `input()` and `output()` (`SKILL.md`, "Angular") | `@Input()` by `prefer-signals`; `@Output()` written only |
 | `model()` for a two-way binding (`SKILL.md`, "Angular") | written only |
 | inline templates for small components (`SKILL.md`, "Angular") | written only, and a recorded conflict with the code |
+| small components and services with one responsibility each (`SKILL.md`, "Angular") | written only |
 | no `ngClass`, `ngStyle` or `CommonModule` (`SKILL.md`, "Angular") | written only |
 | native control flow (`SKILL.md`, "Angular") | `template/prefer-control-flow` |
 | simple templates, no globals or `new` in one (`SKILL.md`, "Angular") | no lint rule; `$any()` by the template `no-any` |

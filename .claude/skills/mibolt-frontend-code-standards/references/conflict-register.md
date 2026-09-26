@@ -33,13 +33,13 @@ file and the rule goes into section 5 of `SKILL.md`.
 - **`inject(Api)`**, in four storefront units, among them `frontend/projects/storefront/src/app/features/catalog/catalog.facade.ts:197`, `frontend/projects/storefront/src/app/features/product/product.facade.ts:119` and `frontend/projects/storefront/src/app/core/demo-access/demo-access.ts:62`; the fourth is the home page.
 - **`new Api(inject(ApiConfiguration), inject(HttpClient))`**: `frontend/projects/storefront/src/app/features/cart/cart.facade.ts:159`, `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:244`, `frontend/projects/demo-payment/src/app/payment-page.ts:226`. The comment above each gives the reason: Vitest's esbuild pipeline does not emit the decorator metadata the generated class's constructor injection needs (`frontend/projects/storefront/src/app/features/cart/cart.facade.ts:152-158`).
 - **How the specs supply it**: the catalogue facade's and the home page's specs replace `Api` with a stub (`provide: Api` with `useValue`); the specs of the cart facade, the checkout facade, the payment page and `demo-access.ts` drive real HTTP through MSW, the last one although its unit uses `inject(Api)` (`frontend/projects/storefront/src/app/core/demo-access/demo-access.spec.ts:32`), and so does the product facade's page spec (`frontend/projects/storefront/src/app/features/product/product-page.spec.ts:51`). A third form sits in the specs: `provide: Api` with a `useFactory` that calls `new Api(config, http)` (`frontend/projects/storefront/src/app/features/product/variant-selection.spec.ts:430-434`, `frontend/projects/storefront/src/app/features/catalog/catalog-page.spec.ts:331-335`, `frontend/projects/storefront/src/app/a11y-structure.spec.ts:485-489`), for the decorator-metadata reason `frontend/projects/storefront/src/app/features/product/variant-selection.spec.ts:425-429` gives.
-- **Left alone**: the idiom of each existing unit, since a switch changes what its spec has to provide. No source decides which form a new unit uses, so a new unit's report names the form it took. The admin app uses its own `AdminApi` through `inject()` and is outside this entry.
+- **Left alone**: the idiom of each existing unit, since a switch changes what its spec has to provide. No source decides which form a new unit uses. The admin app uses its own `AdminApi` through `inject()` and is outside this entry.
 
 ## C3. Inline templates preferred, external templates in use
 
 - **Written**: a small component takes an inline template (`SKILL.md`, "Angular").
 - **Observed** (non-spec components): the storefront has 57 `templateUrl` components and 1 inline template (`frontend/projects/storefront/src/app/features/checkout/navigation-reason-banner.ts:26`); the admin has 19 and 5 (for example `frontend/projects/admin/src/app/shared/forms/control-error.ts:17`); demo-payment has 2 and none.
-- **Left alone**: existing components, in both directions. No decision is recorded between the written preference and the house pattern; say in the report which one a new small component followed.
+- **Left alone**: existing components, in both directions. No decision is recorded between the written preference and the house pattern.
 
 ## C4. The zoneless provider, explicit in two apps and omitted in one
 
@@ -58,7 +58,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 - **Written**: the project makes `frontend/docs/design/yettel.md` the design reference for every rendered surface (`mibolt-shop-frontend` ("Design authority")), and the document calls itself "the mandatory design reference for the MiBolt frontend" (`frontend/docs/design/yettel.md:5`). It never mentions the admin app or demo-payment (`git grep`, 0 hits).
 - **Observed**: the admin is styled with Angular Material's `azure-blue` theme and Tailwind utilities without Preflight (`frontend/projects/admin/README.md:5`, `frontend/projects/admin/README.md:70-72`). Demo-payment's stylesheet takes the shop's spacing, radii and a few colours from the design reference and records that its palette and typeface are deliberately not the shop's (`frontend/projects/demo-payment/src/styles.css:9-18`).
 - **A third source**: `frontend/docs/spec/architecture.md:25` says "no Angular Material visual theme", in a document whose status line calls it an implementation-ready design rather than an implemented application (`frontend/docs/spec/architecture.md:3`).
-- **Left alone**: no decision is recorded. A styling change in the admin or demo-payment says which source it followed; the admin's styling itself belongs to `mibolt-admin-frontend`.
+- **Left alone**: no decision is recorded; the admin's styling itself belongs to `mibolt-admin-frontend`.
 
 ## C7. The accessibility rule beside the template accessibility lint rules
 
@@ -81,11 +81,11 @@ full; they are named here only because frontend documents cite them as checks.
 ## C9. Inferred types preferred, return types required
 
 - **Written**: a type is inferred where it is obvious (`SKILL.md`, "Types").
-- **Linted**: `explicit-function-return-type` at error level (`frontend/eslint.config.mjs:299-308`) requires a return type on every function and method in `projects/**/*.ts` and `tests/**/*.ts`, `const f = () => 1` included; it exempts only an inline callback, a function whose variable is already typed, and one that directly returns another function (https://typescript-eslint.io/rules/explicit-function-return-type/). On the same side as the written rule, `no-inferrable-types` rejects an annotation on a variable, parameter or property initialised to a number, string or boolean, under `projects/` only (https://typescript-eslint.io/rules/no-inferrable-types/).
+- **Linted**: `explicit-function-return-type` at error level (`frontend/eslint.config.mjs:299-308`) requires a return type on every function and method in `projects/**/*.ts` and `tests/**/*.ts`, `const f = () => 1` included; it exempts an inline callback, a function whose variable is already typed, one that directly returns another function, an arrow function that directly returns an `as const` value, and a concise arrow function that starts with `void`, the five options at `frontend/eslint.config.mjs:302-306` (https://typescript-eslint.io/rules/explicit-function-return-type/). On the same side as the written rule, `no-inferrable-types` rejects an annotation on a variable, parameter or property initialised to a number, string or boolean, under `projects/` only (https://typescript-eslint.io/rules/no-inferrable-types/).
 - **Left alone**: the return types. A missing one fails the lint check, so the written preference reaches only what that rule leaves open; no source says whether the preference or the rule should give way.
 
 ## C10. The `async` pipe written, subscriptions into signals observed
 
 - **Written**: an observable a template reads goes through the `async` pipe, and state lives in signals (`SKILL.md`, "Angular").
 - **Observed**: no template reads an observable. Outside the specs and the generated clients, `| async` occurs nowhere and `.subscribe(` occurs 20 times in class code (`git grep`, 2026-09-26), for example at `frontend/projects/storefront/src/app/features/home/home-page.ts:71-81`, which writes a generated client's result into a signal.
-- **Left alone**: the existing subscriptions. No source says whether a new unit hands its template an observable through the pipe or a signal set from a subscription; a new unit's report names the form it took.
+- **Left alone**: the existing subscriptions. No source says whether a new unit hands its template an observable through the pipe or a signal set from a subscription.
