@@ -1,10 +1,7 @@
 # Local run modes
 
-Every path is relative to the repository root. Starting and stopping any mode
-below is the orchestrator's, never a spawned agent's:
-`.claude/rules/session-lifecycle.md` ("Tools and startup") owns that rule and
-`.claude/rules/parallel-spawns.md` ("What a batch shares") explains why a port
-and the database are shared.
+Every path is relative to the repository root, except `SKILL.md`, which is
+this skill's own file.
 
 ## Contents
 

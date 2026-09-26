@@ -178,10 +178,6 @@ files; `deploy/candidate/README.md:91-97` runs `actionlint` by hand, and no
   `deploy/tests/test-candidate.py:37`, `deploy/tests/test-candidate.py:40`),
   and `git ls-files tools/ci` lists no file: the pattern matches no tracked
   path today.
-- The `tools` filter includes `.claude/hooks/**` (`.github/components.yml:23`),
-  and `.github/workflows/tools.yml` runs only in `tools/`; no workflow runs
-  `mise run claude:hooks:test` or `mise run claude:hooks:typecheck`, which
-  `mise run verify` runs locally (`mise.toml:67-74`).
 - CI takes Node 26 and Java 21 from the setup actions, while mise pins exact
   versions for local runs (`mise.toml:11-13`).
 - `README.md:340-346` names four reusable workflows; `.github/components.yml`

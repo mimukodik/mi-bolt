@@ -5,9 +5,13 @@ description: "Changing or running MiBolt workspace wiring: root and area mise ta
 
 # MiBolt workspace ops
 
-Every path here is relative to the repository root, and every command runs from
-there; `.claude/rules/session-lifecycle.md` ("Tools and startup") says where
-each workspace's own commands run.
+A path starting with `references/` is relative to this skill's directory, a
+path starting with a MiBolt skill name, such as
+`mibolt-project-map/scripts/check-skill-references.mjs`, is relative to the
+directory that holds the MiBolt skills, and every other path is relative to
+the repository root. Commands run from the repository root with their paths
+resolved that way; "Where commands run" below gives the form each area's
+commands take.
 
 ## Scope and hand-offs
 
@@ -27,8 +31,8 @@ files, the last a tracked symlink to the properties file in
 `backend/services/commerce/Dockerfile` and
 `backend/services/commerce/Dockerfile.dockerignore`; `frontend/nginx/`,
 `frontend/tests/web-image/` and `frontend/tests/scripts/`; `.github/`;
-`tools/dev-server/`, `tools/install-spring-tools-mcp.sh`,
-`frontend/scripts/serve-static.mjs` and `frontend/scripts/proxy-timeout.mjs`;
+`tools/dev-server/`, `frontend/scripts/serve-static.mjs` and
+`frontend/scripts/proxy-timeout.mjs`;
 `backend/docs/06-uzembe-helyezes.md`, which builds and runs the backend image
 by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
 `backend/.gitattributes` and `backend/.gitignore` as files.
@@ -43,21 +47,17 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   owns them. The wiring of those root tasks is here.
 - Application code is out of scope: `mibolt-shop-frontend`,
   `mibolt-admin-frontend` and `mibolt-commerce-backend` own it.
-- Playwright projects, specs and their web servers are out of scope:
-  `playwright-tests` owns them.
+- Playwright projects, specs and their web servers are out of scope: they are
+  the end-to-end suite's own configuration, in `frontend/playwright.config.ts`
+  and `frontend/e2e/`.
 - The formatting rules that follow from `.editorconfig` are out of scope:
   `mibolt-frontend-code-standards` and `mibolt-backend-code-standards` own
   them.
-- `.claude/**` is out of scope even where a root task runs it (`claude:memory`,
-  `claude:hooks:test`, `claude:hooks:typecheck`): `.claude/CLAUDE.md` and the
-  rule files it indexes own it.
 - `backend/settings.gradle` and the plugin, toolchain and dependency blocks at
   `backend/services/commerce/build.gradle:1-37` are out of scope:
   `mibolt-commerce-backend` owns them.
 - Dependency upgrades are out of scope for this skill, though the manifests
-  and the lockfiles named above are in it as files;
-  `.claude/rules/parallel-spawns.md` ("What a batch shares") treats the
-  dependency files as one agent's at a time.
+  and the lockfiles named above are in it as files.
 
 ## What the wiring is
 
@@ -106,9 +106,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   publishes what it installs.
 - **Dev tooling.** `deploy/stack.sh` gives a linked worktree a Compose stack of
   its own; `tools/dev-server/dev-server.sh` starts and stops one process on one
-  port; `frontend/scripts/serve-static.mjs` serves a production build;
-  `tools/install-spring-tools-mcp.sh` downloads the Spring Tools language
-  server for the `spring-tools` MCP server (`README.md:67-79`).
+  port; `frontend/scripts/serve-static.mjs` serves a production build.
 - **`api:drift` checks the frontend clients only** (`mise.toml:80-82`). The
   backend stubs are generated into the Gradle build directory on every build
   (`backend/services/commerce/build.gradle:92`) and no file of them is tracked.
@@ -140,7 +138,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    `depends`, which mise runs in parallel
    (https://mise.jdx.dev/tasks/task-configuration.html, "depends"). A step that
    has no task of its own goes under `run` and runs from the root, the way
-   `claude:memory` runs `npm --prefix tools run` (`mise.toml:88-90`). A task
+   `stop` runs `deploy/compose.sh down` (`mise.toml:58-60`). A task
    that runs the contract checks and the frontend contract suite, for
    example, can depend on `//contracts:check`, which
    `mise run //contracts:check` runs alone, and run
@@ -151,16 +149,17 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    `check`'s `depends`, and depend on it from the root, because `vacuum` is
    pinned in that file and nowhere else (see "Pins" above).
 3. Name it for what it acts on, prefixed by its owner, the way
-   `mise run contracts:check` and `mise run api:drift` are named
-   (`.claude/rules/code-standards.md`, "A name says what it operates on, and
-   who owns it").
+   `mise run contracts:check` and `mise run api:drift` are named ("Naming"
+   below).
 4. Give it a `description`: `mise tasks` prints it, and the two command tables
    repeat it word for word.
 5. Add the same row to `README.md:352-372` and to `docs/monorepo.md:30-50`.
    Both tables list the other 19 root tasks; `mise run deploy:check`
    (`mise.toml:100-102`) is in neither.
 6. When the workspace as a whole should pass it, add it to `verify`'s `depends`
-   (`mise.toml:67-74`).
+   (`mise.toml:67-74`). `verify` also runs checks outside the product, and a
+   run can leave a tracked file outside the change modified, so read
+   `git status` after it.
 7. CI never runs a root task, so a check that CI should run also needs a step
    in its workflow; [references/ci-cd.md](references/ci-cd.md) has the shape.
    The edit itself still runs component workflows in CI, because every
@@ -222,7 +221,6 @@ workflow, or a trigger that does not fire: read
   variables stops the default `mi-bolt-local` project instead
   (`deploy/compose.yaml:6`).
 
-Starting either is the orchestrator's step, as with every mode.
 [references/run-modes.md](references/run-modes.md) has the slot arithmetic and
 the variables.
 
@@ -237,26 +235,86 @@ argument to Compose. Then match the symptom in the table at the end of
 
 ## Rules that apply here
 
-- **Name a task or a script for what it acts on, prefixed by its owner:**
-  `.claude/rules/code-standards.md` ("A name says what it operates on, and who
-  owns it").
-- **Run a Python tool through uv, pinned in the area's `mise.toml`:**
-  `.claude/rules/code-standards.md` ("A Python tool runs through uv"). The
-  deploy checks run through uv with no uv pinned at the root:
-  `mise run deploy:check` runs
-  `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
-  (`mise.toml:100-102`), and `.github/workflows/candidate.yml:32-40` runs all
-  six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
-- **No machine-specific path in a committed file:**
-  `.claude/rules/code-standards.md` ("No machine-specific path in any committed
-  file"). The scripts here find their location at run time, as
-  `deploy/compose.sh:8` and `deploy/stack.sh:29-30` do.
-- **Servers, containers and the database are the orchestrator's:**
-  `.claude/rules/session-lifecycle.md` ("Tools and startup").
-  `deploy/stack.sh up` starts containers and claims ports the same way the root
-  modes do.
-- **Ports and the dependency files are shared across agents:**
-  `.claude/rules/parallel-spawns.md` ("What a batch shares").
+### Where commands run
+
+Run every command from the repository root, in the form its area takes:
+
+- a root task as `mise run` and its name, such as `mise run stack`; `mise tasks`
+  lists them with their descriptions. The area tasks behind them, `setup`,
+  `lint`, `test` and `build` in each of `frontend/`, `backend/` and `tools/`
+  and `check` in `contracts/`, are listed by `mise tasks --all` and run by
+  their full name, such as `mise run //frontend:build`;
+- a script of the Angular workspace as `npm --prefix frontend run` and its
+  name, such as `npm --prefix frontend run test:contract`, and one of `tools/`
+  the same way, such as `npm --prefix tools run typecheck`;
+- a backend Gradle task through the wrapper, with `backend` as the project
+  directory and the task under `:services:commerce:`, such as
+  `backend/gradlew -p backend :services:commerce:build`;
+- one of the repository's own scripts by its path, such as `deploy/compose.sh`,
+  `deploy/stack.sh` or `tools/dev-server/dev-server.sh`.
+
+The one exception is a package binary run with `npx` against the Angular
+workspace, such as `npx eslint` or `npx prettier`, which runs from `frontend/`.
+npx finds its project by walking up from the directory it runs in to the first
+one holding a `package.json` or a `node_modules`
+(https://docs.npmjs.com/cli/v11/configuring-npm/folders), and the repository
+root has no `package.json`, so run there it misses the `node_modules` under
+`frontend/` and runs whatever other copy it finds, which need not be the
+version the workspace pins (measured 2026-09-26: `npx --no -- eslint --version`
+printed v10.10.0 in `frontend/` and v10.11.0 at the root). The package manager
+is npm (`frontend/package.json:37`); there is no `pnpm`.
+
+A task, npm script or Gradle task that `mise tasks --all`, the "scripts" block
+of `frontend/package.json` or `tools/package.json`, or the Gradle build does
+not define does not exist here, however familiar the name looks. Read the list
+rather than recalling a name: one remembered from another project fails here
+on its first run.
+
+### Python tools
+
+Run a Python tool through uv, pinned in the `mise.toml` of the area that uses
+it, the way `contracts/mise.toml:5-12` does: `uv` under `[tools]`, the tool
+beside it as `"pypi:<name>" = "<version>"`, and `pypi.uvx = true` under
+`[settings]`, which has mise install the tool with that uv rather than with
+pipx (https://mise.jdx.dev/dev-tools/backends/pipx.html), so it runs at the
+same version locally and in CI. Run a one-off tool that no `mise.toml` pins as
+`uvx <name>@<version>`, with an exact version
+(https://docs.astral.sh/uv/guides/tools/). Install nothing Python with `pip`,
+`pipx` or a global or system Python, whose version is whatever that machine
+has; where a tool cannot run through uv, ask the user before installing it any
+other way.
+
+The deploy checks run through uv with no uv pinned at the root:
+`mise run deploy:check` runs
+`uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
+(`mise.toml:100-102`), and `.github/workflows/candidate.yml:32-40` runs all
+six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
+
+### Naming
+
+Name a script, a script directory, an npm script or a mise task after the
+thing it acts on rather than after the technique it uses, and give anything
+that belongs to one tool or area that owner's prefix: `contracts:check`,
+`deploy:check` and `api:drift` among the root tasks, `fixtures:catalog:check`
+among the scripts of `frontend/package.json`, `deploy/candidate/` and
+`tools/dev-server/` among the directories. The test is whether a reader who
+comes back two days later can tell what the name does without opening the
+file.
+
+### No machine-specific paths
+
+Keep every committed file free of paths that exist on one machine only: no
+home directory, no `~`, no temp directory, no `file:` URL pointing at a local
+checkout. Derive a location at run time or write it repository-relative:
+`deploy/compose.sh:8` and `deploy/stack.sh:29-30` find their own directory
+through `BASH_SOURCE`, `frontend/scripts/serve-static.mjs:63` finds the
+repository root from `import.meta.url`, and `deploy/stack.sh:44` keeps its
+slot ledger under `XDG_STATE_HOME`, falling back to `HOME`. Prose names such a
+location generically, as "the user's state directory". A path written for one
+machine fails on every other, CI included.
+
+### Wiring conventions
+
 - **Start an Angular dev server through the `start*` npm scripts, never
   `npx ng serve`,** because they carry the Node flag that avoids the V8 abort
   and `npx ng serve` does not (`frontend/package.json:6-11`,
@@ -271,10 +329,9 @@ argument to Compose. Then match the symptom in the table at the end of
   or volume variable exported, and then a fresh start
   (`backend/README.md:81-88`). `mibolt-commerce-backend` sends it here for a
   local database that halts on an edited changeset, and it is also what makes
-  a changed catalogue or `MIBOLT_DEMO_*` value take effect. Running it is the
-  orchestrator's step, as with every mode, and where one of those cases calls
-  for it without the user having asked, the orchestrator asks the user first,
-  because it deletes every local row (`backend/README.md:82-83`).
+  a changed catalogue or `MIBOLT_DEMO_*` value take effect. Where one of those
+  cases calls for it and the user has not asked for a reset, ask the user
+  first, because it deletes every local row (`backend/README.md:82-83`).
 - **Pin images by digest,** as every base image in both Dockerfiles and the
   PostgreSQL image in `deploy/compose.yaml:10` are. An image's published tag is
   a hash of tracked files (`deploy/candidate/README.md:27-29`), so only a
@@ -287,7 +344,7 @@ argument to Compose. Then match the symptom in the table at the end of
 |---|---|
 | a root task added, renamed or removed | `README.md:352-372`, `docs/monorepo.md:30-50`; `verify` when it is a gate; the workflow step when CI should run it |
 | an area task | the root task that names it as `//area:task`; the CI step that runs the same command |
-| a `start*` script | `frontend/mise.toml:29-45`; Playwright's own `ng serve` command at `frontend/playwright.config.ts:26`, which `playwright-tests` owns |
+| a `start*` script | `frontend/mise.toml:29-45`; Playwright's own `ng serve` command at `frontend/playwright.config.ts:26`, which is end-to-end configuration outside this skill |
 | a dev-server port or proxy | `frontend/angular.json`, `frontend/proxy*.json`, the ports table at `README.md:229-239`, the payment URL defaults at `backend/README.md:29-30` |
 | a Compose port, service or variable | `deploy/.env.example`, `README.md:241-243`, `backend/README.md:19-31`, the slot state `deploy/stack.sh:367-383` writes, `.github/workflows/smoke.yml:19-25`, `.github/workflows/backend.yml:183-185` and `.github/workflows/backend.yml:221-222`, the chart |
 | a Compose `build:` block | `deploy/candidate/publish.py:169-184` on `main` first, `.github/workflows/candidate.yml:51-60`, `deploy/tests/test-candidate.py` |
@@ -314,8 +371,8 @@ argument to Compose. Then match the symptom in the table at the end of
   serves the built apps with in CI (`frontend/playwright.config.ts:27`).
 - **A Dockerfile change:** beyond the `robots.txt` line
   `frontend/tests/web-image/nginx-robots.spec.ts` reads, only building the
-  image through Compose exercises it: `mise run stack` locally, which the
-  orchestrator starts, and the `smoke` and `Candidate Build` workflows in CI
+  image through Compose exercises it: `mise run stack` locally, and the
+  `smoke` and `Candidate Build` workflows in CI
   (`.github/workflows/smoke.yml:40-42`, `.github/workflows/candidate.yml:51-60`).
 - **A `tools/dev-server/` change:** `mise run //tools:lint` and
   `mise run //tools:test`; Vitest's default `include` collects
@@ -325,9 +382,9 @@ argument to Compose. Then match the symptom in the table at the end of
   `.github/workflows/candidate.yml:32-40` gives it;
   `deploy/candidate/build_metadata.py` has none.
 - **A workflow change** runs only on GitHub; nothing local executes a workflow.
-- **A mode or the stack running** is the orchestrator's to start and stop, and
-  a change a browser can reach is verified in a real browser under
-  `.claude/rules/browser-verification.md`.
+- **A change a browser can reach** is verified in a real browser, on the mode
+  that serves the changed app: `mibolt-verification` ("Browser pass") says
+  what that pass consists of.
 
 Consult `mibolt-verification` when the change is ready, for the full set of
 checks its paths call for.
@@ -353,9 +410,9 @@ platform has been chosen (`backend/docs/06-uzembe-helyezes.md:3-7`).
 ## Keep this skill current
 
 This skill goes stale when any of these change: the five `mise.toml` files; the
-`scripts` of `frontend/package.json` and `tools/package.json`; the `serve` and
-`build` targets in `frontend/angular.json` and the `frontend/proxy*.json`
-files; anything under `deploy/` or `.github/`; the two Dockerfiles,
+"scripts" blocks of `frontend/package.json` and `tools/package.json`; the
+`serve` and `build` targets in `frontend/angular.json` and the
+`frontend/proxy*.json` files; anything under `deploy/` or `.github/`; the two Dockerfiles,
 `frontend/.dockerignore`, `frontend/nginx/`, `frontend/tests/web-image/` and
 `frontend/tests/scripts/`; `tools/dev-server/`,
 `frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` and
@@ -374,10 +431,10 @@ nothing is printed for it, so reread what this skill and its references say
 about that file and about each directory above it.
 
 Check the cited paths, anchors and commands with
-`node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-workspace-ops`;
+`node mibolt-project-map/scripts/check-skill-references.mjs mibolt-workspace-ops`;
 add `--show-anchors` to print each anchored line's current text, so a reader
 can judge whether it still says what this skill claims. Run the checker again
-after an edit to the root `CLAUDE.md`, `.claude/CLAUDE.md` or any file under
-`.claude/rules/`: its check (e) fails a section this skill cites by name only
-once that name occurs nowhere in the file, so also reread each section cited
-from the edited file against the sentence here that cites it.
+after an edit to `mibolt-verification`, whose "Browser pass" section this
+skill cites by name: its check (e) fails such a citation only once the name
+occurs nowhere in that skill, so also reread the section against the sentence
+here that cites it.
