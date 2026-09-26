@@ -32,8 +32,10 @@
 //       is stripped, and the path must exist on disk and be one a fresh
 //       checkout holds (tracked, untracked but not ignored, or a directory
 //       above one), so a gitignored output fails whether or not it was built
-//       here; with an anchor, every upper line number must not exceed the
-//       target file's line count; a token containing `*` is a glob and must
+//       here; with an anchor, the path must be a file (an anchor on a
+//       directory is reported FAIL, reason "line anchor on a directory") and
+//       every upper line number must not exceed its line count; a token
+//       containing `*` is a glob and must
 //       match at least one such file or directory;
 //   (c) commands: `mise run <task>` against `mise tasks --all --json`;
 //       `npm --prefix frontend run <s>` / `npm --prefix tools run <s>`
@@ -59,7 +61,8 @@
 //       double-quoted name); only the first quoted name right after the
 //       target counts. A backticked `<target>` is read as a citation only
 //       when it matches `mibolt-<name>` (a skill name) or is a path, meaning
-//       it contains a `/` or its last segment has a file extension (a dot
+//       that, with any line anchor stripped as (b) strips it, it contains a
+//       `/` or its last segment has a file extension (a dot
 //       followed by 1-10 alphanumerics, as in `SKILL.md` or `mise.toml`);
 //       any other token followed by a quoted phrase, such as a flag or a
 //       bare value, is not a citation and is skipped with no report and no
@@ -76,8 +79,9 @@
 //         "no such skill".
 //       - the target is a path that resolves neither repo-relative nor
 //         skill-relative: skipped entirely (no report line, no contribution
-//         to "checked") when its first path segment is a top-level entry of
-//         `git ls-files` (check (b) already reports that same token) or when
+//         to "checked") when it holds no whitespace and its first path
+//         segment is a top-level entry of `git ls-files` (check (b) already
+//         reports that same token) or when
 //         the target contains `<` or `*` (a placeholder or a glob, as in a
 //         documentation template); otherwise reported FAIL, reason "section
 //         target not found".
@@ -643,6 +647,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
       }
 
       if (anchor !== null) {
+        if (statSync(resolved).isDirectory()) { findings.push({ status: 'FAIL', line: lineNo, kind: 'anchor', token, reason: 'line anchor on a directory' }); continue; }
         const upperBounds = anchorUpperBounds(anchor);
         const maxLine = Math.max(...upperBounds);
         const lineCount = fileLineCount(resolved);
@@ -686,7 +691,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
     const name = citationMatch[2] ?? citationMatch[4];
     const lineNo = lineNumberAtOffset(lineOffsets, indexMap[citationMatch.index]);
     const citationToken = `${target} "${name}"`;
-    const targetKind = classifySectionTarget(target);
+    const targetKind = classifySectionTarget(splitAnchor(target).base);
     if (targetKind === 'none') continue; // not a citation: a flag or a bare value
 
     if (targetKind === 'skill') {
@@ -714,12 +719,12 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
 
     const result = resolveSectionPathText(target, repoRoot, skillDir, ctx.presentPaths);
     if (!result.found) {
-      // Same first-segment test as (b) (line 574-576 above): when it is a
-      // top-level repo entry, (b) already reports this same backticked
-      // token, so this stays silent; a placeholder/glob target is also
-      // silent since it is not meant to resolve.
+      // Same test as (b) above: a whitespace-free target whose first segment
+      // is a top-level repo entry is the token (b) already reports, so this
+      // stays silent; a placeholder/glob target is also silent since it is
+      // not meant to resolve.
       const firstSegment = target.split('/')[0].split(':')[0];
-      if (ctx.topLevelEntries.has(firstSegment)) continue;
+      if (!/\s/.test(target) && ctx.topLevelEntries.has(firstSegment)) continue;
       if (target.includes('<') || target.includes('*')) continue;
       checked += 1;
       findings.push({
