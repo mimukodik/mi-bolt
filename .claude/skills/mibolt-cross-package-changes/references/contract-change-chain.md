@@ -245,7 +245,9 @@ spec.
 ## 9. Removing or renaming something
 
 - Run the finder on the old name. Everything it lists goes in the same change,
-  in every layer, per `mibolt-frontend-code-standards` ("Removed features").
+  in every layer, the backend included, with no shim kept for the old name;
+  `mibolt-frontend-code-standards` ("Removed features") states the same rule
+  for a cut frontend feature.
 - Regeneration removes what the contract no longer declares. A frontend model
   file that is no longer generated, because its schema is gone or no operation
   of that client references it (`ignoreUnusedModels`), is deleted by

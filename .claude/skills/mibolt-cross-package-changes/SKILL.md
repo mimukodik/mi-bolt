@@ -20,8 +20,10 @@ starts with `scripts/` or `references/`, or is `SKILL.md`, is inside this
 skill's directory; one that starts with a MiBolt skill name is inside the
 directory that holds the MiBolt skills; every other path is relative to the
 repository root. Every command runs from the repository root, as
-`mibolt-workspace-ops` ("Where commands run") sets out, so a script that lives
-in this skill or in another MiBolt skill is given by its full path from there.
+`mibolt-workspace-ops` ("Where commands run") sets out, and a script path
+inside a command is expanded by the rules above before it runs: in
+`node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs`, the
+script is the finder in this skill's own `scripts/` directory.
 
 ## Scope and hand-offs
 
@@ -137,8 +139,8 @@ Canonical examples, one per mechanism:
 
 ### Find every consumer first
 
-Run `node scripts/find-contract-consumers.mjs --kind <kind> <Name>` from the
-repository root, which it reads as the repository to search. It needs a git
+Run `node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>`
+from the repository root, which it reads as the repository to search. It needs a git
 checkout, git and Node 26 (the version `mise.toml:12` pins), and it is
 read-only: it runs only `git grep` and `git ls-files`, over tracked files,
 leaving out the top-level directory that holds the MiBolt skills so that no
@@ -297,14 +299,16 @@ One line each; the source named owns the rule.
 - **Search an identifier in every spelling the repository gives it** before
   concluding it has no consumer, as the finder does for contract names:
   `AddCartItemRequest` in code is `add-cart-item-request.ts` as its generated
-  model file ([references/codegen.md](references/codegen.md), section 2).
-- **A removed name leaves nothing behind in any layer**, with no
-  compatibility shim; `mibolt-frontend-code-standards` ("Removed features")
-  owns the rule, and for a contract name it covers everything the finder
-  lists.
+  model file. This skill owns that rule; [references/codegen.md](references/codegen.md),
+  section 2, shows the file-name spelling.
+- **A removed or renamed contract name leaves nothing behind in any layer
+  the finder lists**, the backend included, with no compatibility shim. This
+  skill owns that rule; `mibolt-frontend-code-standards` ("Removed features")
+  states the same rule for a cut frontend feature.
 - **Every defect fixed here gets a test in the same change**, seen failing
   before the fix and passing after; `mibolt-verification` ("Tests and
-  coverage") owns that rule and the coverage floors.
+  coverage") owns that rule, and the rule that coverage is held to an
+  aggregate floor.
 - **Name a sample after its schema**, with an optional case part
   (`contracts/check-samples.sh:1-4`).
 - **When `prepareOpenApiSpec` fails, update the replacement its message
@@ -312,8 +316,9 @@ One line each; the source named owns the rule.
   discriminated subtype goes through
   `backend/docs/decisions/0001-openapi-generator-and-discriminator-workaround.md`
   first ([references/codegen.md](references/codegen.md), section 4).
-- **Running the catalogue importer scrapes yettel.hu**, an external site, and
-  rewrites the files under `data/catalog/`: run it only when the user has
+- **Running the catalogue importer scrapes yettel.hu**, an external site,
+  replaces `data/catalog/catalog.json` and writes its images into
+  `data/catalog/images/`: run it only when the user has
   agreed to that scrape by name, never as part of a wider go-ahead. A change
   that an edit to `data/catalog/catalog.json` can make needs no importer run
   ([references/catalog-data.md](references/catalog-data.md), section 2).
@@ -344,7 +349,7 @@ the full set for a change and how CI maps onto them.
 
 | Command | What it proves | Side effects |
 |---|---|---|
-| `node scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
+| `node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
 | `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`); `-checkonly` is PlantUML's legacy spelling, no longer documented: the current CLI lists `--check-syntax`, "Check diagram syntax without generating images" (https://plantuml.com/command-line), and keeps legacy options for a transition period (https://github.com/plantuml/plantuml/issues/2377) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
 | `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:16-22`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
 | `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites the tracked files in both client directories before it compares them, as `api:generate` does |
@@ -416,5 +421,5 @@ moved.
 lists the anchors into one file. Run the checker again after any edit to a
 file or a MiBolt skill this skill cites a section of by name, and open the
 sections it cites there, because check (e) still passes a renamed section
-whose old name occurs elsewhere in the file (`mibolt-project-map` ("What it
-checks")).
+whose old name occurs elsewhere in the cited file or skill
+(`mibolt-project-map/references/citation-check.md` ("What it checks")).
