@@ -9,9 +9,11 @@ A path starting with `references/` is relative to this skill's directory, a
 path starting with a MiBolt skill name, such as
 `mibolt-project-map/scripts/check-skill-references.mjs`, is relative to the
 directory that holds the MiBolt skills, and every other path is relative to
-the repository root. Commands run from the repository root with their paths
-resolved that way; "Where commands run" below gives the form each area's
-commands take.
+the repository root. Commands run from the repository root, in the form
+"Where commands run" below gives each area's commands, except a command that
+names a path starting with a MiBolt skill name: it runs, as written, from the
+directory that holds the MiBolt skills, because from the repository root that
+path finds nothing.
 
 ## Scope and hand-offs
 
@@ -157,9 +159,9 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    Both tables list the other 19 root tasks; `mise run deploy:check`
    (`mise.toml:100-102`) is in neither.
 6. When the workspace as a whole should pass it, add it to `verify`'s `depends`
-   (`mise.toml:67-74`). What a `verify` run writes, a tracked file outside the
-   change included, is listed in `mibolt-verification` ("What a check writes
-   or starts").
+   (`mise.toml:67-74`). What a `verify` run writes, and that a run can leave a
+   tracked file outside the change modified, is in `mibolt-verification`
+   ("What a check writes or starts").
 7. CI never runs a root task, so a check that CI should run also needs a step
    in its workflow; [references/ci-cd.md](references/ci-cd.md) has the shape.
    The edit itself still runs component workflows in CI, because every
@@ -434,7 +436,8 @@ nothing is printed for it, so reread what this skill and its references say
 about that file and about each directory above it.
 
 Check the cited paths, anchors and commands with
-`node mibolt-project-map/scripts/check-skill-references.mjs mibolt-workspace-ops`;
+`node mibolt-project-map/scripts/check-skill-references.mjs mibolt-workspace-ops`,
+run from the directory that holds the MiBolt skills;
 add `--show-anchors` to print each anchored line's current text, so a reader
 can judge whether it still says what this skill claims. Run the checker again
 after an edit to `mibolt-verification`, whose "Browser pass" and "What a check
