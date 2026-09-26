@@ -9,8 +9,9 @@ A path that starts with `references/`, or is `SKILL.md`, is relative to this
 skill's directory; one that starts with a MiBolt skill name is relative to the
 directory that holds the MiBolt skills; every other path is relative to the
 repository root. Every command runs from the repository root
-(`mibolt-workspace-ops` ("Where commands run")), with any script path in it
-read by those same rules. `backend/docs/02-backend.md` and
+(`mibolt-workspace-ops` ("Where commands run")) except the checker in
+section 9, which runs from the directory that holds the MiBolt skills because
+its path starts with a skill name. `backend/docs/02-backend.md` and
 `backend/docs/04-adatbazis.md` are written in Hungarian: the anchors point at
 their lines, and the English here summarises them without replacing them.
 
@@ -129,10 +130,10 @@ section 5.
    configuration or a test follows
    `mibolt-workspace-ops` ("No machine-specific paths").
 4. Run `mise run //backend:lint` for the enforced part, and give every
-   finding its tag. A finding is pre-existing only when
-   `git diff --name-status <base>...HEAD` does not list its file and
-   `git status --short` does not show that file
-   (`mibolt-verification` ("Pre-existing failures")).
+   finding its tag. A lint finding is pre-existing only when
+   `git diff --name-status <base>...HEAD`, where `<base>` is the branch the
+   work was cut from, does not list its file and `git status --short` does
+   not show that file (`mibolt-verification` ("Pre-existing failures")).
 
 ## 5. The rules
 
@@ -348,7 +349,8 @@ Update this skill in the same change as any of these:
   rule above.
 
 Then run
-`node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-backend-code-standards`,
+`node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-backend-code-standards`
+from the directory that holds the MiBolt skills,
 and run it as well after an edit anywhere in a file this skill or its
 reference cites by line, including the Java sources the reference cites for
 its examples: a line added or removed above a cited block moves the block off
