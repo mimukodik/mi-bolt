@@ -64,7 +64,7 @@ constructor that carries what the client needs:
   a cause, as the terms check does
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:126-135`).
 
-The detail text is English; the rule and its one exception belong to
+The detail text is English; that rule belongs to
 `mibolt-backend-code-standards`.
 
 ## The 26 codes

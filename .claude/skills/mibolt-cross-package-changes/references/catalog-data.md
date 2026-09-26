@@ -22,6 +22,9 @@ repo-relative and commands run from the repository root.
   (`tools/catalog-import/src/import.ts:1155`); a hand edit to the data meets
   only the consumers' own checks.
 - `data/catalog/images/`: the product images, 85 files named by content hash.
+  `frontend/projects/storefront/public/media/` holds a byte-identical tracked
+  copy of the same 85 files, and no tracked file regenerates it; section 4
+  names who reads it.
 
 Some values are enumerated in more than one place and change together. The
 storage sizes are the clearest case: the contract's `StorageGb`
@@ -45,9 +48,10 @@ on any other value (`frontend/projects/admin/src/mocks/seed.ts:64-68`).
   its header (`tools/catalog-import/src/import.ts:4-21`).
 - **Running it is a call to an external site.** Ask the user first and name
   the scrape in the question itself, per `.claude/CLAUDE.md` ("An
-  outward-facing action is never a passenger in a bigger yes"). A catalogue
-  task that can be done by editing `data/catalog/catalog.json` does not need
-  the importer.
+  outward-facing action is never a passenger in a bigger yes"). A spawned
+  agent, which has no way to ask, does not run it and names the need in its
+  report. A catalogue task that can be done by editing
+  `data/catalog/catalog.json` does not need the importer.
 - `tools/catalog-import/spread-colour-prices.mjs` is a separate, manual
   post-processing step that gives some multi-colour products synthetic
   per-colour prices; the importer does not run it (`tools/catalog-import/spread-colour-prices.mjs:11-13`).
@@ -89,6 +93,7 @@ on any other value (`frontend/projects/admin/src/mocks/seed.ts:64-68`).
 | shop-mocks (`frontend/projects/shop-mocks/src/browser.ts:32`, `frontend/projects/shop-mocks/src/catalog/catalog-store.ts`) and the storefront and shop-mocks specs | the generated fixture | Only after `fixtures:catalog` has been rerun. |
 | Contract suite (`frontend/tests/contract/schema.spec.ts:26-27`) | both files | On `npm --prefix frontend run test:contract`. |
 | Backend and web images (`deploy/compose.yaml:35`, `deploy/compose.yaml:63`) | `data/catalog/` as the `catalog` build context; `frontend/Dockerfile:13` copies `catalog.json` for the admin seed, `backend/services/commerce/Dockerfile:28-29` copies the directory and points the loader at it | On the next image build. |
+| Shop mocks and admin mocks, for image bytes | `frontend/projects/storefront/public/media/`, the copy of `images/`: the storefront serves it with the rest of its `public/` (`frontend/angular.json:22-27`) and the shop mocks fetch `/media/<imageId>.png` from the page's origin (`frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts:355`); the admin development build serves the same directory (`frontend/angular.json:314-315`), and the admin mocks load their seed images from it (`frontend/projects/admin/src/mocks/media.handlers.ts:208`) | Only when the changed images are copied there by hand; no tracked file regenerates it. |
 | Candidate provenance (`deploy/candidate/README.md:58-61`) | a fingerprint over tracked files under `data/catalog/` | On the next candidate build; recorded, not gated on. |
 
 A change under `data/catalog/**` runs the frontend, backend and smoke CI
@@ -106,11 +111,14 @@ branches (`.github/components.yml:6`, `.github/components.yml:13`,
    `frontend/scripts/build-catalog-fixture.mjs` changes too, and the field has
    to exist on the contract's `Product` first, since the contract suite
    rejects unknown fixture members (`frontend/tests/contract/schema.spec.ts:587`).
-   That is a contract change: follow
-   [contract-change-chain.md](contract-change-chain.md).
+   That is a contract change: follow the contract-change-chain reference,
+   section 3.
 4. Consumer follow-ups go to their area skills: the admin seed conversion to
    `mibolt-admin-frontend`, the shop-mocks catalogue store to
    `mibolt-shop-frontend`, and the loader and its validation to
    `mibolt-commerce-backend`.
-5. Commit the data, the regenerated fixture and any images together, then
-   hand the checks to `mibolt-verification`.
+5. The data, the regenerated fixture and any images go in one commit, with
+   their copies under `frontend/projects/storefront/public/media/` when images
+   changed (section 4); a spawned agent names these files in its report for
+   whoever commits (`.claude/rules/session-lifecycle.md`, "The commit belongs
+   to the orchestrator"). Then hand the checks to `mibolt-verification`.

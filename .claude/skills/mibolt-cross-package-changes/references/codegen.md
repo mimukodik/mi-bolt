@@ -28,8 +28,8 @@ three keys only:
 
 The shared keys and what each does here. The option meanings are quoted from
 the generator's own schema, https://github.com/cyclosproject/ng-openapi-gen/blob/master/ng-openapi-gen-schema.json
-(the same file the configs' `$schema` points at under `frontend/node_modules/`),
-and its README, https://github.com/cyclosproject/ng-openapi-gen:
+(the `$schema` key at `frontend/ng-openapi-gen.json:2` points at the
+installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen:
 
 - `includeTags` / `excludeTags`: "filters the generated services" by tag. The
   tag on an operation therefore decides which client gets it: one of
@@ -41,8 +41,7 @@ and its README, https://github.com/cyclosproject/ng-openapi-gen:
 - `excludeParameters: ["If-Match"]` (`frontend/ng-openapi-gen.json:12`, `frontend/ng-openapi-gen.admin.json:12`): "ignores on generated
   services any parameters whose names are in this list". Neither client's
   function signatures carry `If-Match`; the callers attach it through an
-  `HttpContext` (see the If-Match chain in
-  [contract-change-chain.md](contract-change-chain.md)).
+  `HttpContext` (the contract-change-chain reference, section 8).
 - `ignoreUnusedModels: true`: "ignore model files that are not referenced by
   any operation". A schema reachable only from admin operations is not
   generated into the shop SDK, and the reverse: on 2026-09-26 the shop SDK had
@@ -112,14 +111,10 @@ run them only when your task hands you that step.
   So locally it passes only once the regenerated output is staged or
   committed: after a contract change, running it before staging the new
   output fails by design. In CI, where the checkout has nothing staged, it
-  means "the committed clients match the committed contract". CI runs it as
-  the `api-drift` job (`.github/workflows/frontend.yml:136-159`), and the root
-  `mise run verify` includes it (`mise.toml:67-74`).
+  means "the committed clients match the committed contract". Where it runs is
+  in SKILL.md, "What fails when a step is skipped".
 - The script name itself is pinned: renaming or removing `api:generate` in
   `frontend/package.json` fails `frontend/tests/contract/schema.spec.ts:613-630`.
-- There is no backend drift check and none is needed: the backend output is
-  under the Gradle build directory, ignored by `backend/.gitignore:3`, and
-  regenerated before every compile (section 4).
 
 ## 4. The backend generator and its discriminator guard
 
@@ -173,12 +168,20 @@ plugin, version 7.25.0 (`backend/services/commerce/build.gradle:5`), with the `s
 ## 5. When regeneration or drift misbehaves
 
 - **`api:drift` red locally after a contract change.** Expected until the
-  regenerated output is staged: stage both generated directories with the
-  contract change, then rerun.
+  regenerated output is staged with the contract change; SKILL.md, fan-out
+  step 6, says who stages it. Rerun once it is.
 - **`api:drift` red in CI.** The committed clients do not match the committed
   contract: the contract changed without a regeneration, a generated file was
   edited by hand, or a generated file was never added. The fix is to
-  regenerate and commit the result, never to edit the generated file.
+  regenerate and have the result committed with the contract, never to edit
+  the generated file. When the red run follows a rebase that changed
+  `frontend/package-lock.json`, compare the version in
+  `node_modules/ng-openapi-gen/package.json` in `frontend/` with the
+  lockfile's `node_modules/ng-openapi-gen` entry before regenerating: CI
+  installs with `npm ci` (`.github/workflows/frontend.yml:155`), so it
+  generates with the locked version. Bringing the local install in line
+  rewrites the `node_modules` every worktree shares, so it is one agent's at a
+  time (`.claude/rules/parallel-spawns.md`, "What a batch shares").
 - **A model you expected is missing from one client.** `ignoreUnusedModels`
   drops a schema no operation of that client references; check which tag the
   operations using it carry.

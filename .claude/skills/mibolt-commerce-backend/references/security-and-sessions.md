@@ -49,7 +49,7 @@ How the browser apps reach the API is `mibolt-workspace-ops`.
 | Cookie | Issued by | Holds | Lifetime key |
 |---|---|---|---|
 | `mibolt_demo_access` | `POST /demo/session` with the demo password (`backend/docs/decisions/0022-demo-access-gate.md:29-32`) | a random token; only its SHA-256 digest is stored | `mibolt.demo.access-lifetime` (`backend/services/commerce/src/main/resources/application.properties:44`) |
-| `mibolt_session` | `SessionCookieFilter`, on first use of a scoped path | a random token; only its SHA-256 digest is stored (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionTokenService.java`) | `mibolt.session.lifetime` (`backend/services/commerce/src/main/resources/application.properties:37`), extended whenever the cart or the draft changes |
+| `mibolt_session` | `SessionCookieFilter`, on first use of a scoped path | a random token; only its SHA-256 digest is stored (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionTokenService.java`) | `mibolt.session.lifetime` (`backend/services/commerce/src/main/resources/application.properties:37`), set once when the cookie is issued; the server-side session and cart expiry extend whenever the cart or the draft changes (rule 19 in the invariants reference; `backend/docs/decisions/0011-cart-version-etag-and-reconciliation.md:75-84`) |
 | `mibolt_admin_session` | the admin chain's HTTP session | the servlet session id; `HttpOnly`, `Secure`, `SameSite=Strict` | servlet session (`backend/services/commerce/src/main/resources/application.properties:25-30`) |
 | `XSRF-TOKEN` (`backend/services/commerce/scripts/smoke.sh:110`) | `CookieCsrfTokenRepository.withHttpOnlyFalse()` with path `/` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/security/AdminSecurityConfig.java:37-47`) | the admin CSRF token the SPA sends back in a header | the admin session |
 
@@ -159,9 +159,9 @@ field that looks like a price is computed server-side, never accepted.
 
 ## Environment variables
 
-Names and purpose only; the defaults are in
-`backend/services/commerce/src/main/resources/application.properties` and in
-the table at `backend/README.md:19-31`.
+Names and purpose only. The bare line numbers in the table are lines of
+`backend/services/commerce/src/main/resources/application.properties`, which
+holds the defaults, as does the table at `backend/README.md:19-31`.
 
 | Variable | Purpose |
 |---|---|

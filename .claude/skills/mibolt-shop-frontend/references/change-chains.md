@@ -38,9 +38,12 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    (`frontend/projects/storefront/src/app/features/catalog/filter-drawer.ts` and
    its `.html`) carry the control. The drawer edits a draft that only Apply
    emits.
-5. **Chips.** Extend the name union in `FilterIdentity`
-   (`frontend/projects/storefront/src/app/shared/types/filter-identity.ts`) and
-   add a `case` to `CatalogPage.onChipRemoved`
+5. **Chips.** `FilterIdentity`
+   (`frontend/projects/storefront/src/app/shared/types/filter-identity.ts:14-17`)
+   names a chip by `keyof CatalogFilters` plus `'q'` and `'featured'`, so a
+   field step 2 put on `CatalogFilters` is already a chip name, and only a
+   filter kept off `CatalogFilters` adds its literal there. Add a `case` to
+   `CatalogPage.onChipRemoved`
    (`frontend/projects/storefront/src/app/features/catalog/catalog-page.ts:286`).
    `AppliedFilters` only renders what it is given.
 6. **Mock.** Parse and apply the parameter in
@@ -66,8 +69,8 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    `ProductVm` and `buildVm()`, when the field feeds a derived value.
 4. **Selection rules**,
    `frontend/projects/storefront/src/app/features/product/variant-selection.ts`,
-   when the field changes which variant can be chosen or bought. Every export
-   there is a pure function.
+   when the field changes which variant can be chosen or bought. Every
+   function exported there is pure.
 5. **Render** in `frontend/projects/storefront/src/app/features/product/product-page.html`
    or the sub-component that owns that part of the page: `VariantSelector`,
    `ProductGallery`, `SpecificationAccordion`, `AddToCart` or
@@ -128,8 +131,10 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    before the `**` entry. A checkout page goes into
    `frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts`
    instead (chain 3).
-2. Create `frontend/projects/storefront/src/app/features/<name>/` with the
-   page, a `@Service()` facade if the page holds server state, and specs.
+2. Create the feature's folder under
+   `frontend/projects/storefront/src/app/features/`, named after the feature
+   as `catalog/` and `product/` are, with the page, a `@Service()` facade if
+   the page holds server state, and specs.
 3. Link it from the header or footer in
    `frontend/projects/storefront/src/app/core/navigation/` where the shopper
    should reach it.
@@ -175,9 +180,11 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    `error`, `conflict`, `cartExpired` and `priceChange`, and render them with
    shared primitives such as `StatusMessage` and `ErrorState`.
 5. **Reproduce.** In a unit spec, override one route with
-   `server.use(http.patch(...))` returning the Problem, as
-   `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts`
-   does. In the browser, `?mi-scenario=fail-<operation>` and its sibling
+   `server.use(http.<method>(...))` returning the Problem, as
+   `frontend/projects/storefront/src/app/features/checkout/checkout-facade.spec.ts:558`
+   does for a 412 on `PATCH /checkout` and
+   `frontend/projects/storefront/src/app/features/checkout/checkout-facade.spec.ts:717`
+   for a 410. In the browser, `?mi-scenario=fail-<operation>` and its sibling
    fault scenarios fail one endpoint on demand; `FAULT_OPERATIONS`
    (`frontend/projects/shop-mocks/src/faults.ts:64`) lists the operations.
 
@@ -187,10 +194,15 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
   that shows it; there is no i18n pipeline. The add-to-cart refusal sentences,
   the quantity-limit one included, are built in `describeAddFailure`
   (`frontend/projects/storefront/src/app/features/product/product-page.ts:59`)
-  from the error's `code` and `params`; the cart page's are
-  `describeCartError` and `describeNotice` in
+  from the error's `code` and `params`. A cart line shows its quantity as text
+  and has no quantity control
+  (`frontend/projects/storefront/src/app/features/cart/cart-line.ts:11-13`),
+  so the product page is the only place a shopper meets the quantity limit.
+  The cart page's sentences are `describeCartError`, and `describeNotice` for
+  the `QUANTITY_REDUCED`, `ITEM_REMOVED` and `PRICE_CHANGED` notices, in
   `frontend/projects/storefront/src/app/features/cart/cart-page.ts`. A
-  Problem's `detail` is an English diagnostic and is never shown.
+  Problem's `title` and `detail` are English developer text and are never
+  shown (`contracts/commerce/kommunikacio.md` §6).
 - **Prices.** `PriceBlock.formatHuf`
   (`frontend/projects/storefront/src/app/shared/ui/price-block/price-block.ts:68`)
   is the storefront's price formatter: it groups whole forints with a

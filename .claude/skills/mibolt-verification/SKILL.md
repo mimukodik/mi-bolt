@@ -6,10 +6,12 @@ description: "Choosing and running the right checks for a MiBolt change: which f
 # MiBolt verification
 
 Find out which checks a change needs, run them, and read each one's exit
-status. Invoke every command from the repository root unless its row says
-otherwise. Paths are repository-relative, except output directories that exist
-only after a run (`coverage/`, `dist/`, Gradle's `build/`), which are named
-relative to the area directory that holds them.
+status. Invoke every command from the repository root, except an `npx`
+command such as `npx eslint` or `npx prettier --check`, which runs from
+`frontend/` (`.claude/rules/session-lifecycle.md`, "Tools and startup").
+Paths are repository-relative, except directories that exist only after an
+install or a run (`node_modules/`, `coverage/`, `dist/`, Gradle's `build/`),
+which are named relative to the area directory that holds them.
 
 ## Scope and hand-offs
 
@@ -50,9 +52,16 @@ Everything else goes elsewhere:
   storefront (`frontend/projects/storefront/vitest.config.ts:6`),
   `coverage/<project>/` for the other four.
 - **Contract suite.** `test:contract` runs Vitest in Node over
-  `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:16-22`). `ng test`
-  cannot reach `frontend/tests/` (`frontend/vitest.contract.config.ts:8-9`), so
-  a change there is proven by this suite alone. It collects no coverage.
+  `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:16-22`) and
+  collects no coverage. `ng test` discovers no spec under `frontend/tests/`
+  (`frontend/vitest.contract.config.ts:8-9`), so a spec there runs under this
+  suite alone. Two helpers there run under `ng test` as well:
+  `frontend/tests/setup-msw.ts` is a setup file of the storefront and
+  shop-mocks targets (`frontend/angular.json:114`, `frontend/angular.json:477`),
+  and `frontend/tests/msw-server.ts` is imported by storefront, demo-payment
+  and shop-mocks specs (for one,
+  `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts:21`),
+  so a change to either needs the unit suite too.
 - **Lint and format.** `ng lint` runs each project's `lintFilePatterns`; the
   storefront's also take in `tests/**/*.ts`, `e2e/**/*.ts` and
   `playwright.config.ts` (`frontend/angular.json:132-138`). `format:check` is
@@ -85,9 +94,9 @@ quality gates") says why each gate exists.
   that tag (`backend/services/commerce/build.gradle:141-158`). A class
   annotated `@IntegrationTest` carries the tag
   (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java:25`).
-  Both run on H2 in PostgreSQL mode
-  (`backend/services/commerce/src/test/resources/application-test.properties:4`),
-  so no test needs the database.
+  The integration tests run on H2 in PostgreSQL mode
+  (`backend/services/commerce/src/test/resources/application-test.properties:4`)
+  and the unit tests start no Spring context, so no test needs the database.
 - `check` depends on `integrationTest` and `jacocoTestCoverageVerification`
   (`backend/services/commerce/build.gradle:160-162`,
   `backend/services/commerce/build.gradle:216-218`); the verification joins
@@ -153,19 +162,28 @@ what `//frontend:test` and `//frontend:build` run), and
    `git diff --name-only <base>...HEAD`, `git diff --name-only HEAD` and the
    untracked files, where `--base` defaults to `origin/main`; that ref is only
    as current as the last fetch, and the output says so. `--paths <p> ...`
-   checks a hypothetical change instead, each path repository-relative.
-   `--json` prints the same data as one object (`changed_paths`,
+   checks a hypothetical change instead. Write each path as git prints it:
+   repository-relative, with no leading `/` or `./` and no `.`, `..` or empty
+   segment. `--json` prints the same data as one object (`changed_paths`,
    `stale_remote_ref_note`, `triggered`, `not_triggered`,
-   `frontend_files_for_npx`). It exits 0 on success, including when nothing
-   is triggered, and 2 on a usage or parse error, such as
-   `path must be repo-relative: <p>` or
-   `<ref> not found locally; pass --base <ref>`.
+   `frontend_files_for_eslint`, `frontend_files_for_prettier`,
+   `frontend_files_for_neither`). It exits 0 on success, including when
+   nothing is triggered, and 2 on a usage or parse error, such as
+   `path must be repo-relative: <p>`,
+   `<ref> not found locally; pass --base <ref>` or
+   `could not parse <file>: <reason>`.
 
    Per triggered component it prints the workflow, each job with its working
    directory and `needs`, each `run:` line, and the body of every `npm run`
    script those lines call; `[CI-only expression]` marks a line holding
-   `${{ }}`. The changed files under `frontend/` come last, re-rooted for the
-   two `npx` gate commands. An excerpt of a real run with
+   `${{ }}` or a `$GITHUB_*` variable, which fails when pasted into a local
+   shell. The changed files under `frontend/` come last, re-rooted to
+   `frontend/` and split by the `npx` gate command that takes them. ESLint
+   gets `.ts`, `.js`, `.mjs`, `.cjs` and `.html`; Prettier gets those and
+   `.json`, `.md`, `.css`, `.scss`, `.yaml`, `.yml` and `.prettierrc`. A file
+   neither command takes, such as an image, `Dockerfile`, `mise.toml` or an
+   nginx file, is listed apart, because `npx prettier --check` exits 2 on a
+   file it has no parser for. An excerpt of a real run with
    `--paths contracts/commerce/openapi.yaml`, shortened at `…`:
 
    ```text
@@ -187,7 +205,11 @@ what `//frontend:test` and `//frontend:build` run), and
      …
    not triggered: tools
 
-   frontend files for npx (run from frontend/):
+   frontend files for npx eslint (run from frontend/):
+     (none)
+   frontend files for npx prettier --check (run from frontend/):
+     (none)
+   frontend files neither command takes:
      (none)
    ```
 
@@ -201,30 +223,40 @@ what `//frontend:test` and `//frontend:build` run), and
    (`.claude/rules/code-standards.md:100`). Its frontend build is `build`,
    which builds the storefront alone, so an admin or demo-payment change also
    needs that app's build, dist check and boot check, which CI's `build` job
-   runs.
+   runs. What each command needs and what it writes or starts is in
+   [references/commands.md](references/commands.md).
 
 3. **Iterate with focused runs.** They are faster, and the frontend ones write
    no coverage report.
-   - One frontend spec, a directory of specs, or the spec beside a source file:
+   - One frontend spec, a directory of specs, or a glob:
 
      ```bash
      npm --prefix frontend run test -- storefront --include projects/storefront/src/app/features/cart/cart.facade.spec.ts --no-coverage --no-watch
      ```
 
-     The project name comes first (`ng test [project]`). Give the path as
-     seen from `frontend/`: angular.dev calls `include` relative to the
-     project root (https://angular.dev/cli/test), and the installed builder
+     The project name comes first (`ng test [project]`). Give `--include`
+     the spec's path as seen from `frontend/`, its directory, or a quoted
+     `'**/<name>.spec.ts'` glob, and add `--list-tests` to the first run: it
+     prints the files the pattern selects without building or running
+     anything, and exits 0 even when it prints none, so read the list rather
+     than the exit status. angular.dev calls `include` relative to the
+     project root (https://angular.dev/cli/test), but the installed builder
      (22.1.8) resolves it against the project's source root after stripping a
-     leading `projects/<name>/src/`. A directory takes every spec inside it; a
-     source file takes its sibling spec. Confirm what an `--include` matches
-     by adding `--list-tests`, which prints the matched files without building
-     or running anything; `--filter <regex>` narrows by suite and test name
-     (`npx ng test --help`, from `frontend/`).
+     leading `projects/<name>/src/`, so the project-root-relative form
+     (`src/app/…`) selects nothing. A directory takes every spec inside it. A
+     source file `<name>.ts` takes the `<name>.spec.ts` or `<name>.test.ts`
+     beside it; where neither exists, the builder takes the source file
+     itself as the test file (`resolveStaticPattern` in
+     `src/builders/unit-test/test-discovery.js` of `@angular/build`). So
+     point at the spec or its directory when the names differ, as they do for
+     `checkout.facade.ts` and `checkout-facade.spec.ts`. `--filter <regex>`
+     narrows by suite and test name (`npx ng test --help`, from `frontend/`).
      Pass `--no-coverage` because the target turns coverage on for the whole
      project: one spec's run would be measured against the project-wide floor
      and would overwrite that project's report. Pass `--no-watch` because
-     watch mode is the default in a terminal (https://angular.dev/cli/test);
-     `--no-<option>` sets a boolean to false
+     watch mode is the default in a terminal (https://angular.dev/cli/test).
+     `--no-<option>` sets a boolean to false, so
+     `--coverage=false --watch=false` does the same
      (https://angular.dev/tools/cli#boolean-options).
    - One contract spec: `npm --prefix frontend run test:contract -- sdk-split`
      runs only the files whose path contains `sdk-split`
@@ -301,108 +333,24 @@ One line each; the file named is the one that binds.
   afterwards (`.claude/hooks/session-start/hook.test.ts:54-70`).
 - **The database.** `smoke.sh` creates carts and orders in whatever backend it
   calls.
-- **`mise run verify`** does all of the above. mise runs up to four tasks at
-  once, and `depends` sets no order among the tasks it lists
+- **`mise run verify`** writes the coverage reports, the build output, the
+  generated clients, the Gradle output and the shared-memory index above, and
+  binds port 4299; it runs neither `smoke.sh` nor `mise run deploy:check`
+  (`mise.toml:67-74`). mise runs up to four tasks at once, and `depends` sets
+  no order among the tasks it lists
   (https://mise.jdx.dev/tasks/running-tasks.html), so its checks can overlap
   one another in the one checkout.
-
-## Commands
-
-Each row names where the command is defined and carries one or more
-side-effect classes:
-
-- **read-only**: writes nothing inside the repository;
-- **writes local artefacts**: writes ignored output (`coverage/`, `dist/`,
-  Gradle's `build/`, `node_modules/`), which the next run overwrites;
-- **rewrites tracked files**: can change tracked files in the tree;
-- **starts processes or ports**: starts a server, a container or a listener;
-- **needs a missing tool**: needs a tool that no `mise.toml` installs.
-
-### Discovery
-
-| Command | Defined in | Needs | Class |
-|---|---|---|---|
-| `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python .claude/skills/mibolt-verification/scripts/checks-for-changed-paths.py` | this skill's script | uv on PATH; a git checkout | read-only |
-| `mise tasks --all` | mise; lists the tasks of all five `mise.toml` files | mise | read-only |
-
-### Frontend
-
-The npm scripts and `mise` tasks run in `frontend/`. They need
-`frontend/node_modules` (installed by `mise run setup`) and the Node version
-pinned at `mise.toml:12`.
-
-| Command | Defined in | Needs | Class |
-|---|---|---|---|
-| `npx eslint <files>`, invoked from `frontend/` | `eslint` in `frontend/package.json:68`; the form is `.claude/rules/code-standards.md:100-104` | — | read-only |
-| `npx prettier --check <files>`, invoked from `frontend/` | `prettier` in `frontend/package.json:80`; the form is `.claude/rules/code-standards.md:100-104` | — | read-only |
-| `npm --prefix frontend run lint` | `frontend/package.json:28` | — | read-only |
-| `npm --prefix frontend run format:check` | `frontend/package.json:30` | — | read-only |
-| `mise run //frontend:lint` (both of the above) | `frontend/mise.toml:5-6` | — | read-only |
-| `npm --prefix frontend run test -- --no-watch` | `frontend/package.json:22` | — | writes local artefacts |
-| `npm --prefix frontend run test -- <project> --include <path> --no-coverage --no-watch` | `frontend/package.json:22` plus builder flags | — | read-only |
-| `npm --prefix frontend run test:contract` | `frontend/package.json:23` | — | read-only |
-| `mise run //frontend:test` (unit, then contract) | `frontend/mise.toml:8-9` | — | writes local artefacts |
-| `npm --prefix frontend run build` | `frontend/package.json:12` | — | writes local artefacts |
-| `npm --prefix frontend run build:check` | `frontend/package.json:20` | — | writes local artefacts |
-| `npm --prefix frontend run build:payment` | `frontend/package.json:13` | — | writes local artefacts |
-| `npm --prefix frontend run build:admin` | `frontend/package.json:14` | — | writes local artefacts |
-| `npm --prefix frontend run check:storefront-dist` | `frontend/package.json:18` | the storefront's production build | read-only |
-| `npm --prefix frontend run check:payment-dist` | `frontend/package.json:19` | demo-payment's production build | read-only |
-| `npm --prefix frontend run check:admin-dist` | `frontend/package.json:17` | the admin's production build | read-only |
-| `npm --prefix frontend run check:payment-boot` | `frontend/package.json:15` | port 4299 free | starts processes or ports |
-| `npm --prefix frontend run check:admin-boot` | `frontend/package.json:16` | port 4299 free | starts processes or ports |
-| `mise run //frontend:build` (all eight build steps, in CI's order) | `frontend/mise.toml:11-21` | port 4299 free | writes local artefacts; starts processes or ports |
-| `mise run api:drift` | `mise.toml:80-82`, then `frontend/package.json:32` | — | rewrites tracked files |
-| `mise run api:generate`, a change step owned by `mibolt-cross-package-changes` | `mise.toml:76-78` | Java 21 for the backend half | rewrites tracked files; writes local artefacts |
-| `npm --prefix frontend run fixtures:catalog:check` (manual only) | `frontend/package.json:34` | — | read-only |
-| `node frontend/scripts/check-budgets.mjs` (manual only) | the script; no npm script | the storefront's production build | read-only |
-
-### Backend
-
-Gradle builds `backend/`. It needs Java 21 (`mise.toml:13`) and no database.
-
-| Command | Defined in | Needs | Class |
-|---|---|---|---|
-| `backend/gradlew -p backend :services:commerce:build` | Gradle build; the form is `.claude/rules/code-standards.md:104-106` | — | writes local artefacts |
-| `mise run //backend:build` (`//backend:test` first) | `backend/mise.toml:11-13` | — | writes local artefacts |
-| `mise run //backend:test` (`test`, then `integrationTest`) | `backend/mise.toml:8-9` | — | writes local artefacts |
-| `backend/gradlew -p backend :services:commerce:test --tests <pattern>` | Gradle `test` task | — | writes local artefacts |
-| `backend/gradlew -p backend :services:commerce:integrationTest --tests <pattern>` | `backend/services/commerce/build.gradle:148-158` | — | writes local artefacts |
-| `mise run //backend:lint` (PMD, main and test) | `backend/mise.toml:5-6` | — | writes local artefacts |
-| `bash backend/services/commerce/scripts/smoke.sh` | the script | a running backend at `BASE`, default `http://localhost:8080/api/v1`; curl; python3 | read-only in the repository; writes to that backend's database |
-
-### Contract, tools, hooks, deploy
-
-| Command | Defined in | Needs | Class |
-|---|---|---|---|
-| `mise run contracts:check` (vacuum lint, samples, PlantUML; runs in `contracts/`) | `mise.toml:84-86`, then `contracts/mise.toml:14-19` | the tools pinned at `contracts/mise.toml:5-9` | read-only |
-| `mise run //tools:lint` (typecheck; runs in `tools/`) | `tools/mise.toml:5-6` | `tools/node_modules` | read-only |
-| `mise run //tools:test` (Vitest; runs in `tools/`) | `tools/mise.toml:8-9` | `tools/node_modules` | starts processes or ports: `tools/dev-server/dev-server.test.ts` starts short-lived servers on free ports and stops them |
-| `mise run claude:hooks:test` | `mise.toml:92-94` | `.claude/hooks/node_modules` | rewrites tracked files: the shared-memory index, restored after each case |
-| `mise run claude:hooks:typecheck` | `mise.toml:96-98` | `.claude/hooks/node_modules` | read-only |
-| `mise run deploy:check` (renders and checks the Helm chart) | `mise.toml:100-102` | uv; `helm` on PATH | needs a missing tool |
-
-### Umbrella and setup
-
-| Command | Defined in | Needs | Class |
-|---|---|---|---|
-| `mise run verify` | `mise.toml:67-74` | everything above | writes local artefacts; rewrites tracked files; starts processes or ports |
-| `mise run setup` | `mise.toml:62-65` | network access | writes local artefacts (`node_modules/` of `frontend/`, `tools/` and `.claude/hooks/`); an install is a shared resource per `.claude/rules/parallel-spawns.md` |
-
-### Owned elsewhere
-
-Listed so their classes are known; neither group is this skill's to run.
-
-| Command | Defined in | Needs | Class |
-|---|---|---|---|
-| `npm --prefix frontend run e2e`, `npm --prefix frontend run e2e:all`, `npm --prefix frontend run e2e:smoke`; owned by `playwright-tests` | `frontend/package.json:24-26` | browsers from `e2e:install` (`frontend/package.json:27`); for `e2e:smoke`, a backend on 8080 | starts processes or ports (4400, or 4410 for smoke; `frontend/playwright.config.ts:11-18`); writes local artefacts |
-| `mise run storefront`, `mise run backend`, `mise run stack`, `mise run stop` and the other run modes; the orchestrator's alone | `mise.toml` | Docker for every mode that starts PostgreSQL | starts processes or ports |
 
 ## Detailed material
 
 - [references/command-matrix.md](references/command-matrix.md): read when
   choosing the checks for a concrete diff. It maps each kind of changed path
   to the local commands and to the CI components it triggers.
+- [references/commands.md](references/commands.md): read before running a
+  command you have not run in this checkout. It gives each command with where
+  it is defined, what it needs and its side-effect class: read-only, writes
+  local artefacts, rewrites tracked files, starts processes or ports, or needs
+  a missing tool.
 - [references/ci-mirror.md](references/ci-mirror.md): read when a CI job has
   failed, or when a local run has to reproduce one. It maps each job to its
   local mirror, says how closely it mirrors it, and names what CI keeps when
@@ -418,18 +366,25 @@ Listed so their classes are known; neither group is this skill's to run.
 ## Keep this skill current
 
 Edit this skill in the same change as any change that alters a command, a
-class, a floor or a cited line in: the `scripts` of `frontend/package.json` or
+side-effect class, a floor, or a line this skill or its references cite by
+`path:line`; `--show-anchors` below prints every such line. The files most
+often behind one are: the `scripts` of `frontend/package.json` or
 `tools/package.json`; any of the five `mise.toml` files; the `test` targets of
 `frontend/angular.json`, a project's `vitest.config.ts` or
-`frontend/vitest.contract.config.ts`; the test, JaCoCo and PMD blocks of
-`backend/services/commerce/build.gradle`; `.github/workflows/*.yml` or
-`.github/components.yml`; `frontend/e2e/coverage-thresholds.json`; the headers
-of the scripts in `frontend/scripts/` cited above; the two test files cited
-for side effects, `.claude/hooks/session-start/hook.test.ts` and
-`tools/dev-server/dev-server.test.ts`; or the lines of
-`.claude/rules/code-standards.md` cited above. A workflow or `mise` task that
-starts running `fixtures:catalog:check`, `check-budgets.mjs` or the hook
-checks ends their "Not wired to anything" entry.
+`frontend/vitest.contract.config.ts`; `frontend/playwright.config.ts` and
+`frontend/e2e/coverage-thresholds.json`; `frontend/eslint.config.mjs` and
+`frontend/README.md`; the test, JaCoCo and PMD blocks of
+`backend/services/commerce/build.gradle`,
+`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java`,
+`backend/services/commerce/src/test/resources/application-test.properties`
+and `backend/services/commerce/scripts/smoke.sh`; `.github/workflows/*.yml` or
+`.github/components.yml`; the headers of the scripts in `frontend/scripts/`
+cited in this skill, with the logs in `frontend/scripts/fixtures/`; the two
+test files cited for side effects, `.claude/hooks/session-start/hook.test.ts`
+and `tools/dev-server/dev-server.test.ts`; and the lines of
+`.claude/rules/code-standards.md` cited in this skill. A workflow or `mise`
+task that starts running `fixtures:catalog:check`, `check-budgets.mjs` or the
+hook checks ends their "Not wired to anything" entry.
 
 The changed-paths script reads the CI files live and needs no edit when a
 component or job changes, unless `.github/components.yml` gains a pattern

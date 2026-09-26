@@ -93,19 +93,20 @@ google-java-format, Error Prone, NullAway, JSpecify or Lombok appears in any
    section 5. Any other name is a quickstart rule: read its page in the PMD
    7.24.0 rule index, https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java.html,
    rather than recalling it, because the ruleset is pinned to that version.
-3. Fix the code. The backend has no `// NOPMD` and no `@SuppressWarnings`, so
-   do not add the first one. A rule that is wrong for this codebase is changed
-   in the ruleset through a decision (section 6), never suppressed at the call
-   site.
+3. Fix the code. The backend has no `// NOPMD` and no `@SuppressWarnings`
+   (observed; no document forbids them), so do not add the first one: change
+   a rule that is wrong for this codebase in the ruleset through a decision
+   (section 6) instead.
 4. Rerun `mise run //backend:lint` until it exits 0. Which other checks the
    change needs is `mibolt-verification`'s to say.
 
-**Fixing a compile error:** an error that names a type under
-`com.example.mi_bolt_backend.api` comes from generated code, which is
-regenerated before every compile
-(`backend/services/commerce/build.gradle:137-139`); that case belongs to
-`mibolt-cross-package-changes`. Fix any other compile error without breaking a
-rule in section 5.
+**Fixing a compile error:** the types under `com.example.mi_bolt_backend.api`
+are generated from the contract before every compile
+(`backend/services/commerce/build.gradle:137-139`) and are never edited. When
+hand-written code no longer matches them after a contract change, the change
+and its consumers belong to `mibolt-cross-package-changes`; when hand-written
+code simply uses them wrongly, fix that code. Fix any compile error without
+breaking a rule in section 5.
 
 **Reviewing a Java diff:**
 
@@ -143,12 +144,13 @@ rule in section 5.
   underscores, and a name ending in `Test` or `Tests` for a class that holds
   test methods, as every one here has (the reference gives PMD's exact
   pattern); an `isXEnabled()` guard around a log call
-  that concatenates strings or calls a method; `Locale.ROOT` on every
-  `toLowerCase` and `toUpperCase`; no unused import, local, private field,
-  private method or parameter; `@Override` on every override. The build's
-  report is the authority on the full set, not this list.
+  that concatenates strings or calls a method; a `Locale` argument on every
+  `toLowerCase` and `toUpperCase`, which here is always `Locale.ROOT`; no
+  unused import, local, private field, private method or parameter;
+  `@Override` on every override. This list is not the full set: that is the
+  7.24.0 quickstart the reference links, minus `UseUtilityClass`.
 
-**Written, and checked only by review or by the build's structure:**
+**Written, and checked only by review:**
 
 - **A controller only converts, a service holds every rule, a repository only
   queries.** The controller turns HTTP into a domain call and the result into
@@ -158,22 +160,31 @@ rule in section 5.
   and persists. Review-only, `backend/docs/02-backend.md:48-62`.
 - **A controller implements its generated `*Api` interface and declares no
   route, HTTP method or status code of its own.** Review-only,
-  `backend/docs/02-backend.md:34-35`. The only hand-written mapping in main
-  code, `ProblemErrorController`'s `/error`, serves Spring Boot's error
-  forward rather than a contract route.
+  `backend/docs/02-backend.md:34-35`. Returning the status the contract lists
+  for an operation, as the controllers' `ResponseEntity.created(...)`,
+  `noContent()` and `status(...)` returns do, is not a status of its own. The
+  only hand-written mapping in main code, `ProblemErrorController`'s `/error`,
+  serves Spring Boot's error forward rather than a contract route, and it is
+  also the one controller that builds its own error body.
 - **Error text is English.** Review-only, `backend/docs/02-backend.md:447`.
   Hungarian user-facing text appears only in non-error responses, the receipt
   notice and the checkout option labels, which this rule does not cover.
-- **Money is whole forints in an integer type; never `double`, `float` or
-  `BigDecimal`.** Review-only, `backend/docs/04-adatbazis.md:103`. In Java
-  that is a `long` field named `*Huf`, narrowed with `Math.toIntExact` where a
-  mapper builds the generated `Money`.
+- **Money is whole forints in an integer type; never a floating-point type.**
+  Review-only, `backend/docs/04-adatbazis.md:103`, which states it for
+  columns. In Java it is a `long`: entity fields are named `*Huf`
+  (`ShopOrder.totalHuf`), while record components and the checkout fee
+  settings are not (`CheckoutData.Summary.subtotal`,
+  `CheckoutService.homeDeliveryFee`). A mapper narrows it with
+  `Math.toIntExact` where it builds the generated `Money`, and main code has
+  no `double`, `float` or `BigDecimal`.
 - **No test starts, reaches or depends on the Docker PostgreSQL container.**
-  Structural, `backend/docs/02-backend.md:296-324`. Give every Spring-context
+  Review-only, `backend/docs/02-backend.md:296-324`. Give every Spring-context
   test `@IntegrationTest`, never a bare `@SpringBootTest`. `@IntegrationTest`
-  selects the in-memory H2 `test` profile; a context started without it gets
-  the default datasource, the container on port 55433
-  (`backend/services/commerce/src/main/resources/application.properties:5`).
+  selects the in-memory H2 `test` profile, and nothing else in the build does:
+  the Gradle test tasks set no profile
+  (`backend/services/commerce/build.gradle:141-158`, `:247-269`), so a context
+  started without the annotation gets the default datasource, the container on
+  port 55433 (`backend/services/commerce/src/main/resources/application.properties:5`).
   How the annotation works belongs to `mibolt-commerce-backend`.
 
 **Observed patterns; follow them, nothing checks them:**
@@ -184,15 +195,19 @@ rule in section 5.
   `order`, `problem` and `session`, with no horizontal layer package. Which
   domain holds what belongs to `mibolt-commerce-backend`.
 - **Name a class after its layer:** `*Controller`, `*Service`, `*Repository`,
-  `*Data` (an interface grouping domain records) and `*Models` (the mapping
-  from those records to generated types). Entities take no suffix.
+  `*Data` (an interface grouping domain records), `*Models` (the mapping from
+  those records to generated types) and `*Dto` (the catalogue loader's JSON
+  shapes). Entities take no suffix.
 - **Inject through the constructor into `final` fields, with no
   annotation.** `@Autowired` appears once in main code, to choose between two
-  constructors. Test classes inject `@Autowired private` fields. Data types
-  are records. There is no Lombok.
-- **Read the current time from an injected `Clock`**, as ten classes do.
-  `SessionService` calls `OffsetDateTime.now()` directly, so this is a
-  pattern with an exception rather than a rule.
+  constructors. Spring-context test classes inject `@Autowired private`
+  fields. Value types are records, most of them nested in the `*Data`
+  interfaces; JPA entities, the catalogue loader's `*Dto` classes and
+  `AdminPrincipal`, whose `eraseCredentials()` clears a field, are ordinary
+  classes with accessors. There is no Lombok.
+- **Read the current time from an injected `Clock`.** `SessionService` calls
+  `OffsetDateTime.now()` directly, so this is a pattern with an exception
+  rather than a rule.
 - **Nulls:** no nullability annotation and no `Objects.requireNonNull`.
   Repositories return `Optional`, mostly resolved with `orElseThrow`; inside a
   class `null` means absent; a business failure is thrown as a
@@ -203,9 +218,9 @@ rule in section 5.
   `private static final Logger log = LoggerFactory.getLogger(X.class);`
   (SLF4J). Log a 4xx at WARN without a stack trace, and an unexpected
   throwable at ERROR with the exception as the last argument. Wrap each call
-  in the matching `isXEnabled()` guard, as 15 of the 16 calls are. PMD
-  demands the guard only on a call that builds its message, and never checks
-  the declaration.
+  in the matching `isXEnabled()` guard, as every call in main code but one
+  is. PMD demands the guard only on a call that builds its message, and never
+  checks the declaration.
 - **Formatting, a conflict:** the Java sources, `build.gradle` and
   `ruleset.xml` are tab-indented, and no Java file has a space-indented code
   line, while `.editorconfig:4-7` sets two-space indentation for every file.
@@ -233,7 +248,7 @@ line, with its enforcement:
 - Direct intervention in the database container (`:450`): reach the local
   database only through the mise tasks and `deploy/compose.sh`
   (`backend/docs/04-adatbazis.md:5-15`). Review-only.
-- A test built on the Docker database (`:451-452`). Structural, as above.
+- A test built on the Docker database (`:451-452`). Review-only, as above.
 - Getting around the coverage floor by counting generated code, or switching
   it off (`:453`). Review of the JaCoCo block in
   `backend/services/commerce/build.gradle`; the numbers belong to

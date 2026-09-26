@@ -57,6 +57,10 @@ import yaml
 
 ALLOWED_PATTERN_CHARS = re.compile(r"^[A-Za-z0-9_./*?-]+$")
 
+ESLINT_SUFFIXES = {".ts", ".js", ".mjs", ".cjs", ".html"}
+PRETTIER_SUFFIXES = {".ts", ".js", ".mjs", ".cjs", ".html", ".json", ".md", ".css", ".scss", ".yaml", ".yml"}
+PRETTIER_NAMES = {".prettierrc"}
+
 
 def fail(message: str) -> NoReturn:
     print(f"error: {message}", file=sys.stderr)
@@ -86,9 +90,7 @@ def find_repo_root() -> Path:
 
 
 def validate_repo_relative_path(path: str) -> None:
-    if path.startswith("/"):
-        fail(f"path must be repo-relative: {path}")
-    if not path or path == "." or any(seg == ".." for seg in path.split("/")):
+    if path.startswith("/") or any(seg in ("", ".", "..") for seg in path.split("/")):
         fail(f"path must be repo-relative: {path}")
 
 
@@ -106,7 +108,10 @@ def load_json(path: Path) -> Any:
     if not path.is_file():
         return None
     with path.open(encoding="utf-8") as fh:
-        return json.load(fh)
+        try:
+            return json.load(fh)
+        except json.JSONDecodeError as exc:
+            fail(f"could not parse {path}: {exc}")
 
 
 # --- glob matching (dorny/paths-filter's supported subset: '**', '*', '?', literals) ---
@@ -302,7 +307,7 @@ def build_job_report(
                     "name": step.get("name", "(unnamed step)"),
                     "dir": step_dir,
                     "run": run_text,
-                    "ci_only_expression": "${{" in run_text,
+                    "ci_only_expression": "${{" in run_text or "$GITHUB_" in run_text,
                     "npm_scripts": npm_scripts,
                 }
             )
@@ -354,13 +359,22 @@ def build_report(
         for p in sorted_paths
         if p.startswith("frontend/") and (repo_root / p).is_file()
     )
+    eslint_files = [f for f in frontend_files if Path(f).suffix in ESLINT_SUFFIXES]
+    prettier_files = [
+        f
+        for f in frontend_files
+        if Path(f).suffix in PRETTIER_SUFFIXES or Path(f).name in PRETTIER_NAMES
+    ]
+    neither_files = [f for f in frontend_files if f not in eslint_files and f not in prettier_files]
 
     return {
         "changed_paths": sorted_paths,
         "stale_remote_ref_note": stale_ref_note,
         "triggered": triggered,
         "not_triggered": not_triggered,
-        "frontend_files_for_npx": frontend_files,
+        "frontend_files_for_eslint": eslint_files,
+        "frontend_files_for_prettier": prettier_files,
+        "frontend_files_for_neither": neither_files,
     }
 
 
@@ -399,12 +413,17 @@ def render_text(report: dict[str, Any]) -> str:
 
     lines.append("not triggered: " + (", ".join(report["not_triggered"]) or "(none)"))
     lines.append("")
-    lines.append("frontend files for npx (run from frontend/):")
-    if report["frontend_files_for_npx"]:
-        for f in report["frontend_files_for_npx"]:
-            lines.append(f"  - {f}")
-    else:
-        lines.append("  (none)")
+    for heading, key in (
+        ("frontend files for npx eslint (run from frontend/):", "frontend_files_for_eslint"),
+        ("frontend files for npx prettier --check (run from frontend/):", "frontend_files_for_prettier"),
+        ("frontend files neither command takes:", "frontend_files_for_neither"),
+    ):
+        lines.append(heading)
+        if report[key]:
+            for f in report[key]:
+                lines.append(f"  - {f}")
+        else:
+            lines.append("  (none)")
     return "\n".join(lines)
 
 

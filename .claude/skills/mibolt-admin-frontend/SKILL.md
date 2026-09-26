@@ -38,9 +38,10 @@ done; it owns the full check matrix, which this skill does not repeat.
 
 - **An app of its own.** Selector prefix `adm`, served under `/admin/`
   (`frontend/angular.json:251`), dev server on port 4220 (`frontend/angular.json:341-342`),
-  Hungarian UI copy, `LOCALE_ID` `hu-HU`. The routes are `/bejelentkezes`, `/attekintes`,
-  `/termekek`, `/termekek/uj`, `/termekek/:productId` and `/adminok`; the page to return to after
-  sign-in travels in the `vissza` query parameter.
+  Hungarian UI copy, `LOCALE_ID` `hu-HU`. The routes are `/bejelentkezes` (sign-in),
+  `/attekintes` (the Áttekintés overview, which its component calls the dashboard), `/termekek`,
+  `/termekek/uj`, `/termekek/:productId` and `/adminok`; the page to return to after sign-in
+  travels in the `vissza` query parameter.
 - **Its own client.** `AdminApi` is generated into
   `frontend/projects/admin/src/app/api/generated/` from the same contract as the shop SDK,
   restricted to the `AdminAuth`, `AdminUsers`, `AdminProducts` and `AdminMedia` tags and without an
@@ -51,10 +52,11 @@ done; it owns the full check matrix, which this skill does not repeat.
   by `frontend/projects/admin/src/mocks/`, and the unit specs run on the same handlers. The
   `local-backend` configuration proxies `/api` to the Spring backend on port 8080 instead
   (`frontend/projects/admin/README.md:34-47`).
-- **One provider list.** `frontend/projects/admin/src/app/app.config.ts:42-53`: the router with
-  component input binding, the admin's API configuration, the interceptors `ifMatchInterceptor`,
-  `unauthorizedInterceptor` and `transportInterceptor` in that order, the app initializer that
-  runs `AdminSession.refresh()`, and `LOCALE_ID`.
+- **One provider list.** `frontend/projects/admin/src/app/app.config.ts:42-53`: the browser global
+  error listeners, the router with component input binding, the admin's API configuration,
+  `HttpClient` with the interceptors `ifMatchInterceptor`, `unauthorizedInterceptor` and
+  `transportInterceptor` in that order, the app initializer that runs `AdminSession.refresh()`,
+  and `LOCALE_ID`.
 - **Session and sign-in.** `AdminSession.current` is `undefined` until the initializer has run,
   then `null` or the signed-in `AdminUser`. `adminAuthGuard` sends a signed-out visit to
   `/bejelentkezes` with `vissza`; a 401 from any call does the same through
@@ -63,15 +65,18 @@ done; it owns the full check matrix, which this skill does not repeat.
 - **Optimistic concurrency.** Product writes carry `If-Match` through the admin's own
   `withIfMatch` (`frontend/projects/admin/src/app/core/api/if-match.interceptor.ts:6-8`), not the
   one in `@mi-bolt/core-api`. A 412 means someone else saved first.
-- **State.** Root singletons are `@Service()`: `AdminSession` and `MediaUploader`. A screen's state
-  is an `@Injectable()` store listed in the page's own `providers`: `ProductListStore`,
-  `ProductEditStore`, `AdminsStore`. A store method that calls the backend never rejects; it
-  returns a tagged union (`SaveResult`, `RowActionResult`, `DeleteResult`) or sets a status signal,
-  and the page switches on it.
+- **State.** Root singletons are `@Service()`: `AdminSession` and `MediaUploader`. The product
+  list, the product editor and the admins screen keep their state in an `@Injectable()` store
+  listed in the page's own `providers`: `ProductListStore`, `ProductEditStore`, `AdminsStore`; the
+  overview holds its per-card `Loadable<T>` signals in the component, and the login page works
+  through `AdminSession`. A store method that calls the backend never rejects; it returns a tagged
+  union (`SaveResult`, `RowActionResult`, `DeleteResult`) or sets a status signal, and the page
+  switches on it.
 - **Forms.** Every form is a Signal Form from `@angular/forms/signals`; the admin imports nothing
   from `@angular/forms`. The shared pieces are in `frontend/projects/admin/src/app/shared/forms/`:
   `SubmitAttempt` (submit, disabled state, focus on the first error), `MESSAGES` and
-  `SERVER_FIELD_MESSAGES`, `toServerErrors` for a 422 answer, and `adm-control-error`.
+  `SERVER_FIELD_MESSAGES`, `toServerErrors` for a 400 or 422 answer that carries field errors, and
+  `adm-control-error`.
 - **Transport.** HttpClient keeps its default fetch backend. The image upload alone is marked
   `USE_XHR`, because fetch produces no upload progress events
   (https://angular.dev/guide/http/setup#withxhr).
@@ -147,8 +152,10 @@ what it calls; see [references/admin-architecture.md](references/admin-architect
 
 **Change session or auth behaviour.** Work in `frontend/projects/admin/src/app/core/auth/` and keep
 the interceptor order in `frontend/projects/admin/src/app/app.config.ts:48`. Keep
-`skipUnauthorizedRedirect()` on the session-priming GET, the login and the logout: their caller
-handles a 401 itself, and the interceptor must not also navigate
+`skipUnauthorizedRedirect()` on every session call that carries it: `refresh()`'s session read,
+`login()`'s priming GET and POST, and `logout()`
+(`frontend/projects/admin/src/app/core/auth/admin-session.ts:36-82`). Their caller handles a 401
+itself, and the interceptor must not also navigate
 (`frontend/projects/admin/src/app/core/auth/admin-session.ts:65-70`). Keep every post-login target
 behind `isSafeTarget`.
 
@@ -173,10 +180,12 @@ Each line names a rule and where it is written or enforced; the owner carries th
   `frontend/projects/admin/src/app/features/products/list/product-list.query.ts:67-83`.
   `mibolt-frontend-code-standards` owns the lint detail.
 - **No shop SDK, no shop mocks, no other app.** Importing `@mi-bolt/api/*`, `@mi-bolt/mocks/*`,
-  anything under `shop-api`, or anything from `storefront` or `demo-payment` is a lint error here,
-  a dynamic `import()` included (`frontend/eslint.config.mjs:392-407` and
-  `frontend/eslint.config.mjs:428-437`). Code two apps need moves into a library, which is
-  `mibolt-cross-package-changes`'s.
+  anything under `shop-api`, or anything from `storefront` or `demo-payment` is a lint error here
+  (`frontend/eslint.config.mjs:392-407`). A dynamic `import()` is linted only for the app segments
+  (`frontend/eslint.config.mjs:428-437`), because `no-restricted-imports` does not visit one
+  (`frontend/eslint.config.mjs:26-28`), so a dynamic `import()` of the shop SDK or mocks passes
+  lint and review is what keeps it out. Code two apps need moves into a library, which is
+  `mibolt-cross-package-changes`'s; `mibolt-frontend-code-standards` owns the lint detail.
 - **The Angular conventions** of root `CLAUDE.md` (signal inputs and outputs, `computed`, native
   control flow, `@Service()` for root singletons, Signal Forms) hold here, and the admin follows
   them throughout.
@@ -189,7 +198,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
   focus only minimally, because it will never be a live app! no screen reader will ever read it!"
   The admin already carries ARIA and focus code: `role="alert"` in `adm-control-error`, focus moved
   to a title before a reload removes the focused button, `SubmitAttempt` focusing the first invalid
-  control, and the list's row and cell roles. Neither extend it nor remove it.
+  control, and the list's row and cell roles. Neither extend it nor remove it. A new list column
+  copies its neighbours' markup as it stands, roles included, which is not extending it
+  ([references/product-form.md](references/product-form.md), section 8).
 - **Framework questions** are answered through the instruments in
   `.claude/rules/framework-facts.md`, with the URL beside the claim. The `angular-developer` skill
   is generic guidance; where it and this skill differ, the admin's conventions win.
@@ -199,7 +210,9 @@ Each line names a rule and where it is written or enforced; the owner carries th
   `frontend/projects/admin/README.md:70-72` describe Angular Material with the `azure-blue` theme
   and Tailwind utilities, which is what the admin's code uses. Which of the two governs an admin
   style value is the user's to settle, and this skill does not settle it. A change that needs a new
-  style value puts that choice to the user, naming both sources.
+  style value puts that choice to the user, naming both sources. `mibolt-frontend-code-standards`
+  records the same open question as entry C6 of its conflict register, which also names a third,
+  pre-implementation source.
 - **End-to-end tests.** The admin has no Playwright spec; it is verified by unit specs over its
   mocks and by the browser pass. Only the `playwright-test-*` agents write one
   (`.claude/rules/code-standards.md:146`).
@@ -243,13 +256,18 @@ Run everything from the repository root. The dev servers are the orchestrator's 
   npm --prefix frontend run ng -- test admin --include '**/product-form.schema.spec.ts' --coverage=false --watch=false
   ```
 
-  For a whole directory, use a glob such as `'**/products/list/*.spec.ts'`. Keep the `**/` prefix
-  and the quotes. https://angular.dev/cli/test documents `--include` as relative to the project
-  root, while the installed `@angular/build` 22.1.8 resolves it against the project's source root
-  (`test-discovery.js`, `findTests`); a `**/` glob matches the same spec under either reading, and
-  the quotes keep the shell from expanding it. Pass `--coverage=false`: the admin's `test` target
-  turns coverage on (`frontend/angular.json:365`), and its thresholds are set for the whole project
-  (`frontend/angular.json:374-380`), which a focused run does not exercise.
+  For a whole directory, use a glob such as `'**/products/list/*.spec.ts'`, keeping the `**/`
+  prefix and the quotes, which keep the shell from expanding it. A spec path or a directory
+  written from `frontend/`, such as `projects/admin/src/app/features/products/list`, works too.
+  Never write the path from the project root: https://angular.dev/cli/test documents `--include`
+  as relative to the project root, but the installed `@angular/build` 22.1.8 strips a leading
+  `projects/admin/src/` and resolves the rest against the project's source root
+  (`test-discovery.js`, `findTests`), so a `src/app/...` path discovers nothing and the run still
+  exits 0. Because an empty selection passes, run a new pattern with `--list-tests` first: it
+  prints the spec files the pattern selects and exits without building or running them. Pass
+  `--coverage=false`: the admin's `test` target turns coverage on (`frontend/angular.json:365`),
+  and its thresholds are set for the whole project (`frontend/angular.json:374-380`), which a
+  focused run does not exercise.
 - **The full unit suite**, `npm --prefix frontend run test`, runs every project and writes the
   coverage report that every agent in the checkout shares
   (`.claude/rules/parallel-spawns.md`, "What a batch shares"). It is the orchestrator's before a
@@ -294,9 +312,11 @@ In the repository, `frontend/projects/admin/README.md` covers the admin's comman
 sign-in, the scenarios and the real-backend setup, and `frontend/README.md` the workspace's
 configurations and scripts. Two passages of the admin README differ from the code:
 `frontend/projects/admin/README.md:6` and `frontend/projects/admin/README.md:62-68` describe
-`HttpClient` on the XHR backend and the icon font set in
+`HttpClient` on the XHR backend and the icon font set through `MAT_ICON_DEFAULT_OPTIONS` in
 `frontend/projects/admin/src/app/app.config.ts`, while the code keeps the fetch backend and sets
-the font from the login page and the shell. The code is what runs.
+the font with `applyMaterialSymbolsFont()` from the login page and the shell, and
+`frontend/projects/admin/src/app/app.spec.ts:71-72` asserts that no `MAT_ICON_DEFAULT_OPTIONS` is
+provided. The code is what runs.
 
 ## Keep this skill current
 

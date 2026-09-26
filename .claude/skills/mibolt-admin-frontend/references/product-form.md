@@ -68,7 +68,11 @@ https://angular.dev/api/forms/signals/validateTree.
 
 `frontend/projects/admin/src/app/features/products/edit/product-edit-page.html:36-91` lays out
 five numbered sections and three side cards. The components are in
-`frontend/projects/admin/src/app/features/products/edit/sections/`.
+`frontend/projects/admin/src/app/features/products/edit/sections/`. The header comment of
+`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts:18-21` still
+calls the section a stub whose fields a later unit (F20) writes; the fields are implemented, and
+`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.html` binds all six
+with `[formField]`.
 
 | Card | Component | Model fields |
 |---|---|---|
@@ -92,7 +96,7 @@ five numbered sections and three side cards. The components are in
   (`frontend/projects/admin/src/app/shared/image-upload/image-upload.ts:97`), bound with
   `[formField]` like a native input
   (https://angular.dev/guide/forms/signals/custom-controls#formvaluecontrol).
-- A 422 answer reaches the fields through `toServerErrors(form, errors)`
+- A 400 or 422 answer with field errors reaches the fields through `toServerErrors(form, errors)`
   (`frontend/projects/admin/src/app/shared/forms/server-errors.ts:65-73`); an error whose pointer
   does not resolve lands on the form root.
 
@@ -117,21 +121,27 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
    outside a `mat-form-field`, and the field in the card's error-count list.
 6. The write mock, `frontend/projects/admin/src/mocks/products-write.handlers.ts`: the member
    allow-list `TOP_MEMBERS` (line 79), `readProductInput` (line 284), `beanValidationErrors`
-   (line 480), `toAdminProductInput` (line 601) and `buildProduct` (line 821). If seeded products
+   (line 480), `validatorErrors` (line 514) if the backend validator checks it,
+   `toAdminProductInput` (line 601) and `buildProduct` (line 821). If seeded products
    carry it, `seedCatalog` in `frontend/projects/admin/src/mocks/seed.ts:121-152`; if the list
    shows it, chain 8.
 7. Specs: `frontend/projects/admin/src/app/features/products/edit/product-form.mapper.spec.ts`,
    `frontend/projects/admin/src/app/features/products/edit/product-form.schema.spec.ts`, the
    card's spec, `frontend/projects/admin/src/app/features/products/edit/product-edit-page.spec.ts`,
    and the write mock's specs, whose validation cases are in
-   `frontend/projects/admin/src/mocks/products-write.validation.spec.ts`.
+   `frontend/projects/admin/src/mocks/products-write.validation.spec.ts`. The spec helper `inputOf`
+   (`frontend/projects/admin/src/testing/mock-spec-helpers.ts:82-110`) rebuilds an
+   `AdminProductInput` field by field, so it carries the new field too.
 
 ## 5. The list keeps its state in the URL
 
 - The router query string is the only state of the list's filters and sort
   (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts:1-19`,
   `frontend/projects/admin/src/app/features/products/list/product-list.store.ts:1-30`). Hold no
-  filter in a component field or a store field.
+  filter in a component field or a store field. Both headers give
+  `frontend/docs/spec/architecture.md:67` as the source of this rule, writing the path relative to
+  `frontend/`; that line now describes request cancellation and write serialisation, so the code
+  and this section are the source.
 - `frontend/projects/admin/src/app/features/products/list/product-list.query.ts` is the codec:
   - `ProductListQuery` and `DEFAULT_PRODUCT_LIST_QUERY` (lines 29-50);
   - `parseProductListQuery`, lenient, with an unknown value falling back to the default
@@ -168,7 +178,8 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
   is not offered.
 - The desktop header
   (`frontend/projects/admin/src/app/features/products/list/product-list-page.html:44-53`) has
-  ten columns: image, Név, Márka, Színek, Változatok, Ár, Készlet, Kiemelt, Státusz, Műveletek.
+  ten columns: image, Név (name), Márka (brand), Színek (colours), Változatok (variants), Ár
+  (price), Készlet (stock), Kiemelt (featured), Státusz (status), Műveletek (actions).
   The handset header (`frontend/projects/admin/src/app/features/products/list/product-list-page.html:39-42`)
   has four: image, Név, Státusz and the menu. The column widths are the `--adm-product-columns`
   variable, desktop at
@@ -211,11 +222,21 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
 2. The header cell in
    `frontend/projects/admin/src/app/features/products/list/product-list-page.html`, the row cell
    in `frontend/projects/admin/src/app/features/products/list/product-row.html`, and a width in
-   `--adm-product-columns` for each layout that shows it. Add it to `SORTABLE_COLUMNS` only if the
-   generated `AdminProductSortField` carries it.
+   `--adm-product-columns` for each layout that shows it. Copy an existing column's header cell
+   and row cell as they stand, `role="columnheader"` and `role="cell"` included, so the new column
+   matches its neighbours. Add no accessibility work beyond what the copied markup already
+   carries, and remove no role an existing cell carries: root `CLAUDE.md` ("Accessibility
+   Requirements") rules out work on ARIA, keyboard handling and AXE checks here. Add it to
+   `SORTABLE_COLUMNS` only if the generated `AdminProductSortField` carries it, and then also to
+   the codec's `SORT_VALUES`
+   (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts:56-64`), which
+   the compiler does not check for completeness: a value missing there parses back to the default
+   sort.
 3. The read mock's projection `toListItem`
-   (`frontend/projects/admin/src/mocks/products-read.handlers.ts:354-378`), and `sortValue`
-   (line 315) if it sorts.
+   (`frontend/projects/admin/src/mocks/products-read.handlers.ts:354-378`), and, if it sorts,
+   `sortValue` (line 315) and both spellings of the field, the wire value and its constant name,
+   in `SORT_VALUES` (`frontend/projects/admin/src/mocks/products-read.handlers.ts:77-92`), which
+   otherwise answers 400.
 4. Specs: `frontend/projects/admin/src/app/features/products/list/product-row.spec.ts`,
    `frontend/projects/admin/src/app/features/products/list/product-list-page.spec.ts` and
    `frontend/projects/admin/src/mocks/products-read.handlers.spec.ts`.

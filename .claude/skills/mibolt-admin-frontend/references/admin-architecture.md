@@ -38,14 +38,15 @@ lines before changing them: the code comments there carry the reasons.
 
 `frontend/projects/admin/src/app/app.config.ts:42-53` is the whole provider list:
 
+- `provideBrowserGlobalErrorListeners()`.
 - `provideRouter(routes, withComponentInputBinding())`. Route parameters arrive as component
   inputs, which is how `ProductEditPage` gets `productId`
   (https://angular.dev/api/router/withComponentInputBinding).
 - `provideApiConfiguration(resolveApiRoot())`: the admin's own generated configuration, pointed
   at `/api/v1` on the page's origin.
-- `withInterceptors([ifMatchInterceptor, unauthorizedInterceptor, transportInterceptor])`, in
-  this order. `transportInterceptor` stays last so every interceptor before it, and HttpClient's
-  own XSRF handling, still sees a request it hands to the XHR backend
+- `provideHttpClient(withInterceptors([ifMatchInterceptor, unauthorizedInterceptor, transportInterceptor]))`,
+  the interceptors in this order. `transportInterceptor` stays last so every interceptor before
+  it, and HttpClient's own XSRF handling, still sees a request it hands to the XHR backend
   (`frontend/projects/admin/src/app/core/api/transport.interceptor.ts:18-27`).
 - `provideAppInitializer(() => inject(AdminSession).refresh())`, so the session is known before
   the first route activates.
@@ -99,7 +100,8 @@ The guards:
   rotated the token depends on that priming.
 - `logout()` reads 204 and 401 alike as signed out and rethrows anything else. `changePassword()`
   never touches `current`.
-- The priming GET, the login POST and the logout POST carry `skipUnauthorizedRedirect()`
+- `refresh()`'s session read, the priming GET, the login POST and the logout POST carry
+  `skipUnauthorizedRedirect()`
   (`frontend/projects/admin/src/app/core/auth/skip-unauthorized-redirect.ts`): their caller
   handles a 401 itself, so the interceptor below must not also navigate
   (`frontend/projects/admin/src/app/core/auth/admin-session.ts:65-70`).
@@ -108,9 +110,9 @@ The 401 round trip:
 
 1. `unauthorizedInterceptor`
    (`frontend/projects/admin/src/app/core/auth/unauthorized.interceptor.ts:17-38`) answers a 401
-   from any other request by clearing the session and navigating to the login page with `vissza`
-   set to the current URL, unless that URL already is the login page. It always rethrows, so the
-   caller still sees the error.
+   from any other request by clearing the session and navigating to the login page, with `vissza`
+   set to the current URL unless that URL already is the login page, where it navigates without
+   `vissza`. It always rethrows, so the caller still sees the error.
 2. `LoginPage` (`frontend/projects/admin/src/app/features/login/login-page.ts:91-112`) signs in,
    then navigates to `vissza` only when `isSafeTarget` accepts it
    (`frontend/projects/admin/src/app/features/login/login-page.ts:28-36`): a same-origin absolute
@@ -143,8 +145,9 @@ The 401 round trip:
 - Root singletons use `@Service()`: `AdminSession` and `MediaUploader`
   (https://angular.dev/api/core/Service). Root `CLAUDE.md` ("Services") is where the preference
   is written.
-- A screen's state lives in an `@Injectable()` store that the page lists in its own `providers`,
-  so every route activation gets a fresh one: `ProductListStore`
+- The product list, the product editor and the admins screen keep their state in an
+  `@Injectable()` store that the page lists in its own `providers`, so every route activation gets
+  a fresh one: `ProductListStore`
   (`frontend/projects/admin/src/app/features/products/list/product-list-page.ts:62`),
   `ProductEditStore`
   (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:63`) and

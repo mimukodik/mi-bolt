@@ -17,11 +17,11 @@ test-method names) belong to `mibolt-backend-code-standards`.
 
 ## Two test tasks
 
-`backend/services/commerce/build.gradle:141-162`: `test` excludes the JUnit tag
-`integration`, the registered `integrationTest` task runs only that tag, and
-`check` depends on `integrationTest`. An `@IntegrationTest` class therefore
-runs only under `integrationTest`. Focus a run with Gradle's `--tests`
-filter, a text pattern over class and method names
+`backend/services/commerce/build.gradle:141-162` splits the suite on the JUnit
+tag `integration`, so an `@IntegrationTest` class runs only under
+`integrationTest`; the task wiring and when to run which is
+`mibolt-verification`'s. Focus a run with Gradle's `--tests` filter, a text
+pattern over class and method names
 (https://docs.gradle.org/current/userguide/java_testing.html, "Test
 filtering"):
 

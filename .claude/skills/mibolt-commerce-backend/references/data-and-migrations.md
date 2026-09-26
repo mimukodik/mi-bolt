@@ -99,18 +99,18 @@ The stable deployment keeps its database and applies new migrations to it
 after the merge. `check-liquibase-changelog.py --base` is the check that
 catches it before then.
 
-The script treats a changeset as applied when it exists at the base, so one
-this branch added may still be edited before the merge. A local PostgreSQL
-that already ran it halts on the changed checksum until it is reset;
-resetting it is `mibolt-workspace-ops`.
+The script treats a changeset as applied when it exists at the merge base of
+`--base` and `HEAD`, so one this branch added may still be edited before the
+merge. A local PostgreSQL that already ran it halts on the changed checksum
+until it is reset; resetting it is `mibolt-workspace-ops`.
 
 ## The changelog check script
 
 `.claude/skills/mibolt-commerce-backend/scripts/check-liquibase-changelog.py`,
-read-only: it reads the changelog YAML and runs only `git rev-parse`,
-`git diff --name-status` and `git status --porcelain`. Run it from the
-repository root of the checkout to check; it finds the root with
-`git rev-parse --show-toplevel` from the working directory.
+read-only: it reads the changelog YAML and runs only `git rev-parse` and
+`git diff --name-status`. Run it from the repository root of the checkout to
+check; it finds the root with `git rev-parse --show-toplevel` from the working
+directory.
 
 ```bash
 uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \
@@ -120,23 +120,30 @@ uv run --no-project --python 3.12 --with PyYAML==6.0.2 python \
 
 - `--base <git-ref>` is optional. Pass the branch this work was cut from;
   `.claude/rules/code-standards.md` ("Pre-existing") says how to name it.
-  The committed-history half compares from the merge base
-  (`git diff --name-status <base>...HEAD`); the working-tree half reads
-  `git status --porcelain`.
-- Prerequisites: uv on `PATH`, Python 3.12 resolvable by uv, and PyYAML
-  6.0.2, which uv fetches from PyPI once if its cache lacks it.
+  It compares the working tree against the merge base of `<base>` and
+  `HEAD` (`git diff --name-status --no-renames --merge-base <base>`), so
+  committed, staged and unstaged edits count alike, a changeset this branch
+  added stays new however often it is edited, and a renamed applied
+  changeset counts as deleted.
+- Prerequisites: uv on `PATH`, git 2.30 or later, Python 3.12 resolvable by
+  uv, and PyYAML 6.0.2, which uv fetches from PyPI once if its cache lacks
+  it.
 - Exit codes: 0 no FAIL; 1 at least one FAIL; 2 a usage or prerequisite
-  error on stderr (`unknown git ref: <ref>`, `not a git checkout`, or
-  `layout changed: <path> not found; update the script and the skill`).
+  error on stderr: `unknown git ref: <ref>`;
+  `cannot diff <ref> against the working tree: <git's message>` when git
+  finds no merge base, as in a shallow clone; `not a git checkout`;
+  `layout changed: <path> not found; update the script and the skill`; or
+  `cannot parse backend/services/commerce/src/main/resources/db/changelog/db.changelog-master.yaml: <error>`.
 
 It fails on: an include pointing at a missing file; a file under `changes/`
 that is not included; a file included twice; includes out of ascending
-number order; a duplicate number; a changeset without `id` or `author`; and,
-with `--base`, a changeset modified or deleted since the base. It warns, for
-observed patterns rather than documented rules, on: a file name outside
-`NNNN-kebab.yaml`; a first `id` different from the file stem; more than one
-`author`; a gap in the numbers. It then prints the next number and the
-include block to append, and writes nothing.
+number order; a duplicate number; a changeset file that is not valid YAML; a
+changeset without `id` or `author`; and, with `--base`, a changeset that
+existed at the merge base and has since been modified, renamed or deleted.
+It warns, for observed patterns rather than documented rules, on: a file name
+outside `NNNN-kebab.yaml`; a first `id` different from the file stem; more
+than one `author`; a gap in the numbers. It then prints the next number and
+the include block to append, and writes nothing.
 
 A clean run, `--base HEAD`, on this repository:
 
@@ -171,13 +178,6 @@ For the first, append the printed include block. For the second, reverse the
 edit in the applied changeset by hand, since
 `.claude/rules/session-lifecycle.md` ("Nothing is undone with git") rules out
 a git restore, and add the change as a new changeset.
-
-With `--base`, an uncommitted edit to a changeset this branch itself added and
-committed is also reported as `applied changeset modified`, because the
-working-tree half does not ask whether the file existed at the base. When
-`git diff --name-status <base>...HEAD` lists that file as `A`, it is new on
-this branch, and the last paragraph of the forward-only section above applies
-to it.
 
 ## Schema validation at start, and H2 against PostgreSQL
 

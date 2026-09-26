@@ -24,11 +24,16 @@
 // What it checks, in SKILL.md and references/*.md:
 //   (a) every relative Markdown link resolves from the file's own directory;
 //   (b) every backticked token whose first path segment is a top-level entry
-//       of `git ls-files` must resolve: the optional `:N` or `:N-M[,N-M...]`
-//       anchor is stripped and the path must exist; with an anchor, every
-//       upper line number must not exceed the target file's line count; a
-//       token containing `*` is treated as a glob and must match at least
-//       one file tracked by git;
+//       of `git ls-files`: a token with a colon, no slash and no line anchor,
+//       such as `backend:docker`, is a mise task name and must appear in
+//       `mise tasks --all --json` as `//:<token>` or `//<area>:<task>`; any
+//       other token is a path, whose optional `:N` or `:N-M[,N-M...]` anchor
+//       is stripped, and the path must exist on disk and be one a fresh
+//       checkout holds (tracked, untracked but not ignored, or a directory
+//       above one), so a gitignored output fails whether or not it was built
+//       here; with an anchor, every upper line number must not exceed the
+//       target file's line count; a token containing `*` is a glob and must
+//       match at least one such file or directory;
 //   (c) commands: `mise run <task>` against `mise tasks --all --json`;
 //       `npm --prefix frontend run <s>` / `npm --prefix tools run <s>`
 //       against that package.json's "scripts"; `backend/gradlew -p backend
@@ -37,10 +42,14 @@
 //       backend/mise.toml, or a `./gradlew` line of
 //       .github/workflows/backend.yml (reported UNVERIFIED when none of the
 //       three has it, since Gradle tasks cannot be listed statically, and
-//       never reported as a positive pass); `node <path>` and
-//       `uv run ... python <path>` against the filesystem;
-//   (d) hygiene: `/Users/`, `/home/`, `~/`, `/tmp/` and `file://` anywhere in
-//       a checked file are reported as FAIL.
+//       never reported as a positive pass);
+//   ... `node [options] <path>` and `uv run ... python [options] <path>`,
+//       taking the first word that is not an option, resolved from the
+//       repository root and held to the same fresh-checkout test as (b);
+//   (d) hygiene: `/Users/`, `/home/`, `~/`, `/tmp/` (also after `/private`
+//       or `/var`), `/var/folders/` (also after `/private`) and `file://` are
+//       reported as FAIL wherever a path starts with them: at the start of a
+//       line, or after whitespace or one of ` ' " ( [ { < > = : ; , |.
 //
 // Output (to stdout): one line per finding,
 //   `FAIL|UNVERIFIED <skill-relative-file>:<line> <kind> <token> — <reason>`
@@ -53,14 +62,17 @@
 // Diagnostics and usage/prerequisite errors go to stderr.
 //
 // Exit codes: 0 no FAIL anywhere; 1 at least one FAIL; 2 a usage or
-// prerequisite error (nothing is reported in that case).
+// prerequisite error, mise missing or failing included unless --no-mise is
+// given. Every prerequisite is settled before the first line is printed, so
+// nothing is reported in that case.
 //
 // Prerequisites: git; Node 26 (`mise.toml` pins `node = "26.10.0"`); mise on
 // PATH for the `mise run` check, unless `--no-mise` is given.
 //
 // Read-only guarantee: this script only reads files and runs
-// `git rev-parse --show-toplevel`, `git ls-files` and
-// `mise tasks --all --json`. It makes no writes and no network calls.
+// `git rev-parse --show-toplevel`, `git ls-files` (also with
+// `--cached --others --exclude-standard`) and `mise tasks --all --json`.
+// It makes no writes and no network calls.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -126,10 +138,17 @@ function getMiseTaskNames(repoRoot) {
       encoding: 'utf8',
       stdio: QUIET_STDIO,
     });
-  } catch {
-    fail('mise not found on PATH; rerun with --no-mise to skip task checks');
+  } catch (error) {
+    if (error.code === 'ENOENT') fail('mise not found on PATH; rerun with --no-mise to skip task checks');
+    const detail = String(error.stderr ?? '').trim().split('\n')[0];
+    fail(`mise tasks --all --json failed${detail ? `: ${detail}` : ''}; rerun with --no-mise to skip task checks`);
   }
-  const tasks = JSON.parse(out);
+  let tasks;
+  try {
+    tasks = JSON.parse(out);
+  } catch {
+    fail('mise tasks --all --json printed no JSON; rerun with --no-mise to skip task checks');
+  }
   miseTaskNamesCache = new Set(tasks.map((t) => t.name));
   return miseTaskNamesCache;
 }
@@ -200,9 +219,28 @@ function globToRegExp(pattern) {
   return new RegExp(`^${doubled}$`);
 }
 
-function checkGlob(token, gitFiles) {
-  const re = globToRegExp(token);
-  return gitFiles.some((f) => re.test(f));
+function checkGlob(token, presentPaths) {
+  const re = globToRegExp(token.replace(/\/$/, ''));
+  for (const p of presentPaths) if (re.test(p)) return true;
+  return false;
+}
+
+// Every tracked file, every untracked file no ignore rule covers, and every
+// directory above them: what a fresh checkout holds once the author's new files
+// are added. A gitignored output (coverage, dist, node_modules, Gradle build/)
+// is absent from it on every machine, whether or not it was built here.
+function getPresentPaths(repoRoot) {
+  const out = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: QUIET_STDIO,
+  });
+  const present = new Set();
+  for (const file of out.split('\n').filter(Boolean)) {
+    const parts = file.split('/');
+    for (let i = 1; i <= parts.length; i += 1) present.add(parts.slice(0, i).join('/'));
+  }
+  return present;
 }
 
 const GRADLE_BUILD_PATH = ['backend', 'services', 'commerce', 'build.gradle'];
@@ -269,10 +307,10 @@ function classifyCommand(token) {
   if ((m = /^backend\/gradlew -p backend :services:commerce:(\S+)/.exec(token))) {
     return { type: 'gradle', task: m[1] };
   }
-  if ((m = /^node (\S+)/.exec(token))) {
+  if ((m = /^node\s+(?:-\S+\s+)*([^-\s]\S*)/.exec(token))) {
     return { type: 'script', scriptPath: m[1] };
   }
-  if ((m = /^uv run\b.*\bpython\s+(\S+)/.exec(token))) {
+  if ((m = /^uv run\b.*\bpython\s+(?:-\S+\s+)*([^-\s]\S*)/.exec(token))) {
     return { type: 'script', scriptPath: m[1] };
   }
   return null;
@@ -285,7 +323,18 @@ function loadPackageScripts(repoRoot, area) {
   return { scripts: pkg.scripts ?? {}, relPath: path.join(area, 'package.json') };
 }
 
-const HYGIENE_PATTERNS = ['/Users/', '/home/', '~/', '/tmp/', 'file://'];
+// A machine path starts a path: it opens the line or follows a character that
+// cannot sit inside a repository-relative path. Without that boundary the
+// storefront's features/home/ folder reads as a Linux home directory.
+const PATH_START = '(?:^|[\\s`\'"(\\[{<>=:;,|])';
+const HYGIENE_PATTERNS = [
+  { token: '/Users/', re: new RegExp(`${PATH_START}/Users/`) },
+  { token: '/home/', re: new RegExp(`${PATH_START}/home/`) },
+  { token: '~/', re: new RegExp(`${PATH_START}~/`) },
+  { token: '/tmp/', re: new RegExp(`${PATH_START}(?:/private)?(?:/var)?/tmp/`) },
+  { token: '/var/folders/', re: new RegExp(`${PATH_START}(?:/private)?/var/folders/`) },
+  { token: 'file://', re: /file:\/\// },
+];
 
 function checkFile(absPath, skillDir, repoRoot, ctx, options) {
   const relToSkill = path.relative(skillDir, absPath);
@@ -303,13 +352,13 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
 
     // (d) hygiene
     for (const pattern of HYGIENE_PATTERNS) {
-      if (lineText.includes(pattern)) {
+      if (pattern.re.test(lineText)) {
         checked += 1;
         findings.push({
           status: 'FAIL',
           line: lineNo,
           kind: 'hygiene',
-          token: pattern,
+          token: pattern.token,
           reason: 'machine-specific path or file:// URL',
         });
       }
@@ -395,13 +444,13 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
           }
         } else if (command.type === 'script') {
           const resolved = path.resolve(repoRoot, command.scriptPath);
-          if (!existsSync(resolved)) {
+          if (!existsSync(resolved) || !ctx.presentPaths.has(path.relative(repoRoot, resolved))) {
             findings.push({
               status: 'FAIL',
               line: lineNo,
               kind: 'script',
               token,
-              reason: 'script path does not exist',
+              reason: 'script path does not exist in a fresh checkout',
             });
           }
         }
@@ -417,27 +466,40 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
       checked += 1;
       const { base, anchor } = splitAnchor(token);
 
+      // `backend:docker` names a mise task, not a path: a colon in a token with
+      // no slash and no line anchor cannot belong to a repository path.
+      if (anchor === null && !base.includes('/') && base.includes(':')) {
+        const [area, ...rest] = base.split(':');
+        const names = [`//:${base}`, `//${area}:${rest.join(':')}`];
+        if (options.noMise) {
+          findings.push({ status: 'UNVERIFIED', line: lineNo, kind: 'mise', token, reason: 'mise task check skipped (--no-mise)' });
+        } else if (!names.some((name) => getMiseTaskNames(repoRoot).has(name))) {
+          findings.push({ status: 'FAIL', line: lineNo, kind: 'mise', token, reason: `neither a path nor a mise task: ${names.join(', ')}` });
+        }
+        continue;
+      }
+
       if (base.includes('*')) {
-        if (!checkGlob(base, ctx.gitFiles)) {
+        if (!checkGlob(base, ctx.presentPaths)) {
           findings.push({
             status: 'FAIL',
             line: lineNo,
             kind: 'path',
             token,
-            reason: 'glob matches no tracked file',
+            reason: 'glob matches no path a fresh checkout holds',
           });
         }
         continue;
       }
 
       const resolved = path.resolve(repoRoot, base);
-      if (!existsSync(resolved)) {
+      if (!existsSync(resolved) || !ctx.presentPaths.has(path.relative(repoRoot, resolved))) {
         findings.push({
           status: 'FAIL',
           line: lineNo,
           kind: 'path',
           token,
-          reason: 'path does not exist',
+          reason: 'path does not exist in a fresh checkout',
         });
         continue;
       }
@@ -483,13 +545,18 @@ function main() {
   const skillDirs = resolveSkillDirs(repoRoot, options.skillDirs);
   const gitFiles = getGitLsFiles(repoRoot);
   const topLevelEntries = new Set(gitFiles.map((f) => f.split('/')[0]));
+  const presentPaths = getPresentPaths(repoRoot);
+
+  // Settle the mise prerequisite before any output, so exit 2 never follows a
+  // summary line that already printed.
+  if (!options.noMise) getMiseTaskNames(repoRoot);
 
   let anyFail = false;
 
   for (const skillDir of skillDirs) {
     const skillName = path.basename(skillDir);
     const files = collectSkillFiles(skillDir);
-    const ctx = { gitFiles, topLevelEntries, npmScriptsCache: {}, gradleCache: { loaded: false } };
+    const ctx = { presentPaths, topLevelEntries, npmScriptsCache: {}, gradleCache: { loaded: false } };
 
     let totalChecked = 0;
     let totalFail = 0;
@@ -523,7 +590,7 @@ function main() {
     if (totalFail > 0) anyFail = true;
   }
 
-  process.exit(anyFail ? 1 : 0);
+  process.exitCode = anyFail ? 1 : 0;
 }
 
 main();

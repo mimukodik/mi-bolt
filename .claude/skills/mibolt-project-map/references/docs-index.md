@@ -24,7 +24,7 @@ of the current apps.
 
 | Document | Authoritative for | Language | Currency |
 |---|---|---|---|
-| `frontend/README.md` | the six projects, every npm script, the mock and real-backend configurations, tests, the CI jobs | English | `frontend/README.md:63` says CI runs `npm --prefix frontend run fixtures:catalog:check`; no workflow or mise task runs it |
+| `frontend/README.md` | the six projects, every npm script, the mock and real-backend configurations, tests, the CI jobs | English | `frontend/README.md:63` describes `fixtures:catalog:check` as "Proving the committed fixture matches the source catalogue, as CI does", and `frontend/scripts/build-catalog-fixture.mjs:15` calls that script the CI entry point; no workflow or mise task runs it, and the only comparison CI's contract suite makes between the fixture and the source catalogue is the product count (`frontend/tests/contract/schema.spec.ts:512-513`) |
 | `frontend/projects/admin/README.md` | the admin app's commands, mock backend and styling | English | not checked line by line |
 | `frontend/docs/api/README.md` | SDK generation, the shop and admin SDK split, the catalogue fixture | English | matches `frontend/ng-openapi-gen.json` and `frontend/ng-openapi-gen.admin.json` |
 | `frontend/docs/design/yettel.md`, `frontend/docs/design/yettel/` | colour, type, radii and component recipes, with the captured yettel.hu source; the design authority named in `.claude/CLAUDE.md` ("Design authority") | English | the document never mentions the admin app |

@@ -13,20 +13,25 @@ each workspace's own commands run.
 
 **Inside:** the root `mise.toml` and the four area files (`frontend/mise.toml`,
 `backend/mise.toml`, `tools/mise.toml`, `contracts/mise.toml`) as one task
-graph; `frontend/package.json` as a file, its scripts and the Node start
-wrapper; the build and serve configurations in `frontend/angular.json` and the
-`frontend/proxy*.json` files; everything under `deploy/`;
+graph; `frontend/package.json` and `tools/package.json` with their scripts,
+the Node start wrapper included, and `frontend/package-lock.json`,
+`tools/package-lock.json` and `tools/tsconfig.json`, all as files; the build
+and serve configurations in `frontend/angular.json`, their `budgets` and
+`fileReplacements` included, the `frontend/proxy*.json` files and
+`frontend/.postcssrc.json`; `backend/gradlew`, `backend/gradlew.bat` and
+`backend/gradle/wrapper/` as files; everything under `deploy/`;
 `frontend/Dockerfile`, `backend/services/commerce/Dockerfile`,
 `frontend/nginx/` and `frontend/tests/web-image/`; `.github/`;
 `tools/dev-server/`, `tools/install-spring-tools-mcp.sh`,
 `frontend/scripts/serve-static.mjs` and `frontend/scripts/proxy-timeout.mjs`;
-`.editorconfig` and `.gitattributes` as files.
+`backend/docs/06-uzembe-helyezes.md`, which builds and runs the backend image
+by hand; `.editorconfig`, `.gitattributes` and `.gitignore` as files.
 
 **Outside, and where it goes:**
 
-- Which checks a change needs, what each one writes, and which local command
-  reproduces a CI job: consult `mibolt-verification` when a wiring change here
-  is made.
+- Which checks a change needs, what each one writes, why a check or a
+  coverage floor fails, and which local command reproduces a CI job: consult
+  `mibolt-verification` when a wiring change here is made or a check fails.
 - The contract, a failing `api:generate` or `api:drift`, the generated clients
   and the catalogue data are out of scope here: `mibolt-cross-package-changes`
   owns them. The wiring of those root tasks is here.
@@ -40,7 +45,11 @@ wrapper; the build and serve configurations in `frontend/angular.json` and the
 - `.claude/**` is out of scope even where a root task runs it (`claude:memory`,
   `claude:hooks:test`, `claude:hooks:typecheck`): `.claude/CLAUDE.md` and the
   rule files it indexes own it.
-- Dependency upgrades and lockfile changes are out of scope for this skill;
+- `backend/settings.gradle` and the plugin, toolchain and dependency blocks at
+  `backend/services/commerce/build.gradle:1-37` are out of scope:
+  `mibolt-commerce-backend` owns them.
+- Dependency upgrades are out of scope for this skill, though the manifests
+  and the lockfiles named above are in it as files;
   `.claude/rules/parallel-spawns.md` ("What a batch shares") treats the
   dependency files as one agent's at a time.
 
@@ -59,23 +68,32 @@ wrapper; the build and serve configurations in `frontend/angular.json` and the
   its own `check` task. A config root's tools apply to that root's tasks
   (https://mise.jdx.dev/tasks/monorepo.html), so no root task inherits the
   contracts' uv, and nothing pins `helm`.
-- **Run modes.** `storefront`, `admin`, `payment` and `frontend` serve apps
-  with `ng serve` on the in-page MSW mock (4200, 4220, 4210). `db`,
-  `backend:docker` and `stack` start containers through `deploy/compose.sh`;
-  `backend` adds a native Gradle `bootRun`; `dev` and `dev:docker` serve the
-  three apps in their `local-backend` configuration against the backend on
-  8080, with PostgreSQL on 55433. `stop` stops every container and keeps the
-  volume. `README.md:229-239` lists the ports, 4400 and 4410 for Playwright
-  included.
-- **Two images, built only through Compose.** `mi-bolt-web` puts the three
+- **Run modes.** `mise run storefront`, `mise run admin`, `mise run payment`
+  and `mise run frontend` serve apps with `ng serve` on the in-page MSW mock
+  (4200, 4220, 4210). `mise run db`, `mise run backend:docker` and
+  `mise run stack` start containers through `deploy/compose.sh`;
+  `mise run backend` adds a native Gradle `bootRun`; `mise run dev` and
+  `mise run dev:docker` serve the three apps in their `local-backend`
+  configuration against the backend on 8080, with PostgreSQL on 55433.
+  `mise run stop` stops every container and keeps the volume.
+  `README.md:229-239` lists the ports, 4400 and 4410 for Playwright included.
+- **Two images, built through Compose.** `mi-bolt-web` puts the three
   production builds behind NGINX; `mi-bolt-commerce` is the backend. Both read
-  named build contexts only `deploy/compose.yaml` supplies.
+  named build contexts that a plain `docker build` of their directory does not
+  supply; `deploy/compose.yaml` supplies them, and CI builds from that file
+  (`.github/workflows/candidate.yml:51-60`).
+  `backend/docs/06-uzembe-helyezes.md:49-56`, in Hungarian, builds the backend
+  image by hand instead, passing its contexts to `docker build` with
+  `--build-context`.
 - **CI.** `.github/workflows/ci.yml` filters the change with
   `.github/components.yml` and calls up to five reusable workflows, then
-  `ci-ok`. After it, `.github/workflows/candidate.yml` builds the images, and
-  the publish, preview-smoke, stable-smoke and close-preview workflows run from
-  the default branch. Only `.github/workflows/contracts.yml` goes through mise;
-  the rest call npm and Gradle directly.
+  `ci-ok`. On the same pull-request and `main` push events, beside CI rather
+  than after it, `.github/workflows/candidate.yml` builds the images
+  (`.github/workflows/candidate.yml:3-6`); the publish, preview-smoke,
+  stable-smoke and close-preview workflows run from the default branch. Only
+  `.github/workflows/contracts.yml` goes through mise; the other workflows call
+  npm, Gradle, `deploy/compose.sh`, uv, Docker and Python directly, and none
+  runs a root task.
 - **Deploy.** `deploy/helm/mi-bolt/` is the chart for the preview and stable
   environments, which Flux deploys from outside this repository
   (`deploy/helm/mi-bolt/README.md:29`); `deploy/candidate/` builds and
@@ -118,14 +136,15 @@ wrapper; the build and serve configurations in `frontend/angular.json` and the
    has no task of its own goes under `run` and runs from the root, the way
    `claude:memory` runs `npm --prefix tools run` (`mise.toml:88-90`). A task
    that runs the contract lint and the frontend contract suite, for example,
-   can depend on `contracts:check` and run
-   `npm --prefix frontend run test:contract`.
-3. Name it for what it acts on, prefixed by its owner, as `contracts:check` and
-   `api:drift` are (`.claude/rules/code-standards.md:26`).
+   can depend on `//contracts:check`, which `mise run //contracts:check` runs
+   alone, and run `npm --prefix frontend run test:contract`.
+3. Name it for what it acts on, prefixed by its owner, the way
+   `mise run contracts:check` and `mise run api:drift` are named
+   (`.claude/rules/code-standards.md:26`).
 4. Give it a `description`: `mise tasks` prints it, and the two command tables
    repeat it word for word.
 5. Add the same row to `README.md:352-372` and to `docs/monorepo.md:30-50`.
-   Both tables list the other 19 root tasks; `deploy:check`
+   Both tables list the other 19 root tasks; `mise run deploy:check`
    (`mise.toml:100-102`) is in neither.
 6. When the workspace as a whole should pass it, add it to `verify`'s `depends`
    (`mise.toml:67-74`).
@@ -144,11 +163,15 @@ the row, and the checks `mibolt-verification` names for the change pass.
 2. For a path filter, edit `.github/components.yml`. A change to the `frontend`
    or `backend` list fails `Candidate Build` unless
    `deploy/candidate/inputs.py:15-20` and
-   `deploy/tests/test-candidate.py:34-40` change with it.
+   `deploy/tests/test-candidate.py:34-40` change with it. Even then the
+   `Publish Candidate` workflow fails for that pull request until the change is
+   on `main`, because it hashes with the default branch's `inputs.py`
+   (`deploy/candidate/publish.py:21`, `deploy/candidate/publish.py:185`).
 3. Update the table at `docs/monorepo.md:62-68`, and `frontend/README.md:89`
    when the `frontend` list changed.
 
-A new component, a post-merge workflow, or a trigger that does not fire: read
+A new component, a `workflow_run`, `schedule` or `pull_request_target`
+workflow, or a trigger that does not fire: read
 [references/ci-cd.md](references/ci-cd.md).
 
 ### Add or change a Compose service, a port or an environment variable
@@ -168,11 +191,18 @@ A new component, a post-merge workflow, or a trigger that does not fire: read
   its own project, volume and ports; `deploy/stack.sh ports` prints them, and
   `deploy/stack.sh reset --yes` deletes that worktree's volume and frees the
   slot before the worktree is removed.
-- **From the main checkout**, where `deploy/stack.sh` refuses to run: set
-  `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME`, the three port variables,
-  `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN`, and call
-  `deploy/compose.sh`, whose guard refuses a second project on the default
-  volume.
+- **From the main checkout**, where `deploy/stack.sh` refuses to run: export
+  `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME` and the three port
+  variables (`deploy/.env.example:18-23`), on ports that neither the table at
+  `README.md:229-239` nor the slot ranges at `deploy/stack.sh:36-42` use, plus
+  `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN` set to
+  `http://localhost:<web-port>`, then run
+  `deploy/compose.sh up -d --build --wait`, the arguments `mise run stack`
+  passes (`mise.toml:56`). The wrapper refuses a second project on the
+  default volume. Stop it with `deploy/compose.sh down` in that same
+  environment, adding `-v` to delete its volume; `mise run stop` without those
+  variables stops the default `mi-bolt-local` project instead
+  (`deploy/compose.yaml:6`).
 
 Starting either is the orchestrator's step, as with every mode.
 [references/run-modes.md](references/run-modes.md) has the slot arithmetic and
@@ -192,9 +222,11 @@ argument to Compose. Then match the symptom in the table at the end of
 - **Name a task or a script for what it acts on, prefixed by its owner:**
   `.claude/rules/code-standards.md:26`.
 - **Run a Python tool through uv, pinned in the area's `mise.toml`:**
-  `.claude/rules/code-standards.md:35`. The deploy checks run as
-  `uv run --no-project --with PyYAML==6.0.2 python …` (`mise.toml:100-102`,
-  `.github/workflows/candidate.yml:32-40`), with no uv pinned at the root.
+  `.claude/rules/code-standards.md:35`. The deploy checks run through uv with
+  no uv pinned at the root: `mise run deploy:check` runs
+  `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
+  (`mise.toml:100-102`), and `.github/workflows/candidate.yml:32-40` runs all
+  six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
 - **No machine-specific path in a committed file:**
   `.claude/rules/code-standards.md:21`. The scripts here find their location at
   run time, as `deploy/compose.sh:8` and `deploy/stack.sh:29-30` do.
@@ -205,8 +237,9 @@ argument to Compose. Then match the symptom in the table at the end of
 - **Ports and the dependency files are shared across agents:**
   `.claude/rules/parallel-spawns.md` ("What a batch shares").
 - **Start an Angular dev server through the `start*` npm scripts, never
-  `npx ng serve`,** because only they carry the Node flag that avoids the V8
-  abort (`frontend/package.json:6-11`, `frontend/README.md:30`).
+  `npx ng serve`,** because they carry the Node flag that avoids the V8 abort
+  and `npx ng serve` does not (`frontend/package.json:6-11`,
+  `frontend/README.md:30`).
 - **Call Compose through `deploy/compose.sh`,** because the volume guard and
   the `.env` creation live there (`deploy/compose.sh:10-22`).
 - **Leave the default volume alone.** `stop` keeps it (`mise.toml:58-60`),
@@ -230,8 +263,9 @@ argument to Compose. Then match the symptom in the table at the end of
 | a Compose port, service or variable | `deploy/.env.example`, `README.md:241-243`, `backend/README.md:19-31`, the slot state `deploy/stack.sh:367-383` writes, `.github/workflows/smoke.yml:19-25`, `.github/workflows/backend.yml:183-185` and `.github/workflows/backend.yml:221-222`, the chart |
 | a Compose `build:` block | `deploy/candidate/publish.py:169-184` on `main` first, `.github/workflows/candidate.yml:51-60`, `deploy/tests/test-candidate.py` |
 | a Dockerfile or NGINX file | `frontend/tests/web-image/` for an NGINX or `robots.txt` rule; expect a new image tag, because the input hash changes |
-| `.github/components.yml` | `deploy/candidate/inputs.py:15-20`, `deploy/tests/test-candidate.py:34-40`, `docs/monorepo.md:62-68`, `frontend/README.md:89` |
-| a post-merge workflow or `deploy/candidate/*.py` | nothing else, but it takes effect only once it is on `main` |
+| the `frontend` or `backend` list in `.github/components.yml` | `deploy/candidate/inputs.py:15-20` and `deploy/tests/test-candidate.py:34-40` in the same change, `docs/monorepo.md:62-68`, and `frontend/README.md:89` for the `frontend` list |
+| any other list in `.github/components.yml` | `docs/monorepo.md:62-68` |
+| a `workflow_run`, `schedule` or `pull_request_target` workflow, or a script in `deploy/candidate/` | the `deploy/tests/*.py` check that imports the script, where there is one. Those workflows run the default branch's copy of themselves and of the scripts they call, `deploy/candidate/publish.py` and the `deploy/candidate/inputs.py` it imports included (`deploy/candidate/publish.py:21`), so a change there takes effect only once it is on `main`; `.github/workflows/candidate.yml` runs the pull request's own `deploy/candidate/inputs.py` and `deploy/candidate/build_metadata.py` (`.github/workflows/candidate.yml:28`, `.github/workflows/candidate.yml:65`) |
 | the chart | `deploy/helm/mi-bolt/values.schema.json`, `deploy/tests/check-chart.py`, the Secret key list at `deploy/helm/mi-bolt/README.md:12-16` |
 
 ## How to verify
@@ -241,16 +275,26 @@ argument to Compose. Then match the symptom in the table at the end of
 - **A chart change:** `mise run deploy:check`. It needs `helm` and `uv` on the
   PATH, and the root `mise.toml` pins neither; CI installs Helm v4.2.2
   (`.github/workflows/candidate.yml:29-31`).
-- **An NGINX, Dockerfile or static-server change:**
+- **An NGINX or static-server change:**
   `npm --prefix frontend run test:contract`, which collects
   `frontend/tests/web-image/` and `frontend/tests/scripts/` through
-  `frontend/vitest.contract.config.ts:18`.
+  `frontend/vitest.contract.config.ts:18`. Those specs read the NGINX files
+  and `frontend/Dockerfile` as text and test
+  `frontend/scripts/proxy-timeout.mjs`; no spec runs
+  `frontend/scripts/serve-static.mjs` itself, which the Playwright suite
+  serves the built apps with in CI (`frontend/playwright.config.ts:27`).
+- **A Dockerfile change:** beyond the `robots.txt` line
+  `frontend/tests/web-image/nginx-robots.spec.ts` reads, only building the
+  image through Compose exercises it: `mise run stack` locally, which the
+  orchestrator starts, and the `smoke` and `Candidate Build` workflows in CI
+  (`.github/workflows/smoke.yml:40-42`, `.github/workflows/candidate.yml:51-60`).
 - **A `tools/dev-server/` change:** `mise run //tools:lint` and
   `mise run //tools:test`; Vitest's default `include` collects
   `tools/dev-server/dev-server.test.ts` (https://vitest.dev/config/include).
 - **A `deploy/stack.sh` or `deploy/candidate/*.py` change:** the matching
   `deploy/tests/*.py` check, run with the command
-  `.github/workflows/candidate.yml:32-40` gives it.
+  `.github/workflows/candidate.yml:32-40` gives it;
+  `deploy/candidate/build_metadata.py` has none.
 - **A workflow change** runs only on GitHub; nothing local executes a workflow.
 - **A mode or the stack running** is the orchestrator's to start and stop, and
   a change a browser can reach is verified in a real browser under
@@ -273,16 +317,22 @@ The repository's own sources: `README.md` for the modes, ports and command
 table; `docs/monorepo.md` for the folder map and the CI table;
 `deploy/candidate/README.md` for publication; `deploy/helm/mi-bolt/README.md`
 for the chart; `backend/docs/04-adatbazis.md:62-66`, in Hungarian, for the
-worktree stack.
+worktree stack; `backend/docs/06-uzembe-helyezes.md`, in Hungarian, for
+building and running the backend image by hand, which states that no hosting
+platform has been chosen (`backend/docs/06-uzembe-helyezes.md:3-7`).
 
 ## Keep this skill current
 
 This skill goes stale when any of these change: the five `mise.toml` files; the
 `scripts` of `frontend/package.json` and `tools/package.json`; the `serve` and
 `build` targets in `frontend/angular.json` and the `frontend/proxy*.json`
-files; anything under `deploy/` or `.github/`; the two Dockerfiles and
-`frontend/nginx/`; `tools/dev-server/`, `frontend/scripts/serve-static.mjs`;
-the ports and command tables in `README.md` and `docs/monorepo.md`. When you
+files; anything under `deploy/` or `.github/`; the two Dockerfiles,
+`frontend/nginx/` and `frontend/tests/web-image/`; `tools/dev-server/`,
+`frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` and
+`frontend/playwright.config.ts:26-27`; `.gitattributes` and `.gitignore`; the
+ports and command tables in `README.md` and `docs/monorepo.md`, the variable
+table at `backend/README.md:19-31`, the CI prose at
+`frontend/README.md:87-89` and `backend/docs/06-uzembe-helyezes.md`. When you
 edit one of those, reread the lines this skill and its references cite from it.
 
 Check the cited paths, anchors and commands with

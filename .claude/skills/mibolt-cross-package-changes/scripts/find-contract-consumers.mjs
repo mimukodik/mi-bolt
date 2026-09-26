@@ -42,6 +42,20 @@ import { join } from 'node:path';
 const VALID_KINDS = ['schema', 'property', 'enum', 'operation'];
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+// Text-parsing regexes for deriving an operation's METHOD and path from the
+// contract file (F6: the operation kind's blind spot for a URL that names no
+// operationId). These match the contract's own indentation, not a YAML parse.
+const OPERATION_ID_RE = /^\s*operationId:\s*(\S+)\s*$/;
+const METHOD_RE = /^ {4}(get|put|post|delete|patch|head|options|trace):\s*$/;
+const PATH_RE = /^ {2}(\/\S*):\s*$/;
+const SERVERS_RE = /^servers:\s*$/;
+const SERVER_URL_RE = /^- url:\s*(\S+)\s*$/;
+const BACKTICK = String.fromCharCode(96);
+// A {param} segment in the derived path, generalised to also match a route
+// param (:productId), a template literal (${String(id)}), a literal id, or a
+// string concatenation (" + id + ").
+const PARAM_ALTERNATION = `([^/"'${BACKTICK}[:space:]]+|["'${BACKTICK}] *\\+ *[^"'${BACKTICK}+]+\\+ *["'${BACKTICK}])`;
+
 const BUCKET_LABELS = {
   1: 'contract',
   2: 'generated shop SDK',
@@ -61,7 +75,7 @@ const BUCKET_LABELS = {
   16: 'other',
 };
 
-// Bucket roots, checked for existence up front (contract §4.7, "Buckets").
+// Bucket roots, checked for existence up front; a missing one exits 2 (SKILL.md, "Find every consumer first").
 // One entry per bucket id; each root is repo-root-relative.
 const BUCKET_ROOTS = {
   1: [
@@ -121,6 +135,8 @@ const NOT_SEARCHED_FOOTER =
 const CANDIDATES_FOOTER =
   'hits are candidates: confirm each ' +
   '(a word match such as getCart also matches the entity getter CartItem.getCart)';
+const OPERATION_PATH_MISS_FOOTER =
+  'path search misses a URL assembled from a constant plus a suffix, or ending in a concatenated parameter';
 
 function usageError(message) {
   process.stderr.write(`${message}\n`);
@@ -192,6 +208,18 @@ function gitGrepWord(repoRoot, pattern, pathspecs) {
   return parseGrepOutput(output);
 }
 
+// POSIX ERE search (F6's path search, F7's models/<kebab> search).
+function gitGrepEre(repoRoot, pattern, pathspecs) {
+  const output = runGit(repoRoot, ['grep', '-n', '-I', '-E', '-e', pattern, '--', ...pathspecs]);
+  return parseGrepOutput(output);
+}
+
+// Files whose content contains a literal string (F7's barrel-import pass).
+function gitGrepFilesContaining(repoRoot, literal, pathspecs) {
+  const output = runGit(repoRoot, ['grep', '-l', '-I', '-F', '-e', literal, '--', ...pathspecs]);
+  return output.split('\n').filter((line) => line !== '');
+}
+
 function gitLsFiles(repoRoot, patterns) {
   const output = runGit(repoRoot, ['ls-files', '--', ...patterns]);
   return output
@@ -208,6 +236,77 @@ function checkBucketRoots(repoRoot) {
       }
     }
   }
+}
+
+// Every operation's {name, method, path}, derived by text parsing (F6):
+// walking upward from each operationId line, the nearest method line above
+// it gives the method, and continuing upward from there, the nearest path
+// line gives the path.
+function parseOperations(content) {
+  const lines = content.split('\n');
+  const operations = [];
+  for (let i = 0; i < lines.length; i++) {
+    const idMatch = lines[i].match(OPERATION_ID_RE);
+    if (!idMatch) continue;
+    let method = null;
+    let path = null;
+    for (let j = i - 1; j >= 0; j--) {
+      if (method === null) {
+        const methodMatch = lines[j].match(METHOD_RE);
+        if (methodMatch) method = methodMatch[1];
+        continue;
+      }
+      const pathMatch = lines[j].match(PATH_RE);
+      if (pathMatch) {
+        path = pathMatch[1];
+        break;
+      }
+    }
+    operations.push({ name: idMatch[1], method, path });
+  }
+  return operations;
+}
+
+// The first `- url:` line after `servers:`, e.g. `/api/v1`.
+function parseServerPrefix(content) {
+  const lines = content.split('\n');
+  let inServers = false;
+  for (const line of lines) {
+    if (SERVERS_RE.test(line)) {
+      inServers = true;
+      continue;
+    }
+    if (inServers) {
+      const urlMatch = line.match(SERVER_URL_RE);
+      if (urlMatch) return urlMatch[1];
+    }
+  }
+  return null;
+}
+
+function deriveOperationPath(repoRoot, name) {
+  const content = readFileSync(join(repoRoot, CONTRACT_FILE), 'utf8');
+  const operations = parseOperations(content);
+  const serverPrefix = parseServerPrefix(content);
+  const target = operations.find((op) => op.name === name);
+  if (!target || !target.method || !target.path || !serverPrefix) {
+    fatal(`cannot derive the path of ${name} from ${CONTRACT_FILE}; the layout changed, update the script`);
+  }
+  return { target, operations, serverPrefix };
+}
+
+// POSIX ERE for `git grep -E` matching the operation's path in source, each
+// {param} segment generalised. Narrow variant (orchestrator's call, F6): the
+// path must be directly preceded by a quote, a backtick, or the server
+// prefix, not by any non-identifier character or start of line.
+function buildPathPattern(path, serverPrefix) {
+  const segments = path.split('/').filter((segment) => segment !== '');
+  const parts = segments.map((segment) =>
+    /^\{[^}]+\}$/.test(segment) ? PARAM_ALTERNATION : escapeRegExp(segment),
+  );
+  const prefix = `(['"${BACKTICK}]|${escapeRegExp(serverPrefix)})`;
+  const suffix = '([^A-Za-z0-9_/-]|$)';
+  return `${prefix}/${parts.join('/')}${suffix}`;
 }
 
 function checkMembership(repoRoot, kind, name) {
@@ -227,7 +326,7 @@ function checkMembership(repoRoot, kind, name) {
 
 const WHOLE_REPO_PATHSPECS = ['.', ':!.claude'];
 
-function gatherHits(repoRoot, kind, name) {
+function gatherHits(repoRoot, kind, name, operationInfo) {
   const hits = [];
 
   if (kind === 'schema') {
@@ -237,12 +336,38 @@ function gatherHits(repoRoot, kind, name) {
       `contracts/commerce/samples/${name}.*.json`,
     ]));
     const kebab = toKebabCase(name);
-    hits.push(...gitGrepWord(repoRoot, `models/${kebab}`, WHOLE_REPO_PATHSPECS));
+    // ERE, not -w -F: a word boundary treats "-" as a boundary, so
+    // models/cart would also match models/cart-item (F7).
+    hits.push(...gitGrepEre(repoRoot, `models/${kebab}['"]`, WHOLE_REPO_PATHSPECS));
     hits.push(...gitGrepWord(repoRoot, `api.model.${name};`, WHOLE_REPO_PATHSPECS));
+    // Barrel pass (F7): a file that imports the models barrel names no
+    // per-model path, so it is invisible to the search above.
+    const barrelFiles = gitGrepFilesContaining(
+      repoRoot,
+      "from '@mi-bolt/api/models'",
+      WHOLE_REPO_PATHSPECS,
+    );
+    if (barrelFiles.length > 0) {
+      hits.push(...gitGrepWord(repoRoot, name, barrelFiles));
+    }
   } else if (kind === 'operation') {
-    hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
+    const nameHits = gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS);
     const kebab = toKebabCase(name);
-    hits.push(...gitLsFiles(repoRoot, [`*/fn/*/${kebab}.ts`]));
+    nameHits.push(...gitLsFiles(repoRoot, [`*/fn/*/${kebab}.ts`]));
+    hits.push(...nameHits);
+
+    // Path search (F6): the shop mocks, admin mocks, contract suite's own
+    // handlers and backend API tests address an operation by method and URL,
+    // rarely by name, so the name search alone misses them.
+    const pattern = buildPathPattern(operationInfo.target.path, operationInfo.serverPrefix);
+    const pathHits = gitGrepEre(repoRoot, pattern, WHOLE_REPO_PATHSPECS);
+    const nameKeys = new Set(nameHits.map((hit) => `${hit.file}:${hit.line}`));
+    for (const hit of pathHits) {
+      const key = `${hit.file}:${hit.line}`;
+      if (nameKeys.has(key)) continue;
+      nameKeys.add(key);
+      hits.push({ ...hit, pathOnly: true });
+    }
   } else if (kind === 'property') {
     const pascal = toPascalCase(name);
     hits.push(...gitGrepWord(repoRoot, name, WHOLE_REPO_PATHSPECS));
@@ -289,8 +414,21 @@ function bucketHits(hits) {
   return buckets;
 }
 
-function report(buckets) {
+function report(buckets, kind, operationInfo) {
   const lines = [];
+  if (kind === 'operation') {
+    const { target, operations, serverPrefix } = operationInfo;
+    lines.push(
+      `operation: ${target.method.toUpperCase()} ${target.path} ` +
+        `(path also searched, each {param} generalised, optionally behind ${serverPrefix})`,
+    );
+    const shared = operations.filter((op) => op.path === target.path && op.name !== target.name);
+    if (shared.length > 0) {
+      lines.push(
+        `path shared with: ${shared.map((op) => `${op.method.toUpperCase()} ${op.name}`).join(', ')}`,
+      );
+    }
+  }
   const emptyLabels = [];
   for (let id = 1; id <= 16; id++) {
     const hits = buckets.get(id);
@@ -302,12 +440,16 @@ function report(buckets) {
     lines.push(`${id}. ${label} (${hits.length})`);
     for (const hit of hits) {
       const text = hit.text.length > 160 ? hit.text.slice(0, 160) : hit.text;
-      lines.push(`  ${hit.file}:${hit.line}: ${text}`);
+      const marker = hit.pathOnly ? '[path] ' : '';
+      lines.push(`  ${hit.file}:${hit.line}: ${marker}${text}`);
     }
   }
   lines.push('');
   lines.push(`empty buckets: ${emptyLabels.length ? emptyLabels.join(', ') : 'none'}`);
   lines.push(NOT_SEARCHED_FOOTER);
+  if (kind === 'operation') {
+    lines.push(OPERATION_PATH_MISS_FOOTER);
+  }
   lines.push(CANDIDATES_FOOTER);
   process.stdout.write(lines.join('\n') + '\n');
 }
@@ -340,15 +482,18 @@ function main() {
 
   if (!checkMembership(repoRoot, kind, name)) {
     process.stderr.write(
-      `${name} is not in the contract as a ${kind}; for a new one, use an existing sibling as the template (references/contract-change-chain.md)\n`,
+      `${name} is not in the contract as kind ${kind}; for a new one, use an existing sibling as the template (references/contract-change-chain.md)\n`,
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
-  const hits = gatherHits(repoRoot, kind, name);
+  const operationInfo = kind === 'operation' ? deriveOperationPath(repoRoot, name) : null;
+
+  const hits = gatherHits(repoRoot, kind, name, operationInfo);
   const buckets = bucketHits(hits);
-  report(buckets);
-  process.exit(0);
+  report(buckets, kind, operationInfo);
+  process.exitCode = 0;
 }
 
 main();

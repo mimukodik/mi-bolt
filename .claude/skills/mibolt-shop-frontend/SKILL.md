@@ -7,12 +7,14 @@ description: "Developing the MiBolt customer-facing Angular apps: the storefront
 
 Change the shop the way it is already built. Every path in this skill and its
 references is relative to the repository root, and every command runs from
-there.
+there. The exception is output that exists only after a build, a test run or
+an install, which is named relative to `frontend/`, the directory that holds
+it.
 
 ## Scope and hand-offs
 
-This skill covers the storefront (`frontend/projects/storefront/`), the demo
-payment app (`frontend/projects/demo-payment/`), the shop mock backend
+This skill covers the storefront (`frontend/projects/storefront/`, except
+the catalogue image copy in its `public/media/`), the demo payment app (`frontend/projects/demo-payment/`), the shop mock backend
 (`frontend/projects/shop-mocks/`), the unit MSW harness
 (`frontend/tests/setup-msw.ts`, `frontend/tests/msw-server.ts`,
 `frontend/tests/network-isolation.spec.ts`), and the unit specs of those three
@@ -53,9 +55,11 @@ Consult these when their condition holds, and not otherwise:
   Hungarian routes: `/` home, `/telefonok` catalogue, `/telefonok/:slug`
   product, `/kosar` a redirect to `/penztar/kosar`, `/penztar/...` the
   checkout, `/belepes` the demo sign-in, `/primitives` an internal showcase.
-- **demo-payment** (prefix `pay`, base href `/demo-fizetes/`) is one
-  component, `PaymentPage`, the simulated card authorisation the shop
-  redirects to.
+- **demo-payment** (prefix `pay`, base href `/demo-fizetes/`) is one page,
+  `PaymentPage`, the simulated card authorisation the shop redirects to,
+  inside a root `App` shell whose template
+  (`frontend/projects/demo-payment/src/app/app.html`) holds the demo banner
+  and the outlet.
 - **shop-mocks** (`@mi-bolt/mocks/*`) is the backend both apps run on in
   development, as a service worker in the page; unit specs drive the same
   handlers through MSW's Node server. Nothing sits behind
@@ -68,7 +72,7 @@ The two apps reach the backend only through the generated shop SDK
 models, so a contract change that renames or drops a field breaks them at
 compile time as well.
 
-**Inside the storefront** (`frontend/projects/storefront/src/`):
+**Inside the storefront** (`frontend/projects/storefront/`):
 
 - `frontend/projects/storefront/src/main.ts` starts the mock worker through
   `frontend/projects/storefront/src/core/bootstrap-demo.ts` before Angular
@@ -82,8 +86,25 @@ compile time as well.
   the navigation; `frontend/projects/storefront/src/app/layouts/` holds the
   three layouts; `frontend/projects/storefront/src/app/shared/` holds the
   shell, the UI primitives, the types, the utilities and the media helper.
-- `frontend/projects/storefront/src/styles/tokens.css` names the design
-  tokens, mapped row by row in `frontend/docs/design/yettel.md` §9.
+- `frontend/projects/storefront/src/styles.css` imports Tailwind and declares
+  the one `@theme` block, so templates lay out and space with Tailwind
+  utilities (39 of the 58 storefront templates carry a `flex`, `grid` or
+  `gap-*` class, counted 2026-09-26) and a component's `.scss` carries the
+  rest. `frontend/projects/storefront/src/styles/tokens.css` names the design
+  tokens, mapped row by row in `frontend/docs/design/yettel.md` §9; its
+  colour, radius and font names resolve to those theme variables.
+  `frontend/projects/storefront/src/styles/primitives.css` holds the font
+  faces, the page reset and the shared focus ring. The three are the build's
+  global `styles` (`frontend/angular.json:29-33`). The payment app imports no
+  Tailwind (`frontend/projects/demo-payment/src/styles.css:4-7`).
+- `frontend/projects/storefront/public/` holds the files the build copies as
+  they are: the fonts, `favicon.ico`, the images under `assets/` (the
+  placeholder and the product-page fixture's pictures), and
+  `mockServiceWorker.js`, which only the development configuration copies
+  and which the payment app's and the admin's development builds take from
+  here as well (`frontend/angular.json`). Its `media/` folder is the
+  exception: a copy of `data/catalog/images/` that belongs to
+  `mibolt-cross-package-changes`.
 
 **State.** Six root services hold it: `CatalogFacade`, `ProductFacade`,
 `CartFacade`, `CheckoutFacade`, `OrderSubmission` and `DemoAccess`, each a
@@ -135,6 +156,7 @@ the identifier as the repository spells it").
 | UI primitive | `frontend/projects/storefront/src/app/shared/ui/index.ts` |
 | Shopper-facing sentence | the page that shows it; `describeAddFailure` in `frontend/projects/storefront/src/app/features/product/product-page.ts` builds the add-to-cart refusals |
 | Price display | `frontend/projects/storefront/src/app/shared/ui/price-block/price-block.ts` |
+| Product card (catalogue grid, home featured grid, related strip) | `frontend/projects/storefront/src/app/features/catalog/product-card.ts` |
 | Payment page | `frontend/projects/demo-payment/src/app/payment-page.ts` |
 | Mock data, behaviour or fault | `frontend/projects/shop-mocks/src/create-handlers.ts`, then the domain folder |
 
@@ -183,8 +205,8 @@ Task-specific points:
   render. The wizard's guards hydrate the cart and the session before they
   decide, so a reload lands on the same step.
 - **Error copy.** Map a Problem's `code` and `params` to a Hungarian sentence
-  in the page that shows it. Never render `detail`, which is an English
-  diagnostic.
+  in the page that shows it. Never render `title` or `detail`, which are
+  English developer text (`contracts/commerce/kommunikacio.md` §6).
 - **Mocks.** A new domain file registers with `registerBusinessHandlers` and
   is also imported by `frontend/projects/shop-mocks/src/browser.ts`, or the
   browser never loads it. See [references/shop-mocks.md](references/shop-mocks.md).
@@ -221,9 +243,15 @@ because they are easy to break in this area.
   with one inline exception), although root `CLAUDE.md` prefers inline
   templates for small components (register entry C3). Do not convert one as
   a side change.
-- **The storefront's component stylesheets are `.scss` files holding plain
-  CSS** (observed: none uses `@use`, `@import`, `@mixin` or a `$` variable;
-  register entry C5). Write plain CSS in them.
+- **The storefront's component stylesheets are `.scss` files written as
+  CSS** (observed: none uses `@use`, `@import`, `@mixin`, `@include`,
+  `@forward` or a `$` variable). Write CSS in them. The only Sass syntax
+  present is `//` line comments, in
+  `frontend/projects/storefront/src/app/features/catalog/filter-drawer.scss`,
+  `frontend/projects/storefront/src/app/features/catalog/filter-panel.scss`
+  and `frontend/projects/storefront/src/app/layouts/checkout-layout.scss`.
+  Introducing any other Sass feature, such as `@use`, a mixin or a `$`
+  variable, is a decision to raise, not a style choice (register entry C5).
 - **Zoneless change detection is provided explicitly**
   (`frontend/projects/storefront/src/app/app.config.ts:19`,
   `frontend/projects/demo-payment/src/app/app.config.ts:16`), and
@@ -245,10 +273,13 @@ because they are easy to break in this area.
   because it will never be a live app! no screen reader will ever read it!".
   Both apps already carry ARIA and focus code, such as
   `frontend/projects/storefront/src/app/a11y-structure.spec.ts` and the focus
-  effect in `PaymentPage`. Neither extend that code nor remove it.
+  effect in `PaymentPage`. Neither extend that code nor remove it. The
+  template accessibility lint rules still run on every template, so a new
+  template has to lint clean against them (register entry C7).
 - **Framework questions** are answered with the instruments in
   `.claude/rules/framework-facts.md`, never by a probe. The `angular-developer`
-  skill is generic guidance, and where it differs, the local convention wins.
+  skill is vendored generic Angular guidance; this skill records what this
+  repository enforces and does.
 
 **Unit specs.** Specs sit beside their source as `*.spec.ts`.
 
@@ -279,9 +310,14 @@ because they are easy to break in this area.
   (`frontend/projects/shop-mocks/src/faults.ts:64`).
 - **The production build.** Both apps' production configurations replace
   `frontend/projects/shop-mocks/src/browser.ts` with
-  `frontend/projects/shop-mocks/src/browser.production.ts`, so keep the two
-  files' exports in step. The production budget warns at 4 kB and fails at
-  8 kB per component stylesheet (`frontend/angular.json`).
+  `frontend/projects/shop-mocks/src/browser.production.ts`, which exports
+  only `startMockWorker`. Anything an app imports from
+  `@mi-bolt/mocks/browser` (today `startMockWorker`, at
+  `frontend/projects/storefront/src/core/bootstrap-demo.ts:22` and
+  `frontend/projects/demo-payment/src/main.ts:37-38`) has to be exported by
+  the production file too, with the same signature. The production budget
+  warns at 4 kB and fails at 8 kB per component stylesheet
+  (`frontend/angular.json`).
 - **End-to-end specs.** Every spec under `frontend/e2e/integration/` finds
   elements by `data-testid`, and most also by visible text or role, so a
   renamed test id or reworded sentence can break them, and
@@ -291,8 +327,10 @@ because they are easy to break in this area.
   leg touches `frontend/projects/storefront/src/app/features/checkout/review-page.ts`,
   `frontend/projects/storefront/src/app/features/checkout/payment-return-page.ts`
   and `frontend/projects/demo-payment/src/app/payment-page.ts` together.
-- **A shared primitive or token** reaches every feature that uses it; find
-  them by class name and by element selector before changing an input.
+- **A shared primitive, token or reused component** reaches every feature
+  that uses it: `ProductCard`, for one, renders in the catalogue, the home
+  page's featured grid and the product page's related strip. Find the users
+  by class name and by element selector before changing an input.
 
 ## Verify
 
@@ -302,30 +340,45 @@ Run a focused unit test while working:
 npm --prefix frontend run ng -- test storefront --include projects/storefront/src/app/features/catalog --coverage=false --watch=false
 ```
 
-- Replace `storefront` with `demo-payment` or `shop-mocks`, and point
-  `--include` at a spec, the source file it tests, or a folder.
-- **Write the path from `frontend/`**, as `projects/<project>/src/...`. The
-  angular.dev reference describes `include` as relative to the project root
-  (https://angular.dev/cli/test), but the installed `@angular/build` 22.1.8
-  resolves it against the project's `sourceRoot` and strips a leading
-  `projects/<project>/src/`
-  (`frontend/node_modules/@angular/build/src/builders/unit-test/test-discovery.js`,
-  `normalizePattern`). A path starting `src/` therefore matches no test file.
+- Replace `storefront` with `demo-payment` or `shop-mocks`. Point
+  `--include` at a spec file or its folder, written from `frontend/` as
+  `projects/<project>/src/...`, or at a `'**/<name>.spec.ts'` glob, quoted
+  so the shell passes it through unexpanded.
+- **Add `--list-tests` first** to print the files the pattern selects; it
+  exits without running them (https://angular.dev/cli/test). Read the list,
+  not the exit status: a pattern that selects nothing prints no file and
+  still exits 0. The form angular.dev describes, relative to the project
+  root (`src/app/...`), is such a pattern on the installed `@angular/build`
+  22.1.8 (`frontend/package-lock.json:264-265`), which resolves `include`
+  against the project's `sourceRoot` after stripping a leading
+  `projects/<project>/src/` (`normalizePattern` in that package's
+  `src/builders/unit-test/test-discovery.js`, present once `mise run setup`
+  has installed the frontend's dependencies).
+- **Point at the spec, not at the source file.** A source file selects its
+  spec only when the two share a base name, as `cart.facade.ts` and
+  `cart.facade.spec.ts` do; otherwise the source file itself is selected as
+  the test file. `checkout.facade.ts`, whose spec is
+  `checkout-facade.spec.ts`, is such a case (measured 2026-09-26).
 - `--coverage=false` switches off the coverage the test target turns on
   (`frontend/angular.json`, `"coverage": true`), so a partial run leaves the
-  full run's report under `frontend/coverage/` alone.
-- `--watch=false` makes the run exit.
+  full run's report alone: `coverage/unit/` in `frontend/` for the storefront
+  (`frontend/projects/storefront/vitest.config.ts:6`), and
+  `coverage/demo-payment/` and `coverage/shop-mocks/` for the other two.
+- `--watch=false` makes the run exit; watch is the default in a terminal.
+  `--no-coverage --no-watch` is accepted in place of the two `=false` flags.
 
 Before declaring the work done, consult `mibolt-verification` for the full
-set. The commands this area adds to it:
+set, its prerequisites and what each command leaves behind. The ones this
+area needs most often:
 
 - `npm --prefix frontend run test` runs every project and writes its reports
-  under `frontend/coverage/`, which parallel runs share
+  under `coverage/` in `frontend/`, which parallel runs share
   (`.claude/rules/parallel-spawns.md`, "What a batch shares").
 - `npm --prefix frontend run build` and `npm --prefix frontend run build:payment`
-  write `frontend/dist/`; `npm --prefix frontend run check:storefront-dist`
-  and `npm --prefix frontend run check:payment-dist` then fail if MSW reached
-  a production build.
+  write `dist/storefront/` and `dist/demo-payment/` in `frontend/`;
+  `npm --prefix frontend run check:storefront-dist` and
+  `npm --prefix frontend run check:payment-dist` then read those directories
+  (`frontend/package.json:18-19`) and fail if MSW reached a production build.
 - `npm --prefix frontend run check:payment-boot` starts `ng serve` on port
   4299 (`frontend/scripts/check-app-boot.mjs:17`).
 
@@ -362,9 +415,14 @@ references that describes it, in the same change:
 
 - `frontend/projects/storefront/src/app/app.routes.ts` and
   `frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts`;
-- any `frontend/projects/storefront/src/app/features/*/*.facade.ts`;
+- any `frontend/projects/storefront/src/app/features/*/*.facade.ts`,
+  `frontend/projects/storefront/src/app/features/checkout/order-submission.ts`
+  and `frontend/projects/storefront/src/app/core/demo-access/demo-access.ts`,
+  the six root services;
 - `frontend/projects/shop-mocks/src/create-handlers.ts`,
-  `frontend/projects/shop-mocks/src/faults.ts` and
+  `frontend/projects/shop-mocks/src/faults.ts`,
+  `frontend/projects/shop-mocks/src/scenarios.ts`,
+  `frontend/projects/shop-mocks/src/persistence.ts` and
   `frontend/projects/shop-mocks/src/browser.ts`;
 - the `storefront`, `demo-payment` and `shop-mocks` targets in
   `frontend/angular.json`, and the installed `@angular/build` version, which

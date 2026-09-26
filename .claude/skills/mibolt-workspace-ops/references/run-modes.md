@@ -21,19 +21,19 @@ and the database are shared.
 `README.md:81-227` gives each mode with when to pick it; this table is the
 wiring behind them.
 
-| Task | Defined at | Starts | Ports | Stop |
+| Command | Defined at | Starts | Ports | Stop |
 |---|---|---|---|---|
-| `storefront` | `mise.toml:19-21`, `frontend/mise.toml:29-30` | `ng serve storefront`, `development` configuration, in-page MSW | 4200 | Ctrl+C |
-| `admin` | `mise.toml:23-25`, `frontend/mise.toml:35-36` | `ng serve admin`, `development` configuration, in-page MSW | 4220 | Ctrl+C |
-| `payment` | `mise.toml:27-29`, `frontend/mise.toml:41-42` | `ng serve demo-payment`, `development` configuration; `frontend/projects/demo-payment/src/main.ts` starts its mock while `isDevMode()` is true | 4210 | Ctrl+C |
-| `frontend` | `mise.toml:15-17` | the three above together | 4200, 4210, 4220 | Ctrl+C |
-| `db` | `mise.toml:31-33` | `deploy/compose.sh up -d --wait postgres` | 55433 | `mise run stop` |
-| `backend` | `mise.toml:35-38`, `backend/mise.toml:15-16` | `db`, then Gradle `bootRun` in the foreground | 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `backend:docker` | `mise.toml:40-42` | `deploy/compose.sh up -d --build --wait postgres commerce` | 8080, 55433 | `mise run stop` |
-| `dev` | `mise.toml:44-46` | the three `start:*:local-backend` area tasks and `backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `dev:docker` | `mise.toml:48-50` | the three `start:*:local-backend` area tasks and `backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `stack` | `mise.toml:52-56` | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
-| `stop` | `mise.toml:58-60` | `deploy/compose.sh down`; the PostgreSQL volume keeps its data | — | — |
+| `mise run storefront` | `mise.toml:19-21`, `frontend/mise.toml:29-30` | `ng serve storefront`, `development` configuration, in-page MSW | 4200 | Ctrl+C |
+| `mise run admin` | `mise.toml:23-25`, `frontend/mise.toml:35-36` | `ng serve admin`, `development` configuration, in-page MSW | 4220 | Ctrl+C |
+| `mise run payment` | `mise.toml:27-29`, `frontend/mise.toml:41-42` | `ng serve demo-payment`, `development` configuration; `frontend/projects/demo-payment/src/main.ts` starts its mock while `isDevMode()` is true | 4210 | Ctrl+C |
+| `mise run frontend` | `mise.toml:15-17` | the three above together | 4200, 4210, 4220 | Ctrl+C |
+| `mise run db` | `mise.toml:31-33` | `deploy/compose.sh up -d --wait postgres` | 55433 | `mise run stop` |
+| `mise run backend` | `mise.toml:35-38`, `backend/mise.toml:15-16` | `db`, then Gradle `bootRun` in the foreground | 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run backend:docker` | `mise.toml:40-42` | `deploy/compose.sh up -d --build --wait postgres commerce` | 8080, 55433 | `mise run stop` |
+| `mise run dev` | `mise.toml:44-46` | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run dev:docker` | `mise.toml:48-50` | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run stack` | `mise.toml:52-56` | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
+| `mise run stop` | `mise.toml:58-60` | `deploy/compose.sh down`; the PostgreSQL volume keeps its data | — | — |
 
 **`depends` entries run in parallel.** mise runs whatever it can in parallel up
 to `--jobs` (setting `jobs`, variable `MISE_JOBS`), which is what lets
@@ -46,12 +46,16 @@ lists `db` under `depends` and then runs `mise run //backend:run` itself.
 
 **The chain is root task, area task, npm script, Node.** `mise run storefront`
 depends on `//frontend:start:storefront` (`mise.toml:19-21`), which runs
-`npm start` (`frontend/mise.toml:29-30`), which runs
-`node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve storefront`
-(`frontend/package.json:6`). The six `start*` scripts at
-`frontend/package.json:6-11` all carry that Node flag; `frontend/README.md:30`
-records why (a V8 abort on Node 26.10.0 under load, and `NODE_OPTIONS` refuses
-the flag). Start a dev server through those scripts, never `npx ng serve`.
+`npm start` (`frontend/mise.toml:29-30`), whose script at
+`frontend/package.json:6` reads
+`"start": "node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve storefront"`;
+npm runs a script from its package's root, so that `node_modules` is the one
+under `frontend/`
+(https://docs.npmjs.com/cli/v11/using-npm/scripts, "Working Directory for
+Scripts"). The six `start*` scripts at `frontend/package.json:6-11` all carry
+that Node flag; `frontend/README.md:30` records why (a V8 abort on Node
+26.10.0 under load, and `NODE_OPTIONS` refuses the flag). Start a dev server
+through those scripts, never `npx ng serve`.
 
 **Ports and base paths come from `frontend/angular.json`.** `demo-payment`
 serves on 4210 under `/demo-fizetes` (`frontend/angular.json:194-207`) and
@@ -104,8 +108,8 @@ and implies detached mode
 `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN` to the web origin
 (`mise.toml:52-56`), because the web container serves the payment app too;
 `deploy/compose.yaml:44-45` derives the backend's redirect and return prefixes
-from them, defaulting to the dev servers' 4210 and 4200 for `backend:docker`
-and `dev:docker`.
+from them, defaulting to the dev servers' 4210 and 4200 for
+`mise run backend:docker` and `mise run dev:docker`.
 
 ## Environment variables
 
@@ -159,11 +163,13 @@ origins this way in CI, where the default ports are free.
 
 ## Serving a built app or a dev server on a port of your own
 
-**`frontend/scripts/serve-static.mjs` serves a production build.** It binds
-`127.0.0.1` and reads `PORT`, `HOST`, `MI_BOLT_API_PROXY`,
-`MI_BOLT_API_PROXY_TIMEOUT_MS`, `MI_BOLT_PAYMENT_STATIC_DIR`,
-`MI_BOLT_PAYMENT_ONLY` and `MI_BOLT_E2E_STATIC_DIR`; its header
-(`frontend/scripts/serve-static.mjs:1-54`) says what each does, and
+**`frontend/scripts/serve-static.mjs` serves a production build.** It listens
+on `HOST`, `127.0.0.1` by default, and `PORT`, 4200 by default, and reads
+`MI_BOLT_API_PROXY`, `MI_BOLT_API_PROXY_TIMEOUT_MS`,
+`MI_BOLT_PAYMENT_STATIC_DIR` and `MI_BOLT_PAYMENT_ONLY`, which its header
+describes (`frontend/scripts/serve-static.mjs:24-50`), and
+`MI_BOLT_E2E_STATIC_DIR`, the directory it serves, `dist/storefront/browser`
+under `frontend/` by default (`frontend/scripts/serve-static.mjs:63-67`).
 `frontend/README.md:22` gives the two invocations for the shop and the payment
 app. `frontend/scripts/proxy-timeout.mjs` parses the timeout, and
 `frontend/tests/scripts/proxy-timeout.spec.ts` tests it.
@@ -193,6 +199,6 @@ log files. `tools/dev-server/dev-server.test.ts` covers it.
 | a port is already bound | another mode, a second stack or a leftover static server holds it | the ports table at `README.md:229-239`; `tools/dev-server/dev-server.sh status <port>` for a server it started |
 | the payment step redirects to 4210 under the full stack | Compose ran without the origin variables `mise run stack` sets | `mise.toml:52-56` |
 | a changed `MIBOLT_DEMO_*` value has no effect | the demo user is created only while its table is empty, and `stop` keeps the volume | `backend/README.md:27-28` |
-| `docker build frontend/` fails on `catalog` | the image needs the named context only Compose supplies | `frontend/Dockerfile:3-6` |
+| `docker build frontend/` fails on `catalog` | the image needs the named `catalog` context, which a plain `docker build` does not supply; build through Compose | `frontend/Dockerfile:3-6` |
 | the dev server aborts with "Lazy deopt after a fast API call" | `ng serve` started without the `start*` scripts | `frontend/README.md:30` |
 | PostgreSQL still runs after Ctrl+C in `backend` or `dev` | Ctrl+C stops only the foreground processes | `mise run stop` (`README.md:156-159`) |

@@ -19,6 +19,7 @@ Prerequisites:
     first use if the cache does not already hold it. That first fetch is
     uv's own network access, not this script's: the script itself makes no
     network call.
+  - git 2.30 or later, for `git diff --merge-base`.
   - Run from inside a git checkout of this repository.
 
 Command (from the repository root):
@@ -28,13 +29,15 @@ Command (from the repository root):
 
 Exit codes:
   0  the check ran and found no FAIL.
-  1  the check ran and found at least one FAIL.
-  2  a usage or prerequisite error: an unresolvable --base ref, running
-     outside a git checkout, or the changelog layout has moved.
+  1  the check ran and found at least one FAIL, including a changeset file
+     under changes/ that is not valid YAML.
+  2  a usage or prerequisite error: an unresolvable --base ref, a --base
+     with no merge base with HEAD, running outside a git checkout, the
+     changelog layout has moved, or the master changelog does not parse.
 
 Read-only guarantee:
   Reads the changelog YAML files under db/changelog/ and runs only
-  `git rev-parse`, `git diff --name-status` and `git status --porcelain`.
+  `git rev-parse` and `git diff --name-status`.
   It writes no file, makes no network call, and runs no git command that
   changes repository state.
 
@@ -105,11 +108,28 @@ def main() -> int:
         return 2
     repo_root = Path(root_result.stdout.strip())
 
+    diff_lines: list[str] = []
     if args.base is not None:
         verify = run_git(["rev-parse", "--verify", f"{args.base}^{{commit}}"], repo_root)
         if verify.returncode != 0:
             print(f"unknown git ref: {args.base}", file=sys.stderr)
             return 2
+
+        # One diff from the merge base of <base> and HEAD to the working tree:
+        # committed, staged and unstaged edits together. A changeset this
+        # branch added shows as A however often it was edited since, so only
+        # a file that existed at the merge base can come out as M or D.
+        # --no-renames makes a renamed applied changeset a D plus an A.
+        diff_result = run_git(
+            ["diff", "--name-status", "--no-renames", "--merge-base", args.base], repo_root
+        )
+        if diff_result.returncode != 0:
+            print(
+                f"cannot diff {args.base} against the working tree: {diff_result.stderr.strip()}",
+                file=sys.stderr,
+            )
+            return 2
+        diff_lines = diff_result.stdout.splitlines()
 
     master_path = repo_root / MASTER_REL
     changes_dir = repo_root / CHANGES_REL
@@ -252,31 +272,13 @@ def main() -> int:
     if args.base is not None:
         changed_paths: set[str] = set()
 
-        diff_result = run_git(["diff", "--name-status", f"{args.base}...HEAD"], repo_root)
-        for line in diff_result.stdout.splitlines():
+        for line in diff_lines:
             if not line.strip():
                 continue
             fields = line.split("\t")
             status = fields[0]
             if status.startswith("M") or status.startswith("D"):
                 changed_paths.add(fields[-1])
-
-        status_result = run_git(["status", "--porcelain"], repo_root)
-        for line in status_result.stdout.splitlines():
-            if len(line) < 4:
-                continue
-            code = line[:2]
-            path_part = line[3:]
-            # A staged-add ("A ") or added-then-modified ("AM") entry names a
-            # file that is new relative to the index, so it cannot be a
-            # changeset already applied at --base; skip anything carrying 'A'.
-            if "A" in code:
-                continue
-            if "M" not in code and "D" not in code:
-                continue
-            if " -> " in path_part:
-                _, path_part = path_part.split(" -> ", 1)
-            changed_paths.add(path_part.strip().strip('"'))
 
         changes_prefix = f"{CHANGES_REL}/"
         applied_modified = sorted(

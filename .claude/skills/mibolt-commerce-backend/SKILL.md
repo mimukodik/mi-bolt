@@ -24,7 +24,11 @@ English index into them.
 ## 1. Scope and hand-offs
 
 Inside: what the service does and how each subsystem is changed, including
-its test harness and its decision records. Outside, and where each case goes:
+its test harness, its decision records, `backend/settings.gradle`, and the
+plugin and toolchain block at `backend/services/commerce/build.gradle:1-17`.
+The repositories and dependencies blocks (`:19-37`) are described in section
+2; a plugin or dependency version upgrade is out of scope for this skill.
+Outside, and where each case goes:
 
 - **The contract and everything generated from it**:
   `contracts/commerce/openapi.yaml`, its samples,
@@ -34,8 +38,8 @@ its test harness and its decision records. Outside, and where each case goes:
   endpoint, field, enum value or error code starts there and comes back here.
 - **Rules over how Java is written**: PMD, the layering statement, naming,
   error-text language, nulls, logging, formatting, test-code rules and the
-  `backend/docs/02-backend.md` §9 list, less its price-and-stock line and its
-  decision-record line, which stay here. Consult
+  `backend/docs/02-backend.md` §9 list. Its price-and-stock exception (decision
+  0020) and the decision-record workflow are described here. Consult
   `mibolt-backend-code-standards` on a PMD or compile error, or on a question
   about a Java pattern.
 - **The gates**: coverage floors, the full build, CI jobs and when a browser
@@ -52,7 +56,7 @@ its test harness and its decision records. Outside, and where each case goes:
 **Stack.** Spring Boot 4.1.1, a Java 21 toolchain and OpenAPI Generator 7.25.0
 (`backend/services/commerce/build.gradle:1-17`); the webmvc, JPA, Liquibase,
 validation, security and actuator starters, PostgreSQL at run time and H2 in
-tests (`:23-37`). Jackson is version 3, package `tools.jackson`
+tests, all from Maven Central (`:19-37`). Jackson is version 3, package `tools.jackson`
 (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:22-23`).
 One Gradle subproject, `services:commerce` (`backend/settings.gradle:3`). The
 API answers on port 8080 under `/api/v1` (`backend/README.md:33`).
@@ -85,9 +89,10 @@ that failure is a contract change, so it goes to `mibolt-cross-package-changes`.
 
 **A request's path.** `TraceIdFilter`, `DemoAccessFilter` and
 `SessionCookieFilter` run first; `/admin/**` also meets its own Spring Security
-chain; the controller reads the session, checks `If-Match` on a write, and
-calls one service method; the service enforces the rules and throws
-`DomainException`; `ProblemAdvice` turns every failure into
+chain; the controller reads the session, checks `If-Match` on a write (on an
+`Idempotency-Key` operation it runs the replay first and the service checks
+the version), and calls one service method; the service enforces the rules
+and throws `DomainException`; `ProblemAdvice` turns every failure into
 `application/problem+json`. Details:
 [references/security-and-sessions.md](references/security-and-sessions.md)
 and [references/error-model.md](references/error-model.md).
@@ -121,7 +126,8 @@ and [references/error-model.md](references/error-model.md).
   (https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html).
 - **One shop version.** The cart and the checkout draft share the session's
   `state_version`; every shop write checks `If-Match` against it, a mismatch
-  is 412, and the response's `ETag` carries the new value.
+  is 412, and the cart and checkout responses carry the new value as their
+  `ETag`.
 - **Replay first.** An `Idempotency-Key` replay on `POST /orders` and
   `POST /payment-intents` runs before every other check, the version included
   (rule 37).
@@ -199,7 +205,11 @@ passwords.
 3. Implement it in the controller that already implements that interface, or
    in a new `@RestController` in the owning package for a new tag: read the
    session with `CurrentSession.get`, check `If-Match` first on a shop write,
-   call one service method, map the result with the package's `*Models`
+   except where the operation takes an `Idempotency-Key`: there the replay
+   runs first and the service checks the version after the rule 47 price
+   check (rule 37;
+   [references/security-and-sessions.md](references/security-and-sessions.md)).
+   Call one service method, map the result with the package's `*Models`
    mapper, and set `ETag` or `Location` as the contract requires.
 4. Put every rule in the service and refuse with `DomainException`.
 5. Place a session-scoped path under `/cart`, `/checkout`, `/payment-intents`
@@ -248,9 +258,14 @@ A stored value adds a migration.
 4. Update the value table in
    `backend/docs/decisions/0010-checkout-draft-options-and-fees.md:88-99`, or
    record a new decision when the change is one (section 5).
-5. The storefront's mock mirrors these values
-   (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:59-65`);
-   keeping it in step is `mibolt-shop-frontend`.
+5. The value has copies outside the backend: the storefront's mock
+   (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:59-65`),
+   which `mibolt-shop-frontend` keeps in step;
+   `frontend/docs/spec/screens.md:81`; and the Playwright plans under
+   `frontend/specs/` and specs under `frontend/e2e/`, whose product choice
+   depends on the cash-on-delivery ceiling and whose changes the
+   `playwright-tests` skill owns. List them with
+   `git grep -n -e '<property key>' -e '<mock constant>' -- ':!.claude'`.
 
 **A migration.**
 
@@ -298,8 +313,6 @@ Owned by this skill:
 - Keep the transaction choice above: `noRollbackFor = DomainException.class`
   on the cart, checkout, payment-intent and idempotency services, plain
   `@Transactional` on order placement.
-- Take time from the injected `Clock`, so a unit test can fix it with
-  `Clock.fixed`.
 - Follow the changeset pattern in section 4; the script warns on a departure.
 - **Record every decision** a later reader would ask "why this way?" about,
   in the same session as the decision (`backend/docs/02-backend.md:405-429`):
@@ -320,8 +333,13 @@ Owned by `mibolt-backend-code-standards`, one line each:
 
 - No business rule and no database call in a controller
   (`backend/docs/02-backend.md:52-53`).
-- Error responses carry English text; the Hungarian receipt notice is the one
-  exception (`backend/docs/02-backend.md:447`).
+- Error responses carry no user-facing Hungarian text
+  (`backend/docs/02-backend.md:447`); the Hungarian receipt notice and
+  checkout option labels are non-error responses the rule does not cover.
+- Read the time from an injected `Clock`, which a unit test fixes with
+  `Clock.fixed` ([references/testing.md](references/testing.md));
+  `SessionService` calls `OffsetDateTime.now()` directly and is the one
+  exception.
 - Import types; never write a fully qualified name inline (PMD
   `NoFullyQualifiedNames`).
 - No `System.out` or `System.err` (PMD `SystemPrintln`).
@@ -358,8 +376,8 @@ Commands, from the repository root:
 - `uv run --no-project --python 3.12 --with PyYAML==6.0.2 python .claude/skills/mibolt-commerce-backend/scripts/check-liquibase-changelog.py --base origin/main`:
   the changelog check, read-only. Pass the branch this work was cut from as
   `--base`. Exit 0 no FAIL, 1 a FAIL, 2 a usage or
-  prerequisite error. Needs uv, and PyYAML 6.0.2 fetched once by uv if its
-  cache lacks it.
+  prerequisite error. Needs uv, git 2.30 or later, and PyYAML 6.0.2 fetched
+  once by uv if its cache lacks it.
 - `backend/gradlew -p backend :services:commerce:test --tests '<pattern>'`:
   unit tests only.
 - `backend/gradlew -p backend :services:commerce:integrationTest --tests '<pattern>'`:
@@ -389,7 +407,7 @@ append to db.changelog-master.yaml:
       file: db/changelog/changes/0012-<description>.yaml
 ```
 
-The full output, what each FAIL means and one known false FAIL are in
+The full output and what each FAIL means are in
 [references/data-and-migrations.md](references/data-and-migrations.md).
 
 Done means:
@@ -427,8 +445,10 @@ Repository sources: `backend/docs/02-backend.md`, `backend/docs/04-adatbazis.md`
 
 Update this skill in the same change when any of these moves:
 
-- `backend/services/commerce/build.gradle`: the generation block (`:39-139`)
-  and the test tasks (`:141-162`, `:247-268`);
+- `backend/settings.gradle`, and in `backend/services/commerce/build.gradle`
+  the plugin and toolchain block (`:1-17`), the repositories and dependencies
+  blocks (`:19-37`), the generation block (`:39-139`) and the test tasks
+  (`:141-162`, `:247-268`);
 - `backend/docs/02-backend.md` §4 or §8, or `backend/docs/04-adatbazis.md`;
 - a new record under `backend/docs/decisions/` (the next number, 0023, is
   stated in section 5);

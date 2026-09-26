@@ -35,17 +35,10 @@ need.
 | a field on `Product` | `--kind property releasedAt` | reaches the catalogue data, the fixture and both mock layers |
 | a schema | `--kind schema Cart` | has a sample, `contracts/commerce/samples/Cart.json` |
 
-Two blind spots, both measured:
-
-- **An empty bucket is not proof of no consumer.** The admin mocks match
-  requests by URL and never name the operation, so the run above for
-  `archiveAdminProduct` leaves the `admin mocks` bucket empty although
-  `frontend/projects/admin/src/mocks/products-write.handlers.ts:958` handles
-  that route. For an operation, also search its path.
-- **For an error code use the `enum` kind.** The `schema` kind finds the
-  schema name in `contracts/`, its samples, the imports of its generated model
-  file and the Java model imports; run as `--kind schema ProblemCode` it finds
-  no storefront hit at all, while `--kind enum PRICE_CHANGED` finds 25.
+Read a sibling's output the way SKILL.md ("Read it this way") says: its
+`[path]` lines are mostly the mocks and backend API tests that address the
+operation by URL, an empty bucket is where to look next rather than proof of
+no consumer, and an error code is searched with the `enum` kind.
 
 ## 2. Contract-side edits every change shares
 
@@ -53,10 +46,13 @@ Two blind spots, both measured:
   carries one of the eleven tags declared at
   `contracts/commerce/openapi.yaml:56-77`; the tag decides which frontend
   client gets it and which backend interface, `<Tag>Api`, must implement it
-  ([codegen.md](codegen.md)).
-- The spec's own media-type `examples:`. `frontend/tests/contract/schema.spec.ts:177`
-  validates every one against its schema, so an example the change
-  invalidates fails the contract suite.
+  (the codegen reference, sections 1 and 4).
+- The spec's own media-type `examples:`.
+  `frontend/tests/contract/schema.spec.ts:177` validates every example on a
+  shop operation against its schema, so an example the change invalidates
+  there fails the contract suite; admin operations are removed before that
+  test reads the spec (`frontend/tests/contract/admin-tags.ts:56`), so the
+  contract suite does not check an example on an admin operation.
 - `contracts/commerce/samples/`. Each file is named after the schema it
   instantiates, with an optional case part (`OrderRequest.card.json`), and
   `contracts/check-samples.sh` validates it against that schema
@@ -84,8 +80,8 @@ Two blind spots, both measured:
 | shop-mocks | the stores and builders that construct the model, such as `frontend/projects/shop-mocks/src/catalog/catalog-store.ts`: `mibolt-shop-frontend` | a new required field stops that code type-checking; `mibolt-verification` names the commands that compile it |
 | storefront, demo-payment | callers and readers: `mibolt-shop-frontend` | a new required field in a request body stops every caller that builds the body type-checking; a new response field fails nothing |
 | admin app and admin mocks | form model, mapper, schema, mocks and seed, for `Admin*` schemas: `mibolt-admin-frontend` | the same type-checking failures; no contract test covers the admin mocks |
-| backend | domain record, mapper, service and API test: `mibolt-commerce-backend` | the backend API tests check responses against the source contract with `validAgainstContract()`, which "asserts the response satisfies every applicable rule in the contract" (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/ContractValidation.java:35-38`) |
-| catalogue fixture | for `Product` fields: the source data and the mapping in `frontend/scripts/build-catalog-fixture.mjs` ([catalog-data.md](catalog-data.md)) | `frontend/tests/contract/schema.spec.ts:571-585` validates every fixture product against `Product` |
+| backend | domain record or entity, its Liquibase migration when the field is stored, mapper, service and API test: `mibolt-commerce-backend` | the backend API tests check responses against the source contract with `validAgainstContract()`, which "asserts the response satisfies every applicable rule in the contract" (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/ContractValidation.java:35-38`) |
+| catalogue fixture | for `Product` fields: the source data and the mapping in `frontend/scripts/build-catalog-fixture.mjs` (the catalog-data reference, section 3) | `frontend/tests/contract/schema.spec.ts:571-585` validates every fixture product against `Product` |
 | e2e | `playwright-tests` | the e2e run |
 
 ## 4. A new shop operation
@@ -98,9 +94,10 @@ Two blind spots, both measured:
    section 8.
 2. **Regenerate.** A new function file under
    `frontend/projects/shop-api/src/generated/fn/` and its export in
-   `frontend/projects/shop-api/src/generated/functions.ts`. Skipped: `api:drift`,
-   and `frontend/tests/contract/operation-matrix.spec.ts:117-133` fails because
-   the SDK lacks the function.
+   `frontend/projects/shop-api/src/generated/functions.ts`. Skipped:
+   `frontend/tests/contract/operation-matrix.spec.ts:117-133` fails because the
+   SDK lacks the function, besides what SKILL.md, "What fails when a step is
+   skipped", lists.
 3. **Contract suite**, each of which fails until updated:
    - `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts:35`),
      read by `frontend/tests/contract/operation-matrix.spec.ts:113-115`,
@@ -122,31 +119,32 @@ Two blind spots, both measured:
    The count 19 also sits in test titles and header comments across
    `frontend/tests/contract/` and in `frontend/tests/contract/admin-tags.ts:4-5`;
    keep them true.
-4. **shop-mocks handler**: `mibolt-shop-frontend`. Skipped:
-   `frontend/tests/contract/operation-matrix.spec.ts:135-145` lists the
-   operation under "MSW handlers missing for".
+4. **shop-mocks handler**: `mibolt-shop-frontend`. Skipped: see SKILL.md,
+   "What fails when a step is skipped".
 5. **Backend controller method** on the tag's `<Tag>Api`:
-   `mibolt-commerce-backend`. Skipped: nothing fails at compile time, because
-   the generated interface carries a default method ([codegen.md](codegen.md),
-   section 4); only a backend API test for the operation, or a run against the
-   real backend, shows it.
+   `mibolt-commerce-backend`. Skipped: see SKILL.md, "What fails when a step
+   is skipped".
 6. **Storefront or demo-payment caller**: `mibolt-shop-frontend`.
 
 ## 5. A new admin operation
 
 1. **Contract.** A path under `/admin` and exactly one of `AdminAuth`,
-   `AdminUsers`, `AdminProducts`, `AdminMedia`; product writes take the
-   `ProductIfMatch` parameter (`contracts/commerce/openapi.yaml:1815`).
-   Skipped or wrong: `frontend/tests/contract/sdk-split.spec.ts:103-121`.
-2. **Regenerate.** It lands in the admin client only. Skipped: `api:drift`, and
+   `AdminUsers`, `AdminProducts`, `AdminMedia`; a wrong path or tag fails
+   `frontend/tests/contract/sdk-split.spec.ts:103-121`. Product updates take
+   the `ProductIfMatch` parameter (`contracts/commerce/openapi.yaml:1815`):
+   replace, archive and restore (`contracts/commerce/openapi.yaml:1484`,
+   `contracts/commerce/openapi.yaml:1540`,
+   `contracts/commerce/openapi.yaml:1580`); create does not.
+2. **Regenerate.** It lands in the admin client only. Skipped:
    `frontend/tests/contract/sdk-split.spec.ts:139-144` reports the admin
-   functions module missing it.
+   functions module missing it, besides what SKILL.md, "What fails when a step
+   is skipped", lists.
 3. **Counts.** 15 admin operations are pinned at
    `frontend/tests/contract/sdk-split.spec.ts:125` and
    `frontend/tests/contract/sdk-split.spec.ts:141`, and stated in
    `frontend/tests/contract/admin-tags.ts:4-5`.
-4. **Admin mocks handler and the admin caller**: `mibolt-admin-frontend`. No
-   contract test checks that the admin mocks cover every admin operation.
+4. **Admin mocks handler and the admin caller**: `mibolt-admin-frontend`.
+   Skipped: see SKILL.md, "What fails when a step is skipped".
 5. **Backend** controller method on the tag's interface, for example
    `AdminProductsController implements AdminProductsApi`
    (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/catalog/AdminProductsController.java:21`):
@@ -161,7 +159,7 @@ spec.
 
 - **Contract** enum, plus any example or sample that lists the values.
 - **Regenerate**: the union type and its `-array.ts` sibling in each client
-  that references the enum ([codegen.md](codegen.md), section 1).
+  that references the enum (the codegen reference, section 1).
 - **TypeScript consumers** that must cover every member, such as a `Record`
   keyed by the union, stop type-checking until the new member is handled:
   `OUTCOME_LABELS` over the payment outcome is one
@@ -176,11 +174,11 @@ spec.
 - **Discriminator enums.** `home_delivery`, `pickup_point`, `card` and
   `cash_on_delivery` inside the four discriminated subtypes are guarded by
   `prepareOpenApiSpec`; a second value under one of them fails every backend
-  build ([codegen.md](codegen.md), section 4). The finder shows the guard in
+  build (the codegen reference, section 4). The finder shows the guard in
   its `other` bucket (`backend/services/commerce/build.gradle:52` for
   `home_delivery`).
 - **Catalogue-backed enums** such as `StorageGb` are also enumerated in the
-  catalogue schema and the admin seed ([catalog-data.md](catalog-data.md),
+  catalogue schema and the admin seed (the catalog-data reference,
   section 1).
 
 ## 7. A new error code
@@ -198,14 +196,12 @@ spec.
 3. **Backend** `ErrorCode` constant with the same name, its HTTP status and an
    English default title
    (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java:12-37`;
-   the `type` URI is built at `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java:71`), thrown by the owning service:
-   `mibolt-commerce-backend`. `ProblemAdvice` maps it to the wire with
+   the `type` URI is built at `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java:71`), thrown by the owning service,
+   and the count of `ErrorCode` constants that `ErrorCodeTest` pins raised to
+   match: `mibolt-commerce-backend`. `ProblemAdvice` maps it to the wire with
    `ProblemCode.valueOf(code.name())`
    (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:365-367`).
-   An `ErrorCode` with no matching `ProblemCode` compiles and throws
-   `IllegalArgumentException` when that error is rendered
-   (https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Enum.html);
-   a `ProblemCode` with no `ErrorCode` fails nothing and is never sent.
+   Skipped: see SKILL.md, "What fails when a step is skipped".
 4. **Storefront and demo-payment** handling and its Hungarian text:
    `mibolt-shop-frontend`. An unhandled code compiles; in
    `frontend/projects/storefront/src/app/features/checkout/order-submission.ts:300-320`
@@ -229,10 +225,15 @@ spec.
   silent retry with the new version.
 - **Frontend.** Both generator configs drop `If-Match` from the generated
   signatures (`frontend/ng-openapi-gen.json:12`), so the caller attaches it.
-  The storefront and demo-payment use core-api's `withIfMatch(version)`
-  (`frontend/projects/core-api/src/demo-session.interceptor.ts:85`), which
-  quotes a numeric version and throws on anything else (`frontend/projects/core-api/src/demo-session.interceptor.ts:117-123`); the admin
-  uses its own `withIfMatch(etag)`, which passes the ETag through unchanged
+  The storefront uses core-api's `withIfMatch(version)`
+  (`frontend/projects/core-api/src/demo-session.interceptor.ts:85`);
+  `demoSessionInterceptor` writes the header, quoting a bare integer, passing
+  an already-quoted one through and throwing on anything else
+  (`frontend/projects/core-api/src/demo-session.interceptor.ts:89-98`,
+  `frontend/projects/core-api/src/demo-session.interceptor.ts:117-123`).
+  demo-payment registers the same interceptor and calls no operation that
+  takes `If-Match`. The admin uses its own `withIfMatch(etag)`, which passes
+  the ETag through unchanged
   (`frontend/projects/admin/src/app/core/api/if-match.interceptor.ts:6-8`).
   The caller changes go to `mibolt-shop-frontend` and `mibolt-admin-frontend`.
 - **Contract suite.** A shop mutation gaining or losing `IfMatch` moves in or
@@ -246,11 +247,15 @@ spec.
 - Run the finder on the old name. Everything it lists goes in the same change,
   in every layer, per `.claude/rules/code-standards.md:125` ("A cut feature
   leaves nothing behind").
-- Regeneration removes what the contract no longer declares: a frontend model
-  no operation references disappears through `ignoreUnusedModels`, and the
-  backend output directory is wiped before every generation
-  ([codegen.md](codegen.md)). `api:drift` then shows the deletions as a diff
-  until they are staged or committed.
+- Regeneration removes what the contract no longer declares. A frontend model
+  file that is no longer generated, because its schema is gone or no operation
+  of that client references it (`ignoreUnusedModels`), is deleted by
+  ng-openapi-gen's `removeStaleFiles`, which "Defaults to true" and neither
+  config sets
+  (https://github.com/cyclosproject/ng-openapi-gen/blob/master/ng-openapi-gen-schema.json);
+  the backend output directory is wiped before every generation (the codegen
+  reference, section 4). `api:drift` then shows the deletions as a diff until
+  they are staged or committed.
 - A sample named after a removed schema no longer has a schema to validate
   against; remove or rename it with the schema.
 - A renamed operation moves every count and list in section 4 or 5, and the

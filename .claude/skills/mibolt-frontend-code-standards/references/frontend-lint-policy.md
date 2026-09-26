@@ -31,7 +31,7 @@ output the severity is 0 off, 1 warn, 2 error, and only 2 changes the exit code
 | `frontend/eslint.config.mjs:108-191` | `projects/**/*.ts` | the type-aware presets and rules of section 2, with `projectService` |
 | `frontend/eslint.config.mjs:192-203` | `tests/**/*.ts` | `recommended` presets only: `tests/` belongs to no tsconfig, so no type-aware rule runs there |
 | `frontend/eslint.config.mjs:204-342` | `projects/**/*.ts`, `tests/**/*.ts` | the shared rules of section 3 |
-| `frontend/eslint.config.mjs:343-384` | `e2e/**/*.ts`, `playwright.config.ts` | the Playwright rules of section 5; `e2e/seed.spec.ts` is taken out of that block |
+| `frontend/eslint.config.mjs:343-384` | `e2e/**/*.ts`, `playwright.config.ts` | the Playwright rules of section 5; `e2e/seed.spec.ts` is taken out of that block, so ESLint parses it with its default JavaScript parser and runs only the `security/*` warnings and the coverage-pragma ban on it |
 | `frontend/eslint.config.mjs:385-437` | each app | the import boundaries of section 4, and the admin assertion ban |
 | `frontend/eslint.config.mjs:438-445` | `tests/contract/admin-tags.ts`, `tests/contract/sdk-split.spec.ts` | the assertion ban |
 | `frontend/eslint.config.mjs:453-472` | `projects/**/*.spec.ts`, `tests/**/*.ts` | the test policy |
@@ -94,7 +94,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 
 ## 6. Templates
 
-`projects/**/*.html` (`frontend/eslint.config.mjs:485-531`):
+`projects/**/*.html` (`frontend/eslint.config.mjs:485-531`), and every inline template, which the processor at `frontend/eslint.config.mjs:122` hands to ESLint as a virtual `.html` file under that glob:
 
 - `templateRecommended`: `banana-in-box`, template `eqeqeq`, `no-negated-async`, `prefer-control-flow` (also set at `frontend/eslint.config.mjs:498`).
 - `templateAccessibility` (`frontend/eslint.config.mjs:493`): `alt-text`, `click-events-have-key-events`, `elements-content`, `interactive-supports-focus`, `label-has-associated-control`, `mouse-events-have-key-events`, `no-autofocus`, `no-distracting-elements`, `role-has-required-aria`, `table-scope`, `valid-aria`, all at error. How these sit beside the accessibility override is recorded as a conflict; `SKILL.md` links the register.
@@ -104,7 +104,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 
 | Rule in `CLAUDE.md` | Checked by |
 | --- | --- |
-| avoid `any` (`CLAUDE.md:7`) | `no-explicit-any` in every linted TypeScript file; `$any()` by the template `no-any` |
+| avoid `any` (`CLAUDE.md:7`) | `no-explicit-any` in every linted TypeScript file except `e2e/seed.spec.ts` (section 1); `$any()` by the template `no-any` |
 | standalone, no `standalone: true` (`CLAUDE.md:11-12`) | `prefer-standalone` reports `standalone: false` only; `standalone: true` is written only |
 | no explicit `OnPush` (`CLAUDE.md:13`) | written only: `allowExplicitOnPush` is true |
 | no `@HostBinding` or `@HostListener` (`CLAUDE.md:16`) | written only |
@@ -117,11 +117,10 @@ The rules switched off in this block (`frontend/eslint.config.mjs:244-249`,
 | `@Service` for new singletons (`CLAUDE.md:56`) | written only |
 | `inject()` (`CLAUDE.md:57`) | `prefer-inject` |
 
-`git grep` over hand-written code under `frontend/projects/` on 2026-09-26
-found no `standalone:`, `ChangeDetectionStrategy`, `@HostBinding`,
-`@HostListener`, `@Input(`, `@Output(`, `ngClass`, `ngStyle` or `CommonModule`,
-so any of them in a diff is new rather than a local habit. Re-run that grep
-before relying on the sentence.
+`git grep -nE 'standalone:|ChangeDetectionStrategy|@HostBinding|@HostListener|@Input\(|@Output\(|ngClass|ngStyle|CommonModule' -- frontend/projects ':!**/generated/**'`,
+run from the repository root on 2026-09-26, printed nothing and exited 1, so
+any of them in a diff is new rather than a local habit. Re-run it before
+relying on the sentence.
 
 ## 8. The relax pass, and what stays
 

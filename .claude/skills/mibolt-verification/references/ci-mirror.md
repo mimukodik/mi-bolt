@@ -5,8 +5,8 @@ The changed-paths script from `SKILL.md` prints each triggered job's `run:`
 lines live, so they are not repeated here. This file adds what the workflows
 do not say: the local command that mirrors each job, how closely it mirrors
 it, and what CI keeps when the job fails. Working directory, prerequisites
-and side-effect class of every command are in the command tables of
-`SKILL.md`.
+and side-effect class of every command are in this skill's commands
+reference.
 
 ## Contents
 
@@ -80,7 +80,8 @@ The changed-paths script does not list these.
   Deployment** (`.github/workflows/publish-candidate.yml`,
   `.github/workflows/preview-smoke.yml`, `.github/workflows/stable-smoke.yml`,
   `.github/workflows/close-bolt-preview.yml`) run after other workflows, on a
-  schedule or on pull-request events. None has a local mirror;
+  schedule, by hand (`workflow_dispatch`) or on pull-request events. None has
+  a local mirror;
   `mibolt-workspace-ops` owns them.
 
 ## Checks CI never runs

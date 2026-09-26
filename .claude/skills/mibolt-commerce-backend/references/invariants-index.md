@@ -30,7 +30,7 @@ disagree, the spec file wins (`contracts/commerce/kommunikacio.md:11-19`).
 | 6 | Kezdőadat és képek | `backend/docs/02-backend.md:218-286` | 6.1: catalogue collection is a separate task. 6.2: the backend stores and serves images, deliberately for now; content-derived ids, `GET /media/{imageId}`, immutable caching. |
 | 7 | Tesztelési elvárások | `backend/docs/02-backend.md:290-401` | 7.0 no Docker database in tests; 7.1 smoke scenarios F1-F7; 7.2 every numbered invariant tested and named by number, plus concurrency, idempotency and session isolation cases; 7.3 API tests per operation, error code and header; 7.4 machine contract validation. |
 | 8 | A fejlesztés alatti döntések dokumentálása | `backend/docs/02-backend.md:405-438` | The decision-record workflow; SKILL.md section 5 carries it. |
-| 9 | Amit nem szabad | `backend/docs/02-backend.md:442-454` | The forbidden list. It belongs to `mibolt-backend-code-standards`, except two lines that stay here: price, stock or amount never taken from a request body, with its one admin exception (`:448`, decision 0020), and the ban on an undocumented decision, which is the §8 workflow. |
+| 9 | Amit nem szabad | `backend/docs/02-backend.md:442-454` | The forbidden list, which belongs to `mibolt-backend-code-standards`. This skill describes two things its lines lead to: the admin exception to the price-and-stock line (`:448`, decision 0020), and the §8 decision-record workflow behind the ban on an undocumented decision (`:454`). |
 
 ## Section map of 04-adatbazis.md
 
@@ -113,8 +113,13 @@ another file is named:
 18. `lineCount` counts lines, `totalQuantity` sums quantities; the header badge
     shows the latter. `finalize`, `:271-279`.
 19. The cart lives 30 days and every successful operation extends
-    `expiresAt`, with the session cookie's `Max-Age`. `finalize`, `:239-243`;
-    `mibolt.session.lifetime` in
+    `expiresAt`, with the session cookie's `Max-Age`. The code extends the
+    session's and the cart's expiry only when a request changed something or
+    produced a notice (`finalize`, `:239-243`, and a checkout update,
+    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:118-120`),
+    and the cookie keeps the `Max-Age` it was issued with;
+    `backend/docs/decisions/0011-cart-version-etag-and-reconciliation.md:43-46`
+    and `:75-84` record both. The lifetime is `mibolt.session.lifetime` in
     `backend/services/commerce/src/main/resources/application.properties:37`.
 20. Deleting a line is idempotent: a variant unknown to the catalogue is 404,
     a known variant not in the cart is 200 with the current cart.
@@ -169,7 +174,8 @@ Source: `backend/docs/02-backend.md:132-149`. Enforced in
     status in the body. `resolve`, `:98-113`, returns them and never throws for
     them. The rule text names 201; the contract answers
     `POST /payment-intents/{id}/outcome` with 200
-    (`contracts/commerce/openapi.yaml:836`), and the code follows the contract.
+    (`contracts/commerce/openapi.yaml:836`), and the code follows the contract
+    (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentsController.java:76-80`).
 33. A pending intent reaches a terminal status by its `expiresAt`.
     `applyLazyExpiry`, `:124-132`, evaluated lazily on every `get` and
     `resolve`; there is no scheduler.
@@ -195,8 +201,9 @@ unless another file is named:
 37. Idempotency replay comes before every other check, the cart state, the
     expiry and `If-Match` included.
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:89-96`
-    replays before `place` runs; the version check follows at `:122-123`. The
-    same order holds for
+    replays before `place` runs; the version check follows inside `place`, at
+    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:122-123`,
+    after the rule 47 check (`:101-120`). The same order holds for
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentsController.java:54-61`.
 38. A card order needs `paymentIntentId`, and its absence is a schema error,
     400. Each intent status has its answer: `succeeded` proceeds,
@@ -245,8 +252,9 @@ and
 
 ## Schema constraints and where each lives
 
-`backend/docs/04-adatbazis.md:89-103` lists what the database itself enforces.
-Each is in a changeset under
+`backend/docs/04-adatbazis.md:89-103` lists what the database itself enforces;
+the changesets add three more, the colour-code, demo-username and
+one-order-per-intent rows below. Each is in a changeset under
 `backend/services/commerce/src/main/resources/db/changelog/changes/`:
 
 | Constraint | Where |

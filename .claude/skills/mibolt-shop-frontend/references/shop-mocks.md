@@ -152,8 +152,9 @@ snapshot, kept in `sessionStorage` under `mi-bolt.snapshot.<scenario>`.
 - The production configurations of both apps replace
   `frontend/projects/shop-mocks/src/browser.ts` with
   `frontend/projects/shop-mocks/src/browser.production.ts`, whose
-  `startMockWorker` only rejects. Keep the two files' exports in step, and
-  check a production build with `npm --prefix frontend run check:storefront-dist`
+  `startMockWorker` only rejects. Anything an app imports from
+  `@mi-bolt/mocks/browser` has to be exported there too, and check a
+  production build with `npm --prefix frontend run check:storefront-dist`
   or `check:payment-dist` after `build` or `build:payment`.
 
 ## 7. The demo-access gate

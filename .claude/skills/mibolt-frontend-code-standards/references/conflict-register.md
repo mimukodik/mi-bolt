@@ -14,7 +14,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 - C2. Two ways to construct the shop `Api`
 - C3. Inline templates preferred, external templates in use
 - C4. The zoneless provider, explicit in two apps and omitted in one
-- C5. `.scss` files that hold plain CSS
+- C5. `.scss` files written as CSS, with Sass line comments in three
 - C6. How far the design reference reaches
 - C7. The accessibility override beside the template accessibility lint rules
 - C8. Two checks that exist and that nothing runs
@@ -30,7 +30,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 - **`inject(Api)`**, in four storefront units, among them `frontend/projects/storefront/src/app/features/catalog/catalog.facade.ts:197`, `frontend/projects/storefront/src/app/features/product/product.facade.ts:119` and `frontend/projects/storefront/src/app/core/demo-access/demo-access.ts:62`; the fourth is the home page.
 - **`new Api(inject(ApiConfiguration), inject(HttpClient))`**: `frontend/projects/storefront/src/app/features/cart/cart.facade.ts:159`, `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:244`, `frontend/projects/demo-payment/src/app/payment-page.ts:226`. The comment above each gives the reason: Vitest's esbuild pipeline does not emit the decorator metadata the generated class's constructor injection needs (`frontend/projects/storefront/src/app/features/cart/cart.facade.ts:152-158`).
-- **How the specs supply it**: the catalogue facade's and the home page's specs replace `Api` with a stub (`provide: Api`); the specs of the cart facade, the checkout facade, the payment page and `demo-access.ts` drive real HTTP through MSW, the last one although its unit uses `inject(Api)` (`frontend/projects/storefront/src/app/core/demo-access/demo-access.spec.ts:32`).
+- **How the specs supply it**: the catalogue facade's and the home page's specs replace `Api` with a stub (`provide: Api` with `useValue`); the specs of the cart facade, the checkout facade, the payment page and `demo-access.ts` drive real HTTP through MSW, the last one although its unit uses `inject(Api)` (`frontend/projects/storefront/src/app/core/demo-access/demo-access.spec.ts:32`), and so does the product facade's page spec (`frontend/projects/storefront/src/app/features/product/product-page.spec.ts:51`). A third form sits in the specs: `provide: Api` with a `useFactory` that calls `new Api(config, http)` (`frontend/projects/storefront/src/app/features/product/variant-selection.spec.ts:430-434`, `frontend/projects/storefront/src/app/features/catalog/catalog-page.spec.ts:331-335`, `frontend/projects/storefront/src/app/a11y-structure.spec.ts:485-489`), for the decorator-metadata reason `frontend/projects/storefront/src/app/features/product/variant-selection.spec.ts:425-429` gives.
 - **Left alone**: the idiom of each existing unit, since a switch changes what its spec has to provide. No source decides which form a new unit uses, so a new unit's report names the form it took. The admin app uses its own `AdminApi` through `inject()` and is outside this entry.
 
 ## C3. Inline templates preferred, external templates in use
@@ -45,11 +45,11 @@ file and the rule goes into section 5 of `SKILL.md`.
 - **Observed**: the storefront provides `provideZonelessChangeDetection()` at `frontend/projects/storefront/src/app/app.config.ts:19`, and `frontend/projects/storefront/src/app/app.spec.ts:107` asserts that it does; demo-payment provides it at `frontend/projects/demo-payment/src/app/app.config.ts:16`; the admin omits it, with a comment citing the default (`frontend/projects/admin/src/app/app.config.ts:21-23`).
 - **Left alone**: all three. Removing the storefront's provider fails its spec, and adding one to the admin contradicts its comment; neither is a side change.
 
-## C5. `.scss` files that hold plain CSS
+## C5. `.scss` files written as CSS, with Sass line comments in three
 
-- **Observed**: 53 `.scss` files under `frontend/projects/storefront/`, none using `@use`, `@import`, `@mixin`, `@include`, `@forward` or a `$variable:` declaration (`git grep`, 2026-09-26); the one other `.scss`, `frontend/projects/admin/src/material-theme.scss`, uses Sass (`@use '@angular/material' as mat;` at `frontend/projects/admin/src/material-theme.scss:6`).
+- **Observed**: 53 `.scss` files under `frontend/projects/storefront/`, none using `@use`, `@import`, `@mixin`, `@include`, `@forward` or a `$variable:` declaration (`git grep`, 2026-09-26). Three of them carry Sass's `//` line comments, which CSS does not have (https://sass-lang.com/documentation/syntax/comments/, https://www.w3.org/TR/css-syntax-3/): `frontend/projects/storefront/src/app/features/catalog/filter-drawer.scss:197-201`, `frontend/projects/storefront/src/app/features/catalog/filter-panel.scss:205-209`, `frontend/projects/storefront/src/app/layouts/checkout-layout.scss:9-15` and `frontend/projects/storefront/src/app/layouts/checkout-layout.scss:74-75`. The one other `.scss`, `frontend/projects/admin/src/material-theme.scss`, uses Sass (`@use '@angular/material' as mat;` at `frontend/projects/admin/src/material-theme.scss:6`).
 - **Unknown**: whether Sass features are meant to be available in the storefront's files. angular.dev says the CLI "supports CSS imports and all major CSS preprocessors" (https://angular.dev/reference/configs/workspace-config#extra-build-and-test-options), but no page found through `search_documentation` with `version: 22` says which preprocessor a component stylesheet's extension selects, so nothing here asserts that rule.
-- **Left alone**: the file names. Introducing a Sass feature into a storefront `.scss` file is a decision to raise, not a style choice.
+- **Left alone**: the file names and the existing comments. Introducing any other Sass feature into a storefront `.scss` file, such as `@use`, a mixin or a `$` variable, is a decision to raise, not a style choice.
 
 ## C6. How far the design reference reaches
 
@@ -61,10 +61,10 @@ file and the rule goes into section 5 of `SKILL.md`.
 ## C7. The accessibility override beside the template accessibility lint rules
 
 - **Written**: no work on AXE checks, WCAG AA minimums, keyboard handling or ARIA, and focus handling kept to what a native element gives (`CLAUDE.md:20-21`).
-- **Linted**: the template block extends `angular.configs.templateAccessibility` (`frontend/eslint.config.mjs:493`), so its eleven rules, `click-events-have-key-events`, `interactive-supports-focus` and `label-has-associated-control` among them, report at error level on every `projects/**/*.html` file.
-- **Measured**: in the installed angular-eslint 22.5.0, `click-events-have-key-events` skips an inherently interactive element, so a `(click)` on a native `<button>` does not trip it. A native element is also what `CLAUDE.md:21` asks for.
+- **Linted**: the template block extends `angular.configs.templateAccessibility` (`frontend/eslint.config.mjs:493`), so its eleven rules, `click-events-have-key-events`, `interactive-supports-focus` and `label-has-associated-control` among them, report at error level on every `projects/**/*.html` file and on every inline template, which `angular.processInlineTemplates` (`frontend/eslint.config.mjs:122`) hands to ESLint as a virtual `.html` file under the same glob (https://eslint.org/docs/latest/use/configure/plugins).
+- **Measured**: in the installed angular-eslint 22.5.0, `click-events-have-key-events` skips an inherently interactive element, so a `(click)` on a native `<button>` does not trip it. `CLAUDE.md:21` counts what a native element gives on its own as enough focus handling.
 - **Observed**: the code already carries accessibility work the override does not ask for: `frontend/projects/storefront/src/app/a11y-structure.spec.ts`, `frontend/projects/storefront/src/app/app-skip-link.spec.ts`, `role="alert"` at `frontend/projects/admin/src/app/shared/forms/control-error.ts:17`.
-- **Left alone**: that existing code, which is neither extended nor removed. Both sources bind: the changed files have to lint clean for the gate in `.claude/rules/code-standards.md:100-103`, and the override rules out accessibility work as a goal of its own. No source says more than that.
+- **Left alone**: that existing code, which is neither extended nor removed. Both sources bind, and no source says which gives way when they meet: a changed template has to lint clean for the gate in `.claude/rules/code-standards.md:100-103`, and `CLAUDE.md:20` says no work is spent on keyboard handling or ARIA. Where a rule of this preset fails on a changed template and a native element does not clear it, that is a question for the user, and so is any change to the preset.
 
 ## C8. Two checks that exist and that nothing runs
 

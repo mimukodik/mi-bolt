@@ -62,6 +62,7 @@ The sources, pointed at rather than copied:
 | `frontend/eslint.config.mjs` | every lint rule, and which files each block reaches |
 | `frontend/angular.json` | which files `ng lint` visits, per project; the storefront's target also takes `tests/`, `e2e/` and `playwright.config.ts` (`frontend/angular.json:132-138`) |
 | `frontend/tsconfig.json` | the compiler's strictness flags (`frontend/tsconfig.json:6-10`), the `@mi-bolt/*` aliases (`frontend/tsconfig.json:17-21`) and template strictness (`frontend/tsconfig.json:23-31`); every `frontend/projects/*/tsconfig*.json` extends it, directly or through a sibling tsconfig, and overrides no strictness flag |
+| `frontend/tsconfig.e2e.json` | the tsconfig that includes `e2e/**/*.ts` and `playwright.config.ts`, which the end-to-end lint block parses type-aware (`frontend/eslint.config.mjs:346-350`, `e2e/seed.spec.ts` excepted); it extends `frontend/tsconfig.json` and adds only the Node types |
 | `frontend/.prettierrc`, `frontend/.prettierignore` | the formatting, and what Prettier skips: the generated clients, `docs/`, build output |
 | `.editorconfig` | editor defaults: 2-space indent, single quotes in `.ts` |
 | `frontend/docs/lint-relaxations.md` | the relax pass, and how a rule is put back |
@@ -70,7 +71,7 @@ The sources, pointed at rather than copied:
 
 1. **Read the effective rule for the file**, with `--print-config` (section 7), instead of reasoning over the config's blocks. The blocks mislead: `curly` is set to error at `frontend/eslint.config.mjs:239` and reported as `[0,"all"]`, off, because `eslint-config-prettier` is applied last (`frontend/eslint.config.mjs:532`).
 2. **Place the rule** in section 5, and look up its options and file scope in [references/frontend-lint-policy.md](references/frontend-lint-policy.md).
-3. **Fix the code, not the rule.** The tree holds two suppression comments, both in spec files. A new `eslint-disable`, or an edit to `frontend/eslint.config.mjs` that makes an error go away, is a rule change: the relax pass was the user's decision, recorded in `frontend/docs/lint-relaxations.md`, and a further one goes to the user.
+3. **Fix the code, not the rule.** Hand-written code holds two suppression comments, both in spec files and both naming what they suppress (the lint policy reference, section 9). A new suppression comment (`eslint-disable…`, `@ts-expect-error`, `@ts-ignore`), or an edit to `frontend/eslint.config.mjs` that makes an error go away, changes what the gate checks rather than the code. No file hands that decision to an agent: the relax pass in `frontend/docs/lint-relaxations.md:6-11` was the user's own, so a further relaxation goes to the user as a question, per `.claude/CLAUDE.md` ("Think before coding": "Any deviation from the request must be discussed with the user first").
 4. **Re-run the check on the changed files only** (section 7). A `--fix` or `--write` sweep names its files explicitly, per `.claude/CLAUDE.md` ("Surgical changes").
 5. **Leave a recorded conflict alone.** Where the code around your change contradicts a written rule, the register says whether that is known; do not rewrite it as a side effect.
 
@@ -91,7 +92,7 @@ a diff is new.
 ### Types
 
 - **No `as`; use `satisfies`, a type guard or a generic** (written: `.claude/rules/code-standards.md:17`). **Conflict** in enforcement: lint forbids assertions, all but `as const`, only in `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and in two contract files (`frontend/eslint.config.mjs:441-443`).
-- **No `any`** (written: `.claude/rules/code-standards.md:17`; lint: `no-explicit-any` in every linted TypeScript file, the `no-unsafe-*` rules under `projects/`, and `$any()` in templates at `frontend/eslint.config.mjs:529`). Bind a value typed `any`, such as `HttpErrorResponse.error` or the result of `JSON.parse`, to `unknown` at once and narrow it.
+- **No `any`** (written: `.claude/rules/code-standards.md:17`; lint: `no-explicit-any` in every linted TypeScript file except `frontend/e2e/seed.spec.ts`, which ESLint parses as plain JavaScript, the `no-unsafe-*` rules under `projects/`, and `$any()` in templates at `frontend/eslint.config.mjs:529`). Bind a value typed `any`, such as `HttpErrorResponse.error` or the result of `JSON.parse`, to `unknown` at once and narrow it.
 - **Use the guard that exists before writing one** (written: `.claude/rules/code-standards.md:19-20`). `isRecord` has three copies: `frontend/projects/storefront/src/app/shared/utils/is-record.ts`, `frontend/projects/admin/src/app/core/is-record.ts` and `frontend/projects/shop-mocks/src/is-record.ts`. The admin may not import the mocks' copy (`frontend/eslint.config.mjs:397`), and the storefront's copy says in its header that it exists so app code never imports from `projects/shop-mocks/src`. Others include `isProblem` (`frontend/projects/admin/src/app/core/api/problem.ts:16`), `isSort` and `isStorageBucket` (`frontend/projects/storefront/src/app/features/catalog/catalog-query.ts:48-54`) and the DOM guards in `frontend/projects/storefront/src/app/shared/utils/event-target.ts`. List them all, generated code and specs left out, with `git grep -nE '\): [A-Za-z.]+ is ' -- frontend/projects ':!**/generated/**' ':!**/*.spec.ts'`.
 - **Only a `boolean` goes in a condition** (lint: `strict-boolean-expressions`, `frontend/eslint.config.mjs:177-188`, every allow option false, in `projects/**/*.ts` including specs and not in `tests/` or `e2e/`). Compare explicitly with `!== null`, `!== undefined`, `.length > 0` or `typeof x === 'string'`, as `frontend/projects/storefront/src/app/features/cart/cart-page.ts:188` does.
 - **Compiler strictness** (tsc: `frontend/tsconfig.json:6-10`): `strict`, `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`, and `noPropertyAccessFromIndexSignature`, which makes a `Record<string, unknown>` field read as `body['code']` rather than `body.code` (https://www.typescriptlang.org/tsconfig/#noPropertyAccessFromIndexSignature).
@@ -133,22 +134,22 @@ a diff is new.
 ### Formatting and styles
 
 - **Prettier decides layout** (prettier: `frontend/.prettierrc`, print width 100, single quotes, `.html` parsed with the `angular` parser), and `eslint-config-prettier` switches ESLint's formatting rules off (`frontend/eslint.config.mjs:532`). `npm --prefix frontend run format` rewrites the whole workspace, so format only the files you changed, with `npx prettier --write` and their paths.
-- **Storefront component styles are `.scss` files that hold plain CSS**, while the admin's theme file uses Sass (observed, and a recorded conflict). Design values come from `frontend/docs/design/yettel.md`.
+- **Storefront component styles are `.scss` files written as CSS, three of them with Sass `//` line comments**, while the admin's theme file uses Sass `@use` (observed, and a recorded conflict). Design values come from `frontend/docs/design/yettel.md`.
 
 ### Language
 
-- **Shopper-facing copy is Hungarian, and everything else is English** (written: `frontend/docs/spec/execution-rules.md:9`). The copy is hard-coded in templates and components, with no `@angular/localize` or `i18n` markup in the tree (observed). API `title` and `detail` are English diagnostics that are never shown; the UI composes its text from the `code` (written: `contracts/commerce/openapi.yaml:25-29`), as `frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts:54-58` describes.
+- **UI copy is Hungarian in all three apps, the admin included, and everything else is English** (written: `frontend/docs/spec/execution-rules.md:9`, "Public demo UI stays Hungarian; everything else committed to this repository is English"; observed for the admin and demo-payment: their templates carry Hungarian copy, and `frontend/projects/admin/src/app/app.config.ts:51` sets `LOCALE_ID` to `hu-HU`). The copy is hard-coded in templates and components, with no `@angular/localize` or `i18n` markup in the tree (observed). API `title` and `detail` are English diagnostics that are never shown; the UI composes its text from the `code` (written: `contracts/commerce/openapi.yaml:25-29`), as `frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts:54-58` describes.
 
 ### Accessibility
 
 - **The root `CLAUDE.md` overrides generic accessibility guidance** (written: `CLAUDE.md:20-21`), in the user's words: "in the frontend app keyboard and ARIA events are not of interest, and focus only minimally, because it will never be a live app! no screen reader will ever read it!"
-- **Existing ARIA and focus code is neither extended nor removed.** The code already carries some, such as `frontend/projects/storefront/src/app/a11y-structure.spec.ts`.
+- **Existing ARIA and focus code is neither extended nor removed** (written: extending it is the work `CLAUDE.md:20-21` rules out, and removing it is a change nothing asked for, which `.claude/CLAUDE.md` ("Surgical changes") rules out). The code already carries some, such as `frontend/projects/storefront/src/app/a11y-structure.spec.ts`.
 - **The template lint block still extends `angular.configs.templateAccessibility`** (`frontend/eslint.config.mjs:493`), so its rules fail `lint` like any other. The register records how the two sit together.
 
 ### Framework questions
 
-- **Answer a question about how Angular, typescript-eslint or Prettier behaves from its documentation**, with the instruments in `.claude/rules/framework-facts.md`, never with a probe, and put the URL beside the claim.
-- **The `angular-developer` skill is generic guidance.** Where it differs from this skill or the root `CLAUDE.md`, the local rule wins.
+- **Answer a question about how Angular, typescript-eslint or Prettier behaves from its documentation** (written: `.claude/rules/framework-facts.md`), with the instruments that file names, never with a probe, and put the URL beside the claim.
+- **The `angular-developer` skill is generic Angular guidance**: commit `5f5b6392` copied it unchanged from https://github.com/angular/skills. This skill records what this repository enforces and does.
 
 ## 6. What a change here reaches
 
@@ -165,11 +166,13 @@ need `frontend/` as their working directory, because the Angular workspace's
 and a command that depends on its working directory names it in full
 (`.claude/rules/session-lifecycle.md`, "Tools and startup"). So `<repo-root>`
 below stands for the checkout's absolute path, and the file arguments after the
-`cd` are relative to `frontend/`.
+`cd` are relative to `frontend/`. Every command below needs that
+`node_modules`, which `mise run //frontend:setup` installs with `npm ci`
+(`frontend/mise.toml:2-3`).
 
 - `npm --prefix frontend run lint`: `ng lint` over every project's lint target. It passes no `--fix` and the builder's cache is off by default, so it writes nothing.
-- `cd <repo-root>/frontend && npx eslint <files>` and `cd <repo-root>/frontend && npx prettier --check <files>`: the pre-commit form from `.claude/rules/code-standards.md:100-103`. Neither writes without `--fix` or `--write`.
-- `cd <repo-root>/frontend && npx eslint --print-config <file> | grep -A12 '"<rule-id>"'`: the rule as it applies to that one file, as JSON. The first number is the severity: 0 off, 1 warn, 2 error, and only 2 fails the run (https://eslint.org/docs/latest/use/configure/rules).
+- `cd <repo-root>/frontend && npx eslint <files>` and `cd <repo-root>/frontend && npx prettier --check <files>`: the pre-commit form from `.claude/rules/code-standards.md:100-103`. Neither writes without `--fix` or `--write`. Exit 0 from `npx eslint` means no error-level finding; the `security/*` rules report as warnings, which print without changing the exit code.
+- `cd <repo-root>/frontend && npx eslint --print-config <file> | grep -A12 '"<rule-id>"'`: the rule as it applies to that one file, as JSON. `<rule-id>` is the full id with its plugin prefix, the form a lint report prints, for example `"@typescript-eslint/strict-boolean-expressions"`; the bare `"strict-boolean-expressions"` matches nothing, and `grep` then prints nothing and exits 1. A rule the output does not list at all is not configured for that file. The first number is the severity: 0 off, 1 warn, 2 error, and only 2 fails the run (https://eslint.org/docs/latest/use/configure/rules).
 
 There is no separate typecheck script in `frontend/package.json`: a type or
 template error surfaces when the project is compiled, and `mibolt-verification`
@@ -178,12 +181,12 @@ says which command compiles which project.
 ## 8. References
 
 - [references/frontend-lint-policy.md](references/frontend-lint-policy.md): which config block reaches which files, every rule's options and anchor, the root `CLAUDE.md` rules marked enforced or written only, the relax pass, and the suppressions in the tree. Read when fixing a specific lint error, when reviewing a diff, or when a rule's scope matters.
-- [references/conflict-register.md](references/conflict-register.md): the `as` enforcement scope, the two `Api` construction idioms, inline versus external templates, the zoneless provider, `.scss` files holding plain CSS, how far the design reference reaches, the accessibility override beside the lint preset, and two checks nothing runs, each with its sources and what is left alone. Read when code contradicts a written rule, when two idioms coexist, or before changing anything the register names.
+- [references/conflict-register.md](references/conflict-register.md): the `as` enforcement scope, the two `Api` construction idioms, inline versus external templates, the zoneless provider, `.scss` files written as CSS with Sass line comments in three, how far the design reference reaches, the accessibility override beside the lint preset, and two checks nothing runs, each with its sources and what is left alone. Read when code contradicts a written rule, when two idioms coexist, or before changing anything the register names.
 
 ## 9. Keep this skill current
 
 The skill goes stale when any of these changes: `frontend/eslint.config.mjs`,
-`frontend/tsconfig.json` or a `frontend/projects/*/tsconfig*.json`,
+`frontend/tsconfig.json`, `frontend/tsconfig.e2e.json` or a `frontend/projects/*/tsconfig*.json`,
 `frontend/.prettierrc`, `frontend/.prettierignore`, the `lintFilePatterns` in
 `frontend/angular.json`, the lint tool versions or the `lint`, `format` and
 `format:check` scripts in `frontend/package.json`,

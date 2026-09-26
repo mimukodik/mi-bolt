@@ -8,7 +8,7 @@ which CI job, and which checks a change needs, are not here:
 
 - [The pull-request pipeline](#the-pull-request-pipeline)
 - [The reusable workflows](#the-reusable-workflows)
-- [The post-merge chain](#the-post-merge-chain)
+- [The candidate and deployment chain](#the-candidate-and-deployment-chain)
 - [Changing a path filter or adding a component](#changing-a-path-filter-or-adding-a-component)
 - [Adding a job or a step](#adding-a-job-or-a-step)
 - [Current state worth knowing](#current-state-worth-knowing)
@@ -78,14 +78,16 @@ and the caller names it as `uses: ./.github/workflows/<file>`
   its own project (`.github/workflows/smoke.yml:40-103`).
 
 **CI does not call the root mise tasks.** Apart from
-`.github/workflows/contracts.yml`, every job runs npm or Gradle directly, so a
-mise task and the CI step that does the same thing are two edits.
+`.github/workflows/contracts.yml`, every job runs its tools directly, npm and
+Gradle in the component workflows and `deploy/compose.sh` as well in
+`.github/workflows/smoke.yml`, so a mise task and the CI step that does the
+same thing are two edits.
 `frontend/mise.toml:11-21` and `.github/workflows/frontend.yml:122-134` list
 the same eight build steps, for example, and `frontend/mise.toml:8-9` passes
 `-- --watch=false` to the unit run where `.github/workflows/frontend.yml:62`
 does not.
 
-## The post-merge chain
+## The candidate and deployment chain
 
 `deploy/candidate/README.md` owns how candidates are built, published and
 promoted; this is only the wiring.
@@ -118,7 +120,10 @@ candidate build unless the hash contract changes with it.**
 `path filter diverged from candidate hash contract` on any difference
 (`deploy/candidate/inputs.py:66-70`), and
 `deploy/tests/test-candidate.py:34-40` writes the same lists into its fixture.
-Edit, in one change:
+`Publish Candidate` hashes with the default branch's `inputs.py`
+(`deploy/candidate/publish.py:21`, `deploy/candidate/publish.py:185`), so it
+fails for such a pull request until the change is on `main`. Edit, in one
+change:
 
 1. `.github/components.yml`;
 2. `deploy/candidate/inputs.py:15-20` and
@@ -192,7 +197,7 @@ files; `deploy/candidate/README.md:91-97` runs `actionlint` by hand, and no
 | only `changes` and `ci-ok` ran | the change matched no component | `.github/components.yml`, `docs/monorepo.md:73-74` |
 | a component's workflow was skipped on a pull request touching it | the path is missing from that component's list | `.github/components.yml` |
 | `Candidate Build` failed at "Compute tracked build inputs" | `.github/components.yml` and `deploy/candidate/inputs.py` disagree | "Changing a path filter" above |
-| an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The post-merge chain" above |
+| an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The candidate and deployment chain" above |
 | `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md:120-123` |
 | no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md:108-118`, `deploy/candidate/README.md:24-25` |
 

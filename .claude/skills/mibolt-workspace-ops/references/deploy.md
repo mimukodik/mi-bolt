@@ -16,13 +16,16 @@ or to the chart has to keep in step.
 
 ## The two images
 
-**Build both through Compose; neither Dockerfile builds on its own.** Each
-reads named build contexts that only `deploy/compose.yaml` supplies through
-`additional_contexts` (`deploy/compose.yaml:30-35`,
-`deploy/compose.yaml:60-63`;
+**Build both through Compose.** Each reads named build contexts that
+`deploy/compose.yaml` supplies through `additional_contexts`
+(`deploy/compose.yaml:30-35`, `deploy/compose.yaml:60-63`;
 https://docs.docker.com/reference/compose-file/build/), and
-`frontend/Dockerfile:3-6` says outright that a plain `docker build frontend/`
-cannot build it.
+`frontend/Dockerfile:3-6` says that a plain `docker build frontend/` cannot
+build it. `docker build` takes them as `--build-context name=path` as well
+(https://docs.docker.com/reference/cli/docker/buildx/build/), which is how
+`backend/docs/06-uzembe-helyezes.md:49-56`, in Hungarian, builds the backend
+image by hand; the candidate pipeline builds only from `deploy/compose.yaml`
+(`.github/workflows/candidate.yml:51-60`).
 
 - **`mi-bolt-web`**, `frontend/Dockerfile`. The build stage runs `npm ci`,
   copies the `catalog` context's `catalog.json` to where the admin mock seed
@@ -145,7 +148,9 @@ at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
   rejection cases (`deploy/tests/check-chart.py:138-149`). It writes only to a
   temporary directory.
 - `test-candidate.py`, `test-stable-release.py`, `test-preview-smoke.py` and
-  `test-github-deployment.py` cover the `deploy/candidate/*.py` scripts.
+  `test-github-deployment.py` import `inputs.py`, `publish.py`,
+  `stable_smoke.py`, `preview_smoke.py` and `github_deployment.py` from
+  `deploy/candidate/`; `deploy/candidate/build_metadata.py` has no test.
 - `test-stack.py` covers `deploy/stack.sh` in a throwaway git repository with a
   fake Compose wrapper, and never runs Docker
   (`deploy/tests/test-stack.py:1-14`).
@@ -154,9 +159,9 @@ at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
 `mise.toml` pins only Node and Java (`mise.toml:11-13`), and `check-chart.py`
 calls `helm` as a subprocess (`deploy/tests/check-chart.py:33-42`). CI installs
 Helm v4.2.2 and uv with setup actions (`.github/workflows/candidate.yml:25`,
-`.github/workflows/candidate.yml:29-31`). `deploy:check` is a root task that
-the command tables at `README.md:352-372` and `docs/monorepo.md:30-50` do not
-list.
+`.github/workflows/candidate.yml:29-31`). The root task
+`mise run deploy:check` is in neither command table, `README.md:352-372` nor
+`docs/monorepo.md:30-50`.
 
 `docs/monorepo.md:17` describes `deploy/` as the Compose file and its wrapper;
 the chart, the candidate scripts, the checks above and `deploy/stack.sh` sit

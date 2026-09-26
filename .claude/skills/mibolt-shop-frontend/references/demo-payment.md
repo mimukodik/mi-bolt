@@ -32,7 +32,9 @@ returns to the shop with another full page load and a GET.
   `:paymentIntentId` both render `PaymentPage`; everything else redirects to
   the empty path.
 - `frontend/projects/demo-payment/src/app/payment-page.ts` is the whole
-  feature, with its template and plain `.css` stylesheet beside it.
+  feature, with its template and plain `.css` stylesheet beside it. The root
+  component, `App` (`frontend/projects/demo-payment/src/app/app.ts`), is a
+  shell whose template holds the demo banner and the `<router-outlet>`.
 - The app styles itself with its own `--pay-*` custom properties, declared in
   `frontend/projects/demo-payment/src/styles.css`, not with
   `frontend/projects/storefront/src/styles/tokens.css`. The header of that
@@ -130,9 +132,10 @@ discriminated union in one signal; everything else is `computed`.
   page over the shared MSW Node server: it calls `useMswServer()` itself,
   because the payment app's test target has no `setupFiles`, registers each
   intent answer with `server.use(...)`, and overrides `LOCATION_ASSIGN`.
-- `npm --prefix frontend run build:payment` writes the production build under
-  `frontend/dist/`; `npm --prefix frontend run check:payment-dist` then fails
-  if MSW reached that output.
+- `npm --prefix frontend run build:payment` writes the production build to
+  `dist/demo-payment/` in `frontend/` (`frontend/angular.json:157`);
+  `npm --prefix frontend run check:payment-dist` then fails if MSW reached
+  that output.
 - `npm --prefix frontend run check:payment-boot` serves the app with
   `ng serve` on port 4299 and checks that the mock worker script is served
   under `/demo-fizetes/` (`frontend/scripts/check-app-boot.mjs:1-20`). It

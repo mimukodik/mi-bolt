@@ -37,8 +37,10 @@ In scope:
 - The contract suite: `frontend/tests/contract/`, run through
   `frontend/vitest.contract.config.ts`.
 - `data/catalog/`, `tools/catalog-import/`,
-  `frontend/scripts/build-catalog-fixture.mjs` and
-  `frontend/docs/api/fixtures/catalog.json`.
+  `frontend/scripts/build-catalog-fixture.mjs`,
+  `frontend/docs/api/fixtures/catalog.json`, and
+  `frontend/projects/storefront/public/media/`, a tracked copy of the
+  catalogue images.
 
 Out of scope, and where it goes. Consult an area skill once for each consumer
 the change actually touches, not all of them up front:
@@ -77,9 +79,11 @@ skill.
   | backend interfaces and models, in the Gradle build directory | OpenAPI Generator `spring` (`backend/services/commerce/build.gradle:89-114`), fed the copy `prepareOpenApiSpec` derives (`backend/services/commerce/build.gradle:67-87`) | no: ignored, regenerated before every compile | one controller per tag implements its `<Tag>Api` |
 
 - **If-Match** is left out of both frontend clients' signatures. The
-  storefront and demo-payment attach it with core-api's `withIfMatch`
-  (`frontend/projects/core-api/src/demo-session.interceptor.ts:85`), the admin
-  with its own (`frontend/projects/admin/src/app/core/api/if-match.interceptor.ts:6`).
+  storefront attaches it with core-api's `withIfMatch`
+  (`frontend/projects/core-api/src/demo-session.interceptor.ts:85`), which
+  `demoSessionInterceptor` turns into the header; demo-payment registers that
+  interceptor but calls no operation that takes `If-Match`. The admin uses its
+  own (`frontend/projects/admin/src/app/core/api/if-match.interceptor.ts:6`).
 - **Problem codes** travel as the contract's `ProblemCode` enum
   (`contracts/commerce/openapi.yaml:2315-2343`). The backend's `ErrorCode` must
   match it name for name, because `ProblemAdvice` converts with
@@ -138,17 +142,23 @@ version `mise.toml:12` pins), and it is read-only: it runs only `git grep` and
 
 | `--kind` | The name must appear in the contract as | Spellings searched |
 |---|---|---|
-| `schema` | `#/components/schemas/<Name>`, or a schema key | the name in `contracts/`, its sample files, the generated model file name in kebab case, the Java `api.model.<Name>;` import |
-| `operation` | `operationId: <Name>` | the name as a whole word everywhere, and its generated function file in kebab case |
+| `schema` | `#/components/schemas/<Name>`, or a schema key | the name in `contracts/`, its sample files, an import path ending in `models/<kebab-name>` and a quote, the name as a whole word in files that import the `@mi-bolt/api/models` barrel, and the Java `api.model.<Name>;` import |
+| `operation` | `operationId: <Name>` | the name as a whole word everywhere, its generated function file in kebab case, and the operation's path from the contract, each `{param}` generalised, directly behind a quote, a backtick or `/api/v1`; a line only the path search found is marked `[path]` |
 | `property` | a whole word | the name, and `get` or `set` followed by the name with its first letter capitalised |
 | `enum` | a whole word | the value as written, in upper case and in lower case |
 
 Exit codes: **0** when the name is in the contract as that kind, whether or
 not anything else matched; **1** when it is not, with
-`<Name> is not in the contract as a <kind>; for a new one, use an existing sibling as the template (references/contract-change-chain.md)`
+`<Name> is not in the contract as kind <kind>; for a new one, use an existing sibling as the template (references/contract-change-chain.md)`
 on stderr; **2** for a usage error (a missing or unknown `--kind`, a name that
-is not an identifier), a run from outside the repository root, or a missing
-bucket root (`bucket root missing: <path>; the layout changed, update the script`).
+is not an identifier), a run from outside the repository root, a missing
+bucket root (`bucket root missing: <path>; the layout changed, update the script`),
+or an operation whose method and path cannot be read from the contract
+(`cannot derive the path of <Name> from contracts/commerce/openapi.yaml; the layout changed, update the script`).
+
+The finder takes identifiers only: a numeric enum value such as a `StorageGb`
+size exits 2. Run `--kind schema StorageGb` and `--kind property storageGb`
+instead; the second reaches the catalogue data.
 
 The output sorts hits into 16 buckets by path: contract, generated shop SDK,
 generated admin client, storefront, demo-payment, core-api, admin app, admin
@@ -158,41 +168,65 @@ data and fixture, docs, other. An excerpt of a real run of
 kept and most hit lines cut, so the counts are the full run's:
 
 ```text
-1. contract (1)
+operation: GET /cart (path also searched, each {param} generalised, optionally behind /api/v1)
+1. contract (2)
+  contracts/commerce/kommunikacio.md:60: [path] (below). The `/cart*`, `/checkout*`, `/payment-intents*` and
   contracts/commerce/openapi.yaml:338:       operationId: getCart
 2. generated shop SDK (5)
   frontend/projects/shop-api/src/generated/functions.ts:17: export { getCart as getCart } from './fn/cart/get-cart';
-4. storefront (2)
+4. storefront (29)
+  frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts:192: [path]     expect(requestsTo('GET', '/cart')).toHaveLength(1);
   frontend/projects/storefront/src/app/features/cart/cart.facade.ts:460:       const cart = await firstValueFrom(this.api.invoke(getCart, {}));
-9. shop mocks (7)
+9. shop mocks (33)
   frontend/projects/shop-mocks/src/cart/cart.handlers.ts:164:   const getCart: RequestHandler = http.get('*/api/v1/cart', async ({ request }) => {
-10. contract tests (8)
+10. contract tests (17)
   frontend/tests/contract/schema.spec.ts:94:   'getCart',
-12. backend main (10)
+11. e2e (2)
+12. backend main (13)
   backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java:36: 	public ResponseEntity<Cart> getCart() {
   backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartItem.java:63: 	public Cart getCart() {
-13. backend test (43)
+13. backend test (71)
+  backend/services/commerce/src/test/java/com/example/mi_bolt_backend/cart/CartApiTest.java:55: [path] 		MvcResult first = mockMvc.perform(get("/cart"))
 15. docs (2)
 
-empty buckets: 3. generated admin client, 5. demo-payment, 6. core-api, 7. admin app, 8. admin mocks, 11. e2e, 14. catalogue data and fixture, 16. other
+empty buckets: 3. generated admin client, 5. demo-payment, 6. core-api, 7. admin app, 8. admin mocks, 14. catalogue data and fixture, 16. other
 not searched: backend generated sources under backend/services/commerce/build/generated/openapi (untracked, regenerated by the build)
+path search misses a URL assembled from a constant plus a suffix, or ending in a concatenated parameter
 hits are candidates: confirm each (a word match such as getCart also matches the entity getter CartItem.getCart)
 ```
 
 Read it this way:
 
-- **`empty buckets:` is the line that matters.** A new shop operation whose
-  `shop mocks` bucket is empty is exactly the gap `operation-matrix` reports.
+- **The first line is the operation as the contract declares it.** Its path
+  is searched as well as its name, because the mocks and the backend API tests
+  address an operation by method and URL and name it in a comment at most; a
+  line only that search found is marked `[path]`. When other operations share
+  the path, a `path shared with:` line names them, and a `[path]` hit may be
+  theirs: `--kind operation addCartItem` prints
+  `path shared with: DELETE clearCart`.
+- **A path with no quote, backtick or `/api/v1` right in front of it is not a
+  path hit**, which keeps most prose out. The contract's own path key, two
+  lines above `contracts/commerce/openapi.yaml:338`, is such a line; the
+  `operationId:` line the name search finds stands for it.
+- **`empty buckets:` is where to look next, not a verdict.** The path search
+  does not see a URL assembled from a constant plus a suffix, such as the one
+  `archiveUrl` builds at
+  `frontend/projects/admin/src/testing/mock-spec-helpers.ts:60`, nor one
+  ending in a concatenated parameter, such as `get("/admin/products/" + id)`
+  at
+  `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/admin/catalog/AdminProductReplaceApiTest.java:231`,
+  which the `getAdminProduct` run leaves out. Search for those two shapes by
+  hand when a bucket you expect to hold a consumer is empty. On 2026-09-26
+  each of the 34 operations had hits in `backend test` and in the mock bucket
+  of its own side, shop or admin.
 - **Hits are candidates.** `CartItem.java:63` above is an entity getter that
-  shares the name, not the operation.
-- **An empty bucket is not proof.** The admin mocks match requests by URL and
-  never name an operation; search the path as well
-  ([references/contract-change-chain.md](references/contract-change-chain.md),
-  section 1).
+  shares the name, not the operation, and `kommunikacio.md:60` is prose.
 - **For an error code use `--kind enum`.** `--kind enum PRICE_CHANGED` ran on
   the same day with exit 0 and hits in the contract (11), both generated
   clients (5 and 2), the storefront (25), shop mocks (4), the contract tests
   (1), e2e (1), backend main (7) and test (8), and docs (7).
+  `--kind schema ProblemCode` searches the schema name rather than its values
+  and finds no storefront hit at all.
 
 ### The fan-out order
 
@@ -211,11 +245,14 @@ Read it this way:
 5. **Catalogue fixture**, when catalogue data or the `Product` shape changed:
    `npm --prefix frontend run fixtures:catalog`, then
    `npm --prefix frontend run fixtures:catalog:check`.
-6. **Stage the regenerated clients with the contract change.** `api:drift`
+6. **Keep the regenerated clients with the contract change.** `api:drift`
    compares them with the index, so it passes only once they are staged or
-   committed ([references/codegen.md](references/codegen.md), section 3). How
-   the rest splits into commits is `.claude/rules/session-lifecycle.md`
-   ("One commit, one logical change").
+   committed ([references/codegen.md](references/codegen.md), section 3).
+   Whoever commits stages both generated directories together with the
+   contract; a spawned agent whose task does not tell it to stage names both
+   directories in its report instead (`.claude/rules/session-lifecycle.md`,
+   "The commit belongs to the orchestrator"). How the rest splits into commits
+   is `.claude/rules/session-lifecycle.md` ("One commit, one logical change").
 7. **Verify** through `mibolt-verification`.
 
 ### By kind of change
@@ -230,7 +267,7 @@ Read it this way:
 | an If-Match or header change | the callers' `withIfMatch`, the contract suite's header sets | section 8 |
 | a removal or a rename | everything the finder lists, in one change | section 9 |
 | a core-api helper | the export, and an explicit opt-in in each app | section 10 |
-| catalogue data | the fixture, the admin seed, the loader's empty-database rule | [references/catalog-data.md](references/catalog-data.md) |
+| catalogue data | the fixture, the admin seed, the loader's empty-database rule, and for an image its copy under `frontend/projects/storefront/public/media/` | [references/catalog-data.md](references/catalog-data.md) |
 
 The sections are in
 [references/contract-change-chain.md](references/contract-change-chain.md).
@@ -261,9 +298,12 @@ One line each; the source named owns the rule.
   discriminated subtype goes through
   `backend/docs/decisions/0001-openapi-generator-and-discriminator-workaround.md`
   first ([references/codegen.md](references/codegen.md), section 4).
-- **Running the catalogue importer calls an external site**: ask first, per
-  `.claude/CLAUDE.md` ("An outward-facing action is never a passenger in a
-  bigger yes").
+- **Running the catalogue importer scrapes yettel.hu**: ask the user first and
+  name the scrape in the question itself, per `.claude/CLAUDE.md` ("An
+  outward-facing action is never a passenger in a bigger yes"); a spawned agent
+  does not run it and names the need in its report. A change that an edit to
+  `data/catalog/catalog.json` can make needs no importer run
+  ([references/catalog-data.md](references/catalog-data.md), section 2).
 - **Only the `playwright-test-*` agents write end-to-end specs**
   (`.claude/rules/code-standards.md:146`).
 
@@ -271,15 +311,15 @@ One line each; the source named owns the rule.
 
 | Step skipped | What fails | Where it runs |
 |---|---|---|
-| regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json:32`) | the `api-drift` CI job (`.github/workflows/frontend.yml:136-159`), `mise run api:drift`, `mise run verify` |
+| regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json:32`) | the `api-drift` CI job (`.github/workflows/frontend.yml:136-159`), `mise run api:drift`, `mise run verify` (`mise.toml:67-74`) |
 | leaving a generated file as hand-edited | the same `api:drift`, since regeneration overwrites the edit | as above |
-| updating a spec example or a sample the change invalidated | examples: `frontend/tests/contract/schema.spec.ts:177`; samples: `contracts/check-samples.sh` | `npm --prefix frontend run test:contract`; `mise run contracts:check` and the Contracts CI workflow (`.github/workflows/contracts.yml:24-25`) |
-| moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts:123-127`; for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts:35`) and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts:88-108`) | `npm --prefix frontend run test:contract` |
+| updating a spec example or a sample the change invalidated | examples on a shop operation: `frontend/tests/contract/schema.spec.ts:177`; samples: `contracts/check-samples.sh` | `npm --prefix frontend run test:contract`; `mise run contracts:check` and the Contracts CI workflow (`.github/workflows/contracts.yml:24-25`) |
+| moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts:123-127`, and for an admin operation `frontend/tests/contract/sdk-split.spec.ts:141`; for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts:35`) and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts:88-108`) | `npm --prefix frontend run test:contract` |
 | a shop-mocks handler for a new shop operation | `operation-matrix` parity, "MSW handlers missing for" (`frontend/tests/contract/operation-matrix.spec.ts:135-145`) | `npm --prefix frontend run test:contract` |
 | updating the replacement for an edited discriminator block | `prepareOpenApiSpec`'s exactly-once guard (`backend/services/commerce/build.gradle:73-80`) | every backend compile |
-| matching the `ErrorCode` and `ProblemCode` names | nothing at compile time. A `ProblemCode` with no `ErrorCode` is never sent; an `ErrorCode` with no `ProblemCode` throws `IllegalArgumentException` in the strict `valueOf` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:366`) the first time that error is rendered | the backend API test that provokes the code |
+| matching the `ErrorCode` and `ProblemCode` names | `ErrorCodeTest`, which pins the two enums to the same names in both directions and the number of `ErrorCode` constants to 26 (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java:28-53`); nothing fails at compile time, and at run time an `ErrorCode` with no `ProblemCode` would throw `IllegalArgumentException` in the strict `valueOf` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:366`, https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Enum.html) | the backend unit tests, `backend/gradlew -p backend :services:commerce:test`, and every backend build |
 | a backend controller method for a new operation | nothing at compile time: the generated interface supplies a default method ([references/codegen.md](references/codegen.md), section 4) | a backend API test for the operation, or the app on the real backend |
-| following a generated model change in shop-mocks | its code stops type-checking: 14 files under `frontend/projects/shop-mocks/src/` import `@mi-bolt/api/models/*` | every command that compiles shop-mocks; `mibolt-verification` names them |
+| following a generated model change in shop-mocks | its code stops type-checking: 14 files under `frontend/projects/shop-mocks/src/` import generated models, 10 through `@mi-bolt/api/models/*` and 4 through the `@mi-bolt/api/models` barrel | every command that compiles shop-mocks; `mibolt-verification` names them |
 | an admin mocks handler for a new admin operation | nothing: no contract test covers the admin mocks | the admin app in a browser |
 | regenerating the catalogue fixture after a data change | `fixtures:catalog:check` exits 1, but it is manual-only: no workflow or mise task runs it. The contract suite catches only a changed product count or a product `Product` rejects (`frontend/tests/contract/schema.spec.ts:512-514`, `frontend/tests/contract/schema.spec.ts:571-585`) | `npm --prefix frontend run fixtures:catalog:check`, run by hand |
 
@@ -293,17 +333,17 @@ the full set for a change and how CI maps onto them.
 
 | Command | What it proves | Side effects |
 |---|---|---|
-| `node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | every non-empty bucket has been handled or confirmed as a false positive | none |
-| `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
+| `node .claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
+| `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`); `-checkonly` is PlantUML's legacy spelling, no longer documented: the current CLI lists `--check-syntax`, "Check diagram syntax without generating images" (https://plantuml.com/command-line), and keeps legacy options for a transition period (https://github.com/plantuml/plantuml/issues/2377) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
 | `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:16-22`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
-| `mise run api:drift` | the committed clients match the committed contract | rewrites both client directories: a shared resource, as in the fan-out order |
+| `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites both client directories: a shared resource, as in the fan-out order |
 | `npm --prefix frontend run fixtures:catalog:check` | the committed fixture matches `data/catalog/catalog.json`; silent exit 0 when it does | none |
 | `mise run api:generate`, `npm --prefix frontend run fixtures:catalog` | nothing: these write, they do not check | rewrite generated files |
 
 Done means: the finder's buckets are accounted for, the contract checks and the
-contract suite pass, `api:drift` passes with the regenerated clients staged
-beside the contract, and each consumer's own checks have passed through its
-skill and `mibolt-verification`.
+contract suite pass, the regenerated clients are staged beside the contract (or
+named in the report for whoever commits) so that `api:drift` can pass, and each
+consumer's own checks have passed through its skill and `mibolt-verification`.
 
 Tool references: vacuum, https://quobix.com/vacuum/commands/lint/;
 check-jsonschema, https://check-jsonschema.readthedocs.io/en/stable/usage.html;
@@ -345,10 +385,13 @@ Update this skill and its references in the same change as any of these:
 - `frontend/projects/core-api/src/public-api.ts`;
 - `data/catalog/catalog.schema.json` or
   `frontend/scripts/build-catalog-fixture.mjs`;
+- how `frontend/projects/storefront/public/media/` is filled or read, today a
+  copy of `data/catalog/images/` that no tracked file regenerates;
 - the counts and lists in `frontend/tests/contract/` that the chains cite;
 - the finder's bucket roots, `BUCKET_ROOTS` in
   `.claude/skills/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs`;
-  its exit 2 with `bucket root missing` is the signal that the layout moved.
+  its exit 2 with `bucket root missing` or `cannot derive the path` is the
+  signal that the layout moved.
 
 Check every path, anchor and command cited here with
 `node .claude/skills/mibolt-project-map/scripts/check-skill-references.mjs .claude/skills/mibolt-cross-package-changes`;
