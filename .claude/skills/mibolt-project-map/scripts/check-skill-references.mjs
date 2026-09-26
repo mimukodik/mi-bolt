@@ -691,7 +691,7 @@ function checkFile(absPath, skillDir, repoRoot, ctx, options) {
     const name = citationMatch[2] ?? citationMatch[4];
     const lineNo = lineNumberAtOffset(lineOffsets, indexMap[citationMatch.index]);
     const citationToken = `${target} "${name}"`;
-    const targetKind = classifySectionTarget(splitAnchor(target).base);
+    const targetKind = SKILL_NAME_RE.test(target) ? 'skill' : classifySectionTarget(splitAnchor(target).base) === 'path' ? 'path' : 'none';
     if (targetKind === 'none') continue; // not a citation: a flag or a bare value
 
     if (targetKind === 'skill') {
