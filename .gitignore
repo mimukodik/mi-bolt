@@ -329,3 +329,7 @@ blob-report/
 
 # Deployment helper bytecode
 /deploy/**/__pycache__/
+
+
+scripts/coder-agent
+.claude/skills/coder-agent-runner
