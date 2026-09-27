@@ -341,6 +341,11 @@ machine fails on every other, CI included.
   a changed catalogue or `MIBOLT_DEMO_*` value take effect. Where one of those
   cases calls for it and the user has not asked for a reset, ask the user
   first, because it deletes every local row (`backend/README.md:82-83`).
+  Under `mise run backend` and `mise run dev` a changed `MIBOLT_DEMO_*` value
+  also has to be exported in the shell the task is run from, because the
+  `.env` `deploy/compose.sh` creates reaches the containers only
+  ([references/run-modes.md](references/run-modes.md), "Environment
+  variables").
 - **Pin images by digest,** as every base image in both Dockerfiles and the
   PostgreSQL image in `deploy/compose.yaml:10` are. An image's published tag is
   a hash of tracked files (`deploy/candidate/README.md:27-29`), so only a

@@ -111,7 +111,13 @@ from them, defaulting to the dev servers' 4210 and 4200 for
 ## Environment variables
 
 Names and purposes only. The defaults live in the files named, and
-`deploy/.env.example` is the list a developer edits.
+`deploy/.env.example` is the list a developer edits. The `.env`
+`deploy/compose.sh` creates from it reaches the containers only. In
+`mise run backend` and `mise run dev` the backend is a plain `bootRun`
+(`backend/mise.toml:15-16`), so each variable the table lists as read by the
+backend comes from the shell the task is run from, or else from the default
+the backend carries for it (`deploy/.env.example:8-9`). Export a native-mode
+override in that shell before the task runs.
 
 | Variable | Read by | Purpose |
 |---|---|---|
@@ -194,7 +200,7 @@ log files. `tools/dev-server/dev-server.test.ts` covers it.
 | `up --wait` fails on `commerce` | readiness answers only after the catalogue loader and the admin bootstrap have run (`backend/services/commerce/src/main/resources/application.properties:67-68`); the health check allows a 20-second start period and 30 retries 5 seconds apart | `deploy/compose.yaml:51-56`; read `deploy/compose.sh logs commerce` |
 | a port is already bound | another mode, a second stack or a leftover static server holds it | the ports table at `README.md:229-239`; `tools/dev-server/dev-server.sh status <port>` for a server it started |
 | the payment step redirects to 4210 under the full stack | Compose ran without the origin variables `mise run stack` sets | `mise.toml:52-56` |
-| a changed `MIBOLT_DEMO_*` value has no effect | the demo user is created only while its table is empty, and `stop` keeps the volume | `backend/README.md:27-28` |
+| a changed `MIBOLT_DEMO_*` value has no effect | the demo user is created only while its table is empty, and `stop` keeps the volume; in `mise run backend` and `mise run dev`, also a value edited in the `.env` beside the Compose file, which never reaches `bootRun` | `backend/README.md:27-28`; for the native backend, "Environment variables" above |
 | `docker build frontend/` fails on `catalog` | the image needs the named `catalog` context, which a plain `docker build` does not supply; build through Compose | `frontend/Dockerfile:3-6` |
 | the dev server aborts with "Lazy deopt after a fast API call" | `ng serve` started without the `start*` scripts | `frontend/README.md:30` |
 | PostgreSQL still runs after Ctrl+C in `backend` or `dev` | Ctrl+C stops only the foreground processes | `mise run stop` (`README.md:156-159`) |
