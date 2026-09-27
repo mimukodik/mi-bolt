@@ -23,15 +23,16 @@ repository root. Every command runs from the repository root, as
 `mibolt-workspace-ops` ("Where commands run") sets out, except the citation
 checker, `mibolt-project-map/scripts/check-skill-references.mjs`, which runs
 as written from the directory that holds the MiBolt skills (see "Keep this
-skill current"). A script path inside any other command follows the rules
-above too, so one that starts with a skill name does not resolve from the
-root as typed: replace it with that file's path from the root before running
-it. In
-`node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs`, the
-script is the finder in this skill's own `scripts/` directory, and typed as
-it stands the command exits 1 with `Cannot find module`. The finder stays at
-the root even so: it searches the repository it is started in, and from the
-directory that holds the MiBolt skills it exits 2.
+skill current"). The consumer finder, this skill's own
+`scripts/find-contract-consumers.mjs`, is printed with a
+`<directory that holds the MiBolt skills>` placeholder: replace it with that
+directory's path, absolute or from the root; that directory is the parent of
+this skill's own directory. With a path that starts at the skill name
+instead, the command exits 1 with `Cannot find module`, because such a path
+is read from the directory that holds the MiBolt skills and does not resolve
+from the root. The finder stays at the root even so: it searches the
+repository it is started in, and from the directory that holds the MiBolt
+skills it exits 2.
 
 ## Scope and hand-offs
 
@@ -147,8 +148,15 @@ Canonical examples, one per mechanism:
 
 ### Find every consumer first
 
-Run `node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>`
-from the repository root, which it reads as the repository to search. It needs a git
+Run the consumer finder from the repository root, which it reads as the
+repository to search, with the directory placeholder replaced as the opening
+paragraph says:
+
+```text
+node <directory that holds the MiBolt skills>/mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>
+```
+
+It needs a git
 checkout, git and Node 26 (the version `mise.toml:12` pins), and it is
 read-only: it runs only `git grep` and `git ls-files`, over tracked files,
 leaving out the top-level directory that holds the MiBolt skills so that no
@@ -357,7 +365,7 @@ the full set for a change and how CI maps onto them.
 
 | Command | What it proves | Side effects |
 |---|---|---|
-| `node mibolt-cross-package-changes/scripts/find-contract-consumers.mjs --kind <kind> <Name>` | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
+| the consumer finder, the command under "Find every consumer first" | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
 | `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`); `-checkonly` is PlantUML's legacy spelling, no longer documented: the current CLI lists `--check-syntax`, "Check diagram syntax without generating images" (https://plantuml.com/command-line), and keeps legacy options for a transition period (https://github.com/plantuml/plantuml/issues/2377) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
 | `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:16-22`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
 | `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites the tracked files in both client directories before it compares them, as `api:generate` does |
