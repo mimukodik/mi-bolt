@@ -207,9 +207,12 @@ workflow, or a trigger that does not fire: read
 ### Run a second stack beside the default one
 
 - **From a linked worktree:** `deploy/stack.sh up --build` claims a slot with
-  its own project, volume and ports; `deploy/stack.sh ports` prints them, and
+  its own project, volume and ports, and `deploy/stack.sh ports` prints them.
+  To stop that stack and keep its data, `deploy/stack.sh stop` stops its
+  containers and `deploy/stack.sh down` removes them with their network; both
+  keep the volume and the slot (`deploy/stack.sh:482-490`).
   `deploy/stack.sh reset --yes` deletes that worktree's volume and frees the
-  slot before the worktree is removed.
+  slot (`deploy/stack.sh:593-595`); run it before the worktree is removed.
 - **From the main checkout**, where `deploy/stack.sh` refuses to run: export
   `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME` and the three port
   variables (`deploy/.env.example:18-23`), on ports that neither the table at
