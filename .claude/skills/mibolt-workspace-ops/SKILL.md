@@ -160,8 +160,9 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    (`mise.toml:100-102`) is in neither.
 6. When the workspace as a whole should pass it, add it to `verify`'s `depends`
    (`mise.toml:67-74`). What a `verify` run writes, and that a run can leave a
-   tracked file outside the change modified, is in `mibolt-verification`
-   ("What a check writes or starts").
+   tracked file outside the change modified, is in
+   `mibolt-verification/references/commands.md` ("What a check writes or
+   starts").
 7. CI never runs a root task, so a check that CI should run also needs a step
    in its workflow; [references/ci-cd.md](references/ci-cd.md) has the shape.
    The edit itself still runs component workflows in CI, because every
@@ -445,5 +446,5 @@ add `--show-anchors` to print each anchored line's current text, so a reader
 can judge whether it still says what this skill claims. Run the checker again
 after an edit to `mibolt-verification`, whose "Browser pass" and "What a check
 writes or starts" sections this skill cites by name: its check (e) fails such a
-citation only once the name occurs nowhere in that skill, so also reread each
-section against the sentence here that cites it.
+citation only once the name occurs nowhere in the skill or file it names, so
+also reread each section against the sentence here that cites it.

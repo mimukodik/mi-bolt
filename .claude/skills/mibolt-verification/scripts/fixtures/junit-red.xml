@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.mi_bolt_backend.admin.catalog.AdminMediaServiceTest" tests="2" skipped="0" failures="1" errors="0" timestamp="2026-09-27T02:04:33.653Z" hostname="localhost" time="2.649">
+  <properties/>
+  <testcase name="aViolationWithoutAStoredRowIsRethrown()" classname="com.example.mi_bolt_backend.admin.catalog.AdminMediaServiceTest" time="0.424">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;1&gt; but was: &lt;2&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;1&gt; but was: &lt;2&gt;
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:158)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+	at com.example.mi_bolt_backend.admin.catalog.AdminMediaServiceTest.aViolationWithoutAStoredRowIsRethrown(AdminMediaServiceTest.java:57)
+</failure>
+  </testcase>
+  <testcase name="losingTheInsertRaceAnswersTheStoredRow()" classname="com.example.mi_bolt_backend.admin.catalog.AdminMediaServiceTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[<testcase name="notATest()" classname="text.in.captured.Output"><failure message="must not be read"/></testcase>]]></system-err>
+</testsuite>

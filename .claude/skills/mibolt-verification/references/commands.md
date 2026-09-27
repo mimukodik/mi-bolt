@@ -5,13 +5,15 @@ row names where the command is defined, what it needs beyond the checkout,
 and one or more side-effect classes. Invoke every command from the repository
 root unless its row says otherwise. Which commands a given diff needs is in
 this skill's command matrix reference, and the outputs these commands share
-are described in `SKILL.md` ("What a check writes or starts").
+are described under "What a check writes or starts" below.
 
 ## Contents
 
 - [Side-effect classes](#side-effect-classes)
+- [What a check writes or starts](#what-a-check-writes-or-starts)
 - [Discovery](#discovery)
 - [The changed-paths script](#the-changed-paths-script)
+- [The gate-output summarizer](#the-gate-output-summarizer)
 - [Frontend](#frontend)
 - [Backend](#backend)
 - [Contract, tools, deploy](#contract-tools-deploy)
@@ -28,6 +30,38 @@ are described in `SKILL.md` ("What a check writes or starts").
 - **rewrites tracked files**: can change tracked files in the tree;
 - **starts processes or ports**: starts a server, a container or a listener;
 - **needs a missing tool**: needs a tool that no `mise.toml` installs.
+
+## What a check writes or starts
+
+- **Coverage reports.** `npm --prefix frontend run test` with no project name
+  runs all five projects (https://angular.dev/cli/test) and rewrites all five
+  reports in `frontend/`: `coverage/unit/` for the storefront and
+  `coverage/<project>/` for the other four, whichever project the change
+  touched. A later run in the same checkout overwrites them, so after runs in
+  sequence they are the last run's; runs that overlap can leave a mix of both.
+- **Build output and port 4299.** Every build writes `dist/<app>/` in
+  `frontend/`. A `check:*-dist` script reads whatever the last build there
+  left, so run the matching build first in the same checkout; with no dist at
+  all it exits 2 (`frontend/scripts/check-dist-free-of.mjs:19-20`). Both boot
+  checks serve on port 4299, one after the other.
+- **Generated clients.** `api:drift` and `api:generate` rewrite
+  `frontend/projects/shop-api/src/generated/` and
+  `frontend/projects/admin/src/app/api/generated/`. A drift failure leaves the
+  regenerated files in the tree.
+- **Gradle output.** Test reports, `jacoco/*.exec`, PMD reports and the jar go
+  to `build/` in `backend/services/commerce/`. The coverage verification reads
+  every `*.exec` it finds in `build/jacoco/`
+  (`backend/services/commerce/build.gradle:172`).
+- **The database.** `smoke.sh` creates carts and orders in whatever backend it
+  calls.
+- **`mise run verify`** writes the coverage reports, the build output, the
+  generated clients and the Gradle output above, and binds port 4299; it runs
+  neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:67-74`). It can
+  also leave a tracked file outside the change modified, so read
+  `git status --short` after it. mise runs up to four tasks at once, and
+  `depends` sets no order among the tasks it lists
+  (https://mise.jdx.dev/tasks/running-tasks.html), so its checks can overlap
+  one another in the one checkout.
 
 ## Discovery
 
@@ -88,6 +122,87 @@ frontend files for npx prettier --check (run from frontend/):
 frontend files neither command takes:
   (none)
 ```
+
+## The gate-output summarizer
+
+`SKILL.md` ("Gates before a commit") gives the command line and says when a
+subcommand stands in for its gate; the header of
+`scripts/summarize-gate-output.mjs` is the full usage text. It needs the Node
+version `mise.toml:12` pins and whatever its gate needs, in the rows below.
+
+- **What each subcommand runs.** `frontend-test` runs
+  `npm --prefix frontend run test -- <arguments> --reporters minimal --no-watch`,
+  the arguments being any given after the subcommand, such as a project name,
+  `--include` or `--no-coverage` as `SKILL.md` step 3 uses them; it adds
+  `--no-watch` itself. `frontend-lint <files>` runs
+  `npx eslint --format json -o <report> <files>` from `frontend/`, the files
+  being those `SKILL.md` step 1 lists for `npx eslint`, relative to
+  `frontend/`: a path written from the repository root matches no file there,
+  and ESLint exits 2. `frontend-lint` alone runs
+  `npm --prefix frontend run lint` with ESLint's JSON format, one report per
+  project, over every file each project's configuration reaches rather than
+  the changed ones, so it is not the gate. `frontend-build` and `backend-build` run
+  `npm --prefix frontend run build` and
+  `backend/gradlew -p backend :services:commerce:build` unchanged. The
+  Prettier check has no subcommand, since its own output names only the
+  unformatted files; it runs as the gate list gives it.
+- **Output.** In order: `$ ` and the command run; one line per error, then one
+  per warning, as `<location> <name> — <message>`, with ` (warning)` after the
+  name of a warning; for `backend-build`, Gradle's `* What went wrong:`
+  blocks, at most 40 lines of them; one count line per project, per ESLint
+  run or per gate task; and last, `exit <code>; full log: <path> (<n> lines)`.
+  The location is `path:line[:column]` from the repository root, the column
+  1-based, where the output gives a line; the bare path where it gives only a
+  file, as for a JaCoCo class rule; and otherwise the project, test class or
+  task. The name is the ESLint or PMD rule, the test as
+  `<suite> > <test>` or an unhandled error's heading, a compiler code such as
+  `TS2322` or `NG8002`, `javac`, `coverage` or `build`. A message stops at 500
+  characters. A coverage figure under its project's floor in
+  `frontend/angular.json` becomes the error line
+  `<project> coverage — <metric> <value>% is below the floor of <floor>%`, and
+  each `frontend-test` count line gives the figures as value/floor, or
+  `coverage: no report from this run` when this run wrote no
+  `coverage-summary.json`, as under `--no-coverage`. When the gate exits
+  non-zero with no error line printed, nor for `backend-build` a
+  `* What went wrong:` block, the lines before the last are
+  `no failure recognised in the output; the last <n> log lines:` and up to 40
+  lines from the end of the log.
+- **Exit codes.** The gate's own, whatever the summary shows; 1 when a signal
+  stopped the gate, with `(killed by <signal>)` after the code on the last
+  line; 2 as well, with a message on standard error and nothing on standard
+  output, when the gate could not be run: a usage error, a working directory
+  with no `.git`, or a command that failed to start. A gate's own 2, such as
+  ESLint's when a file pattern matches nothing, comes with the summary and its
+  `exit 2; full log:` line.
+- **What it leaves behind.** Its gate's side effects, under "What a check
+  writes or starts" above and in the rows below, and a new `gate-output-`
+  directory under the system temp directory holding the log and, for
+  `frontend-lint`, ESLint's reports, which the script does not delete. With
+  files, `frontend-lint` reads its findings from the report, so its log can
+  be empty.
+- **Keeping the summarizer current.** It recognises failures by the shape of
+  what its gates print and write, and a shape that changes drops lines from
+  its summary while the exit code stays right. So after an upgrade of Vitest,
+  `@angular/build`, `@angular-eslint/builder`, ESLint or Gradle, or an edit to
+  anything in the list that follows, re-run the subcommand that reads it and
+  compare the summary with the full log it names. It reads the `FAIL` blocks
+  of Vitest's `minimal` reporter and the `Using Vitest configuration file:`
+  line before each project's run; the build's `✘ [ERROR]` and `▲ [WARNING]`
+  blocks and, outside them, the patterns at
+  `frontend/scripts/build-check.mjs:41`; ESLint's JSON format and `ng lint`'s
+  `{projectName}` placeholder; Gradle's `> Task`, `* What went wrong:` and
+  `tests completed` lines, the javac, PMD and JaCoCo lines it passes through,
+  PMD's there only because `backend/services/commerce/build.gradle:224` turns
+  its console output on, and the count line
+  `backend/services/commerce/build.gradle:267` logs; each project's
+  `coverage-summary.json`, which the `json-summary` entry of its
+  `coverageReporters` writes to the directory its `vitest.config.ts` names;
+  and the JUnit XML under `build/test-results/` in
+  `backend/services/commerce/`.
+
+`scripts/summarize-gate-output.test.mjs` asserts the exact lines printed for
+recorded output of each gate; its header lists the recordings under
+`scripts/fixtures/`.
 
 ## Frontend
 

@@ -373,6 +373,27 @@ Before every commit, run each of these and read its exit code:
 `build` builds the storefront alone, so step 2 adds the other apps' builds
 and checks when they changed.
 
+**A gate can also run through `scripts/summarize-gate-output.mjs`**, which
+prints the command, one line per error or warning, a count line per project
+or task, and last the gate's exit code with the path of a log holding the
+whole output. It runs the gate in the checkout it is started in, so it runs
+from the repository root; from this skill's directory it exits 2. Replace the
+placeholder with the path, absolute or from the root, of the directory that
+holds the MiBolt skills, the parent of this skill's own directory:
+
+```text
+node <directory that holds the MiBolt skills>/mibolt-verification/scripts/summarize-gate-output.mjs frontend-test
+node <directory that holds the MiBolt skills>/mibolt-verification/scripts/summarize-gate-output.mjs frontend-lint <files relative to frontend/>
+node <directory that holds the MiBolt skills>/mibolt-verification/scripts/summarize-gate-output.mjs frontend-build
+node <directory that holds the MiBolt skills>/mibolt-verification/scripts/summarize-gate-output.mjs backend-build
+```
+
+The commands in the list stay the gates, and either form of one may be run,
+since each subcommand runs its gate with only the output format changed and
+exits with the gate's own exit code. What each subcommand runs and takes, its
+output, its exit codes and the Prettier check it leaves out are in
+`references/commands.md` ("The gate-output summarizer").
+
 ### Pre-existing failures
 
 A red test or lint result is pre-existing only when
@@ -387,35 +408,9 @@ change's own, whatever the branch diff says.
 
 ## What a check writes or starts
 
-- **Coverage reports.** `npm --prefix frontend run test` with no project name
-  runs all five projects (https://angular.dev/cli/test) and rewrites all five
-  reports in `frontend/`: `coverage/unit/` for the storefront and
-  `coverage/<project>/` for the other four, whichever project the change
-  touched. A later run in the same checkout overwrites them, so after runs in
-  sequence they are the last run's; runs that overlap can leave a mix of both.
-- **Build output and port 4299.** Every build writes `dist/<app>/` in
-  `frontend/`. A `check:*-dist` script reads whatever the last build there
-  left, so run the matching build first in the same checkout; with no dist at
-  all it exits 2 (`frontend/scripts/check-dist-free-of.mjs:19-20`). Both boot
-  checks serve on port 4299, one after the other.
-- **Generated clients.** `api:drift` and `api:generate` rewrite
-  `frontend/projects/shop-api/src/generated/` and
-  `frontend/projects/admin/src/app/api/generated/`. A drift failure leaves the
-  regenerated files in the tree.
-- **Gradle output.** Test reports, `jacoco/*.exec`, PMD reports and the jar go
-  to `build/` in `backend/services/commerce/`. The coverage verification reads
-  every `*.exec` it finds in `build/jacoco/`
-  (`backend/services/commerce/build.gradle:172`).
-- **The database.** `smoke.sh` creates carts and orders in whatever backend it
-  calls.
-- **`mise run verify`** writes the coverage reports, the build output, the
-  generated clients and the Gradle output above, and binds port 4299; it runs
-  neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:67-74`). It can
-  also leave a tracked file outside the change modified, so read
-  `git status --short` after it. mise runs up to four tasks at once, and
-  `depends` sets no order among the tasks it lists
-  (https://mise.jdx.dev/tasks/running-tasks.html), so its checks can overlap
-  one another in the one checkout.
+`references/commands.md` ("What a check writes or starts") lists what each
+check overwrites, binds or leaves behind; read it before running two checks
+in one checkout, and when a report or `git status` looks like another run's.
 
 ## Detailed material
 
@@ -478,6 +473,10 @@ The changed-paths script reads the CI files live and needs no edit when a
 component or job changes, unless `.github/components.yml` gains a pattern
 beyond `**`, `*`, `?` and literals: it then exits 2 with
 `unsupported pattern <p> in .github/components.yml` and has to be extended.
+
+After an upgrade of Vitest, `@angular/build`, `@angular-eslint/builder`, ESLint
+or Gradle, or an edit to a file the gate-output summarizer reads, re-check it
+as `references/commands.md` ("Keeping the summarizer current") says.
 
 An edit to a file this skill cites a section of by name (today
 `frontend/README.md`, `backend/README.md`, the skills
