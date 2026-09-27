@@ -479,7 +479,7 @@ references that describes it, in the same change:
   below prints each anchor beside its target file, so search that output for
   the files the change touched.
 
-Then check that every path, anchor and command here still resolves:
+Then, from the directory that holds the MiBolt skills, check that every path, anchor and command here still resolves:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs mibolt-shop-frontend
