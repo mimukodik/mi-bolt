@@ -10,7 +10,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 ## Contents
 
-- C1. The `as` ban: written for every file, linted in admin alone
+- C1. The `as` ban: written for every file, linted in admin and two contract files
 - C2. Two ways to construct the shop `Api`
 - C3. Inline templates preferred, external templates in use
 - C4. The zoneless provider, explicit in two apps and omitted in one
@@ -21,7 +21,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 - C9. Inferred types preferred, return types required
 - C10. The `async` pipe written, subscriptions into signals observed
 
-## C1. The `as` ban: written for every file, linted in admin alone
+## C1. The `as` ban: written for every file, linted in admin and two contract files
 
 - **Written**: `as` is forbidden for the whole workspace, and what replaces one depends on what it did (`SKILL.md`, "Types").
 - **Linted as written**: `consistent-type-assertions` with `assertionStyle: 'never'` covers `projects/admin/**/*.ts` (`frontend/eslint.config.mjs:389-391`) and two contract files (`frontend/eslint.config.mjs:441-443`), and the comment beside the second says "the older contract suites are not covered yet" (`frontend/eslint.config.mjs:440`). Everywhere else in `projects/` the rule runs at its default options, which accept `x as T` (https://typescript-eslint.io/rules/consistent-type-assertions/), and the rest of `frontend/tests/` and all of `frontend/e2e/` do not run it at all.

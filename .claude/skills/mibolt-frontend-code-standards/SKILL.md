@@ -47,8 +47,8 @@ costs:
 - **conflict**: two sources disagree, or the code does what a written rule words differently. Read [references/conflict-register.md](references/conflict-register.md) before changing anything it names.
 
 A rule that is only written is still a rule. The `as` ban is written for the
-whole workspace and linted in the admin app alone; the narrower lint scope does
-not narrow the rule.
+whole workspace and linted only in the admin app and in two contract files
+(section 5, "Types"); the narrower lint scope does not narrow the rule.
 
 Section 5 states the written rules for this code, and the lint policy
 reference, section 7, marks which of the Angular and TypeScript ones a tool
