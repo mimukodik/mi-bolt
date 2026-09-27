@@ -401,8 +401,10 @@ npm --prefix frontend run ng -- test storefront --include projects/storefront/sr
   `projects/<project>/src/...`, or at a quoted `'**/<name>.spec.ts'` glob.
   Point at the spec rather than its source file: `checkout.facade.ts` does
   not select `checkout-facade.spec.ts`. Add `--list-tests` to the first run
-  and read the files it prints, because a pattern that selects nothing still
-  exits 0. `--no-coverage --no-watch` is accepted in place of the two
+  and read the files it prints rather than its exit status: it exits 0
+  whatever it lists, none included, while a plain run whose pattern selects
+  no spec fails with "No tests found matching the following patterns".
+  `--no-coverage --no-watch` is accepted in place of the two
   `=false` flags. The forms `--include` accepts, the `--list-tests` dry run
   and what each flag protects are owned by `mibolt-verification` ("From a
   diff to green checks", step 3).
