@@ -1,0 +1,28 @@
+> Task :services:commerce:prepareOpenApiSpec UP-TO-DATE
+> Task :services:commerce:openApiGenerate UP-TO-DATE
+
+> Task :services:commerce:compileJava FAILED
+@REPO@/backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:42: error: cannot find symbol
+        return cartRepository.findByIdd(id);
+                             ^
+  symbol:   method findByIdd(UUID)
+  location: variable cartRepository of type CartRepository
+1 error
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':services:commerce:compileJava'.
+> Compilation failed; see the compiler output below.
+  @REPO@/backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:42: error: cannot find symbol
+          return cartRepository.findByIdd(id);
+                               ^
+    symbol:   method findByIdd(UUID)
+    location: variable cartRepository of type CartRepository
+  1 error
+
+* Try:
+> Check your code and try again.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 4s

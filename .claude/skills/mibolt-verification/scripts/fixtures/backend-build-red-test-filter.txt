@@ -1,0 +1,22 @@
+> Task :services:commerce:prepareOpenApiSpec UP-TO-DATE
+> Task :services:commerce:openApiGenerate UP-TO-DATE
+> Task :services:commerce:compileJava UP-TO-DATE
+> Task :services:commerce:processResources UP-TO-DATE
+> Task :services:commerce:classes UP-TO-DATE
+> Task :services:commerce:compileTestJava UP-TO-DATE
+> Task :services:commerce:processTestResources UP-TO-DATE
+> Task :services:commerce:testClasses UP-TO-DATE
+> Task :services:commerce:test FAILED
+> Task :services:commerce:jacocoTestReport
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':services:commerce:test'.
+> No tests found for given includes: [com.example.mi_bolt_backend.NoSuchTest](--tests filter)
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 1s
+8 actionable tasks: 2 executed, 6 up-to-date

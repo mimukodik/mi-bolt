@@ -1,0 +1,27 @@
+> Task :services:commerce:compileJava UP-TO-DATE
+> Task :services:commerce:compileTestJava UP-TO-DATE
+
+> Task :services:commerce:test
+test: 360 tests, 360 passed, 0 failed, 0 skipped
+
+> Task :services:commerce:integrationTest
+integrationTest: 415 tests, 415 passed, 0 failed, 0 skipped
+
+> Task :services:commerce:jacocoTestCoverageVerification
+> Task :services:commerce:pmdMain
+
+> Task :services:commerce:pmdTest FAILED
+src/test/java/com/example/mi_bolt_backend/session/SessionTokenServiceTest.java:52: UnnecessaryFullyQualifiedName: Unnecessary qualifier 'java.util': 'List' is already in scope because it is imported in this file
+src/test/java/com/example/mi_bolt_backend/session/SessionTokenServiceTest.java:52: UnnecessaryFullyQualifiedName: Unnecessary qualifier 'java.util': 'ArrayList' is already in scope because it is imported in this file
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':services:commerce:pmdTest'.
+> A failure occurred while executing org.gradle.api.plugins.quality.internal.PmdAction
+   > 2 PMD rule violations were found. See the report at: file://@REPO@/backend/services/commerce/build/reports/pmd/test.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 1m 58s

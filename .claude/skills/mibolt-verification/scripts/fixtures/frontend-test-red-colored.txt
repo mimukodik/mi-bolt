@@ -1,0 +1,136 @@
+
+> mi-bolt@0.0.0 test
+> ng test
+
+Using Vitest configuration file: @REPO@/frontend/projects/storefront/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [10.133 seconds] - 2026-09-27T01:58:44.613Z
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mFile 'tests/setup-msw.ts' not found in TypeScript compilation.[0m [1m[35m[plugin angular-compiler][0m
+
+  The file will be bundled and included in the output but will not be type-checked at build time. To remove this message you can add the file to the TypeScript program via the 'files' or 'include' property.
+
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m@REPO@/frontend[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+(node:18624) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18635) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[2m Test Files [22m [1m[32m74 passed[39m[22m[90m (74)[39m
+[2m      Tests [22m [1m[32m1219 passed[39m[22m[90m (1219)[39m
+[2m   Start at [22m 03:58:45
+[2m   Duration [22m 30.03s[2m (transform 19.41s, setup 33.02s, import 33.21s, tests 118.57s, environment 146.71s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    91.6 |    88.45 |   90.83 |   93.95 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 91.6% ( 4024/4393 )
+Branches     : 88.45% ( 2468/2790 )
+Functions    : 90.83% ( 892/982 )
+Lines        : 93.95% ( 3339/3554 )
+================================================================================
+Using Vitest configuration file: @REPO@/frontend/projects/demo-payment/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [6.035 seconds] - 2026-09-27T01:59:21.877Z
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m@REPO@/frontend[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+(node:26040) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m   Start at [22m 03:59:21
+[2m   Duration [22m 7.87s[2m (transform 289ms, setup 8.46s, import 845ms, tests 658ms, environment 4.13s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-----------------|---------|----------|---------|---------|-------------------
+File             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-----------------|---------|----------|---------|---------|-------------------
+All files        |   96.69 |    91.86 |   92.59 |      99 |                   
+-----------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 96.69% ( 117/121 )
+Branches     : 91.86% ( 79/86 )
+Functions    : 92.59% ( 25/27 )
+Lines        : 99% ( 100/101 )
+================================================================================
+Using Vitest configuration file: @REPO@/frontend/projects/admin/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [13.103 seconds] - 2026-09-27T01:59:43.072Z
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m@REPO@/frontend[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+(node:31297) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31302) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [31m❯[39m [30m[45m admin [49m[39m projects/admin/src/app/app.routes.spec.ts [2m([22m[2m13 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 9002[2mms[22m[39m
+[31m     [31m×[31m the shell loader returns ShellComponent[39m[33m 5004[2mms[22m[39m
+ [31m❯[39m [30m[45m admin [49m[39m projects/admin/src/app/features/products/edit/product-edit-page.spec.ts [2m([22m[2m13 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 12607[2mms[22m[39m
+[31m     [31m×[31m 1: edit mode renders product 1, no spinner, Mentés enabled, slug read-only[39m[33m 5375[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[45m admin [49m[39m projects/admin/src/app/app.routes.spec.ts[2m > [22madmin route loaders[2m > [22mthe shell loader returns ShellComponent
+[31m[1mError[22m: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".[39m
+[36m [2m❯[22m projects/admin/src/app/app.routes.spec.ts:[2m169:3[22m[39m
+    [90m167|[39m   })[33m;[39m
+    [90m168|[39m
+    [90m169|[39m   [34mit[39m([32m'the shell loader returns ShellComponent'[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m   |[39m   [31m^[39m
+    [90m170|[39m     [35mconst[39m shellRoute [33m=[39m routes[[34m1[39m][33m;[39m
+    [90m171|[39m     [34mexpect[39m(shellRoute[33m.[39mpath)[33m.[39m[34mtoBe[39m([32m''[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m admin [49m[39m projects/admin/src/app/features/products/edit/product-edit-page.spec.ts[2m > [22mProductEditPage[2m > [22m1: edit mode renders product 1, no spinner, Mentés enabled, slug read-only
+[31m[1mError[22m: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".[39m
+[36m [2m❯[22m projects/admin/src/app/features/products/edit/product-edit-page.spec.ts:[2m177:3[22m[39m
+    [90m175|[39m   })[33m;[39m
+    [90m176|[39m
+    [90m177|[39m   it('1: edit mode renders product 1, no spinner, Mentés enabled, slug…
+    [90m   |[39m   [31m^[39m
+    [90m178|[39m     [35mconst[39m db [33m=[39m [34msignedIn[39m()[33m;[39m
+    [90m179|[39m     [35mconst[39m product [33m=[39m [34mseededProduct[39m(db[33m,[39m [34m1[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m67 passed[39m[22m[90m (69)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m833 passed[39m[22m[90m (835)[39m
+[2m   Start at [22m 03:59:43
+[2m   Duration [22m 26.49s[2m (transform 31.61s, setup 37.51s, import 80.23s, tests 118.22s, environment 200.05s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   95.97 |    92.36 |   98.09 |   97.49 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 95.97% ( 2674/2786 )
+Branches     : 92.36% ( 1596/1728 )
+Functions    : 98.09% ( 618/630 )
+Lines        : 97.49% ( 2214/2271 )
+================================================================================

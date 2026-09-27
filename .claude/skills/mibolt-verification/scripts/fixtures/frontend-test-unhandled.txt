@@ -1,0 +1,38 @@
+
+> mi-bolt@0.0.0 test
+> ng test core-api --no-coverage --reporters minimal --no-watch
+
+Using Vitest configuration file: @REPO@/frontend/projects/core-api/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [0.937 seconds] - 2026-09-27T02:46:57.824Z
+
+
+ RUN  v4.1.11 @REPO@/frontend
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: rejected outside the test
+ ❯ projects/core-api/src/zz-temporary-red-run.spec.ts:3:25
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+ ❯ runWithCancel node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+ ❯ runWithTimeout node_modules/@vitest/runner/dist/chunk-artifact.js:2272:10
+ ❯ node_modules/@vitest/runner/dist/chunk-artifact.js:2956:64
+
+This error originated in "projects/core-api/src/zz-temporary-red-run.spec.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  4 passed (4)
+      Tests  22 passed (22)
+     Errors  1 error
+   Start at  04:46:58
+   Duration  791ms (transform 122ms, setup 552ms, import 71ms, tests 21ms, environment 2.11s)
+

@@ -1,0 +1,19 @@
+> Task :services:commerce:test
+test: 360 tests, 360 passed, 0 failed, 0 skipped
+
+> Task :services:commerce:integrationTest
+integrationTest: 415 tests, 415 passed, 0 failed, 0 skipped
+
+> Task :services:commerce:jacocoTestCoverageVerification FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':services:commerce:jacocoTestCoverageVerification'.
+> A failure occurred while executing org.gradle.internal.jacoco.JacocoCoverageAction
+   > Rule violated for bundle mi-bolt-backend: lines covered ratio is 0.9, but expected minimum is 1.0
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 2m 3s

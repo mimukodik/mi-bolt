@@ -1,0 +1,30 @@
+
+> mi-bolt@0.0.0 lint
+> ng lint --format json --output-file @TMP@/eslint-{projectName}.json
+
+
+Linting "storefront"...
+All files pass linting.
+
+
+Linting "demo-payment"...
+All files pass linting.
+
+
+Linting "admin"...
+All files pass linting.
+
+
+Linting "core-api"...
+Lint warnings found in the listed files.
+
+Lint errors found in the listed files.
+
+
+Linting "shop-api"...
+All files pass linting.
+
+
+Linting "shop-mocks"...
+All files pass linting.
+

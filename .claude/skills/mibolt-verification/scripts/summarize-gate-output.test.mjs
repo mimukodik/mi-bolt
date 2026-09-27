@@ -11,34 +11,34 @@
  * Fixtures (fixtures/). `@REPO@` stands for the repository root and `@TMP@`
  * for the log directory; a test swaps in its throwaway repository.
  *   Real output, trimmed:
- *     frontend-test-red.log            frontend-test core-api, one failing assertion
- *     frontend-test-red-colored.log    a full frontend test run with the default reporter
+ *     frontend-test-red.txt            frontend-test core-api, one failing assertion
+ *     frontend-test-red-colored.txt    a full frontend test run with the default reporter
  *                                      and colours, two admin tests timed out; cut after
  *                                      the admin project, per-file coverage rows dropped
- *     frontend-test-build-error.log    frontend-test core-api, a spec with an Angular
+ *     frontend-test-build-error.txt    frontend-test core-api, a spec with an Angular
  *                                      template error and a type error
- *     frontend-test-unhandled.log      frontend-test core-api --no-coverage, a spec that
+ *     frontend-test-unhandled.txt      frontend-test core-api --no-coverage, a spec that
  *                                      leaves a rejected promise unhandled
- *     frontend-test-green.log          a full green frontend-test run
+ *     frontend-test-green.txt          a full green frontend-test run
  *     eslint-files-red.json            frontend-lint with two files: one error, one warning
- *     frontend-lint-projects-red.log   frontend-lint with no files, the same finding
+ *     frontend-lint-projects-red.txt   frontend-lint with no files, the same finding
  *     eslint-core-api-red.json         that run's core-api report, cut to three files
  *     eslint-shop-api.json             that run's shop-api report
- *     frontend-build-green.log         a green frontend-build run
- *     backend-build-green.log          a full green backend-build run
- *     backend-build-red-test-filter.log  the backend test task run with a filter
+ *     frontend-build-green.txt         a green frontend-build run
+ *     backend-build-green.txt          a full green backend-build run
+ *     backend-build-red-test-filter.txt  the backend test task run with a filter
  *                                      matching no test
  *   Assembled from real pieces:
- *     frontend-build-red.log           the build banner around the real message blocks
- *                                      of frontend-test-build-error.log and of
- *                                      frontend-test-red-colored.log
- *     backend-build-red-tests.log, junit-red.xml, junit-red-nested.xml
+ *     frontend-build-red.txt           the build banner around the real message blocks
+ *                                      of frontend-test-build-error.txt and of
+ *                                      frontend-test-red-colored.txt
+ *     backend-build-red-tests.txt, junit-red.xml, junit-red-nested.xml
  *                                      Gradle's red test task and JUnit XML files built
  *                                      on a real green result file
- *     backend-build-red-pmd.log        the PMD lines quoted in
+ *     backend-build-red-pmd.txt        the PMD lines quoted in
  *                                      backend/docs/decisions/0009-pmd-quickstart-lint-gate.md
- *     backend-build-red-compile.log    javac's `path:line: error:` lines
- *     backend-build-red-coverage.log   the JaCoCo line quoted in
+ *     backend-build-red-compile.txt    javac's `path:line: error:` lines
+ *     backend-build-red-coverage.txt   the JaCoCo line quoted in
  *                                      backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md
  */
 
@@ -156,7 +156,7 @@ function coverageFiles(root, pctsByProject) {
 
 describe('frontend-test', () => {
   test('prints a failed test as path:line:col, test name and message, and a count line', async (t) => {
-    const outcome = await run(t, 'frontend-test', ['core-api'], (root) => fixture('frontend-test-red.log', root), {
+    const outcome = await run(t, 'frontend-test', ['core-api'], (root) => fixture('frontend-test-red.txt', root), {
       code: 1,
       files: (plan, root) => coverageFiles(root, { 'core-api': FULL_COVERAGE }),
     });
@@ -181,7 +181,7 @@ describe('frontend-test', () => {
   });
 
   test('reads coloured default-reporter output, one count line per project', async (t) => {
-    const outcome = await run(t, 'frontend-test', [], (root) => fixture('frontend-test-red-colored.log', root), {
+    const outcome = await run(t, 'frontend-test', [], (root) => fixture('frontend-test-red-colored.txt', root), {
       code: 1,
     });
     const failures = outcome.lines.filter((line) => line.startsWith('frontend/'));
@@ -210,7 +210,7 @@ describe('frontend-test', () => {
       t,
       'frontend-test',
       ['core-api', '--no-coverage'],
-      (root) => fixture('frontend-test-unhandled.log', root),
+      (root) => fixture('frontend-test-unhandled.txt', root),
       { code: 1 },
     );
     assert.equal(outcome.exitCode, 1);
@@ -221,7 +221,7 @@ describe('frontend-test', () => {
   });
 
   test('prints the build errors of the test build with their code and a 1-based column', async (t) => {
-    const outcome = await run(t, 'frontend-test', ['core-api'], (root) => fixture('frontend-test-build-error.log', root), {
+    const outcome = await run(t, 'frontend-test', ['core-api'], (root) => fixture('frontend-test-build-error.txt', root), {
       code: 1,
     });
     assert.deepEqual(outcome.lines.slice(1, -1), [
@@ -232,7 +232,7 @@ describe('frontend-test', () => {
   });
 
   test('flags a coverage figure below the project floor from frontend/angular.json', async (t) => {
-    const outcome = await run(t, 'frontend-test', [], (root) => fixture('frontend-test-green.log', root), {
+    const outcome = await run(t, 'frontend-test', [], (root) => fixture('frontend-test-green.txt', root), {
       code: 1,
       files: (plan, root) =>
         coverageFiles(root, {
@@ -265,7 +265,7 @@ describe('frontend-test', () => {
     );
     const anHourAgo = new Date(Date.now() - 3_600_000);
     utimesSync(stale, anHourAgo, anHourAgo);
-    const outcome = await run(t, 'frontend-test', ['core-api'], fixture('frontend-test-red.log', root), {
+    const outcome = await run(t, 'frontend-test', ['core-api'], fixture('frontend-test-red.txt', root), {
       root,
       code: 1,
     });
@@ -294,7 +294,7 @@ describe('frontend-lint', () => {
   });
 
   test('with no files, reads one report per project through the {projectName} placeholder', async (t) => {
-    const outcome = await run(t, 'frontend-lint', [], (root) => fixture('frontend-lint-projects-red.log', root), {
+    const outcome = await run(t, 'frontend-lint', [], (root) => fixture('frontend-lint-projects-red.txt', root), {
       code: 1,
       files: (plan, root) => {
         const template = plan.args[plan.args.indexOf('--output-file') + 1];
@@ -333,7 +333,7 @@ describe('frontend-lint', () => {
 
 describe('frontend-build', () => {
   test('prints build errors and warnings, each with its location or the project', async (t) => {
-    const outcome = await run(t, 'frontend-build', [], fixture('frontend-build-red.log', ''), { code: 1 });
+    const outcome = await run(t, 'frontend-build', [], fixture('frontend-build-red.txt', ''), { code: 1 });
     assert.equal(outcome.exitCode, 1);
     assert.deepEqual(outcome.lines.slice(0, -1), [
       '$ npm --prefix frontend run build',
@@ -345,7 +345,7 @@ describe('frontend-build', () => {
   });
 
   test('prints one count line for a green build', async (t) => {
-    const outcome = await run(t, 'frontend-build', [], (root) => fixture('frontend-build-green.log', root));
+    const outcome = await run(t, 'frontend-build', [], (root) => fixture('frontend-build-green.txt', root));
     assert.deepEqual(outcome.lines.slice(1, -1), ['storefront: 0 errors, 0 warnings']);
     assert.match(outcome.lines.at(-1), /^exit 0; full log: .*\(37 lines\)$/);
   });
@@ -353,7 +353,7 @@ describe('frontend-build', () => {
 
 describe('backend-build', () => {
   test('prints a count line per gate task for a green build', async (t) => {
-    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-green.log', root));
+    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-green.txt', root));
     assert.equal(outcome.plan.display, 'backend/gradlew');
     assert.deepEqual(outcome.plan.args, ['-p', 'backend', ':services:commerce:build']);
     assert.deepEqual(outcome.lines.slice(0, -1), [
@@ -369,7 +369,7 @@ describe('backend-build', () => {
   });
 
   test('maps failing tests from this run\'s JUnit XML to the test source line', async (t) => {
-    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-tests.log', root), {
+    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-tests.txt', root), {
       code: 1,
       files: (plan, root) => ({
         [path.join(root, TEST_RESULTS, 'test', 'TEST-com.example.mi_bolt_backend.admin.catalog.AdminMediaServiceTest.xml')]:
@@ -401,7 +401,7 @@ describe('backend-build', () => {
     const stale = writeFile(root, `${TEST_RESULTS}/test/TEST-old.xml`, fixture('junit-red.xml', root));
     const anHourAgo = new Date(Date.now() - 3_600_000);
     utimesSync(stale, anHourAgo, anHourAgo);
-    const outcome = await run(t, 'backend-build', [], fixture('backend-build-red-tests.log', root), { root, code: 1 });
+    const outcome = await run(t, 'backend-build', [], fixture('backend-build-red-tests.txt', root), { root, code: 1 });
     assert.ok(outcome.lines.includes('test: 360 tests completed, 2 failed'));
     assert.ok(!outcome.lines.some((line) => line.includes('AdminMediaServiceTest.java')));
     assert.ok(outcome.lines.includes('* What went wrong:'));
@@ -409,7 +409,7 @@ describe('backend-build', () => {
   });
 
   test('prints PMD violations with their rule, relative to the repository root', async (t) => {
-    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-pmd.log', root), { code: 1 });
+    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-pmd.txt', root), { code: 1 });
     const violations = outcome.lines.filter((line) => line.includes('UnnecessaryFullyQualifiedName —'));
     assert.deepEqual(violations, [
       "backend/services/commerce/src/test/java/com/example/mi_bolt_backend/session/SessionTokenServiceTest.java:52 UnnecessaryFullyQualifiedName — Unnecessary qualifier 'java.util': 'List' is already in scope because it is imported in this file",
@@ -421,7 +421,7 @@ describe('backend-build', () => {
   });
 
   test('prints a compiler error once, although the failure report repeats it', async (t) => {
-    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-compile.log', root), {
+    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-compile.txt', root), {
       code: 1,
     });
     const errors = outcome.lines.filter((line) => line.includes(' javac — '));
@@ -437,7 +437,7 @@ describe('backend-build', () => {
       'backend-build',
       [],
       (root) =>
-        fixture('backend-build-red-compile.log', root).replace(
+        fixture('backend-build-red-compile.txt', root).replace(
           `  ${root}/backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:42: error:`,
           `${root}/backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:42: error:`,
         ),
@@ -448,7 +448,7 @@ describe('backend-build', () => {
   });
 
   test('prints a coverage rule violation, a class one against its source file', async (t) => {
-    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-coverage.log', root), {
+    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-coverage.txt', root), {
       code: 1,
     });
     assert.ok(
@@ -472,7 +472,7 @@ describe('backend-build', () => {
   });
 
   test("prints Gradle's failure report when no single failure can be itemised", async (t) => {
-    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-test-filter.log', root), {
+    const outcome = await run(t, 'backend-build', [], (root) => fixture('backend-build-red-test-filter.txt', root), {
       code: 1,
     });
     assert.deepEqual(outcome.lines.slice(1, 4), [
@@ -516,7 +516,7 @@ describe('fallback and exit codes', () => {
   });
 
   test('never derives the exit code from what was found', async (t) => {
-    const outcome = await run(t, 'frontend-test', ['core-api'], (root) => fixture('frontend-test-red.log', root), {
+    const outcome = await run(t, 'frontend-test', ['core-api'], (root) => fixture('frontend-test-red.txt', root), {
       code: 0,
     });
     assert.equal(outcome.exitCode, 0);
