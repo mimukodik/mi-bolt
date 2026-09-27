@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Verification"
+  short_description: "Pick and run the right checks for a MiBolt change"
+  default_prompt: "Use $mibolt-verification to list the checks this diff needs before committing."

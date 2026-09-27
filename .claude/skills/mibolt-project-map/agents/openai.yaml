@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Project Map"
+  short_description: "Find where things live in MiBolt and which skill applies"
+  default_prompt: "Use $mibolt-project-map to find which area owns the free-shipping threshold shown at checkout."

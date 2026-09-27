@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.mi_bolt_backend.cart.CartServiceTest$WhenEmpty" tests="3" skipped="1" failures="0" errors="1" timestamp="2026-09-27T02:04:36.120Z" hostname="localhost" time="0.031">
+  <properties/>
+  <testcase name="rejectsCheckout()" classname="com.example.mi_bolt_backend.cart.CartServiceTest$WhenEmpty" time="0.012">
+    <error message="java.lang.IllegalStateException: no cart for the session" type="java.lang.IllegalStateException">java.lang.IllegalStateException: no cart for the session
+	at com.example.mi_bolt_backend.cart.CartService.checkout(CartService.java:120)
+	at com.example.mi_bolt_backend.cart.CartServiceTest$WhenEmpty.rejectsCheckout(CartServiceTest.java:88)
+</error>
+  </testcase>
+  <testcase name="answersAnEmptyCart()" classname="com.example.mi_bolt_backend.cart.CartServiceTest$WhenEmpty" time="0.002"/>
+  <testcase name="keepsTheSessionVersion()" classname="com.example.mi_bolt_backend.cart.CartServiceTest$WhenEmpty" time="0.0">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

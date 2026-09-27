@@ -1,0 +1,44 @@
+[
+  {
+    "filePath": "@REPO@/frontend/projects/core-api/src/splash.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "@REPO@/frontend/projects/core-api/src/zz-temporary-red-run.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 2,
+        "message": "'unusedValue' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 11,
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 22
+      },
+      {
+        "ruleId": "security/detect-unsafe-regex",
+        "severity": 1,
+        "message": "Unsafe Regular Expression",
+        "line": 4,
+        "column": 21,
+        "endLine": 4,
+        "endColumn": 29
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 1,
+    "fatalErrorCount": 0,
+    "warningCount": 1,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  }
+]

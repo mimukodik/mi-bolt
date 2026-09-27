@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Workspace Ops"
+  short_description: "mise tasks, run modes, compose, CI and deploy wiring"
+  default_prompt: "Use $mibolt-workspace-ops to add a root mise task and wire it into CI."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Frontend Code Standards"
+  short_description: "Frontend lint, type and format rules for MiBolt"
+  default_prompt: "Use $mibolt-frontend-code-standards to fix this strict-boolean-expressions lint error the project way."

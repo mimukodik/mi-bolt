@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Admin Frontend"
+  short_description: "Admin back-office screens, forms, session and mocks"
+  default_prompt: "Use $mibolt-admin-frontend to add a field to the admin product edit form."

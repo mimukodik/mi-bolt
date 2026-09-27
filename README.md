@@ -64,6 +64,20 @@ npm --prefix frontend run e2e:install
 Installs the Playwright browsers (Chromium, Firefox, WebKit) with their OS
 dependencies (`frontend/package.json`'s `e2e:install` script).
 
+```bash
+tools/install-spring-tools-mcp.sh
+```
+
+Downloads the Spring Tools language server JAR (v2.4.0, about 98 MB,
+SHA256-checked against cdn.spring.io) into `.spring-tools/` at the
+repository root. The root `.mcp.json` starts it with `java -jar` as the
+`spring-tools` MCP server, which fails to connect until the JAR is there,
+and it needs Java 21+, which `mise install`'s pinned Java satisfies. The
+directory is gitignored, so every checkout, worktrees included, needs its
+own run; a second run skips the download when the checksum matches, and
+`--force` downloads it again. Reconnect the server in Claude Code afterward
+with `/mcp`.
+
 ## 👤 Start the apps: which mode when
 
 When the backend only has to run because the frontend needs it, pick

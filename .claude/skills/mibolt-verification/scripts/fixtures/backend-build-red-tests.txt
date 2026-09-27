@@ -1,0 +1,35 @@
+> Task :services:commerce:prepareOpenApiSpec UP-TO-DATE
+> Task :services:commerce:openApiGenerate UP-TO-DATE
+> Task :services:commerce:compileJava UP-TO-DATE
+> Task :services:commerce:processResources UP-TO-DATE
+> Task :services:commerce:classes UP-TO-DATE
+> Task :services:commerce:compileTestJava UP-TO-DATE
+> Task :services:commerce:processTestResources UP-TO-DATE
+> Task :services:commerce:testClasses UP-TO-DATE
+
+> Task :services:commerce:test FAILED
+
+AdminMediaServiceTest > aViolationWithoutAStoredRowIsRethrown() FAILED
+    org.opentest4j.AssertionFailedError: expected: <1> but was: <2>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:158)
+        at app//com.example.mi_bolt_backend.admin.catalog.AdminMediaServiceTest.aViolationWithoutAStoredRowIsRethrown(AdminMediaServiceTest.java:57)
+
+CartServiceTest > WhenEmpty > rejectsCheckout() FAILED
+    java.lang.IllegalStateException: no cart for the session
+        at app//com.example.mi_bolt_backend.cart.CartServiceTest$WhenEmpty.rejectsCheckout(CartServiceTest.java:88)
+
+360 tests completed, 2 failed
+
+> Task :services:commerce:jacocoTestReport
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':services:commerce:test'.
+> There were failing tests. See the report at: file://@REPO@/backend/services/commerce/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+BUILD FAILED in 41s
+8 actionable tasks: 2 executed, 6 up-to-date

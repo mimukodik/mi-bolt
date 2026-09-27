@@ -1,0 +1,23 @@
+
+> mi-bolt@0.0.0 test
+> ng test core-api --reporters minimal --no-watch
+
+Using Vitest configuration file: @REPO@/frontend/projects/core-api/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation failed. [0.831 seconds] - 2026-09-27T02:36:50.002Z
+
+✘ [ERROR] NG8002: Can't bind to 'notAProperty' since it isn't a known property of 'div'. Find more at https://next.angular.dev/errors/NG8002 [plugin angular-compiler]
+
+    projects/core-api/src/zz-temporary-red-run.spec.ts:5:18:
+      5 │   template: '<div [notAProperty]="1"></div>',
+        ╵                   ~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2322: Type 'string' is not assignable to type 'number'. [plugin angular-compiler]
+
+    projects/core-api/src/zz-temporary-red-run.spec.ts:11:10:
+      11 │     const count: number = 'three';
+         ╵           ~~~~~
+
+

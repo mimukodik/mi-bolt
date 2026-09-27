@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Commerce Backend"
+  short_description: "Endpoints, invariants and migrations of the backend"
+  default_prompt: "Use $mibolt-commerce-backend to change a checkout fee and its options response."

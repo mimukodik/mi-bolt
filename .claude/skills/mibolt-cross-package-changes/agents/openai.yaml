@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Cross-Package Changes"
+  short_description: "Contract, generated clients, core-api and catalogue data"
+  default_prompt: "Use $mibolt-cross-package-changes to add a new error code from the contract to every consumer."

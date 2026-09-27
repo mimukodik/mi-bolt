@@ -15,6 +15,9 @@
       "Bash(git reset -- .)"
     ],
     "deny": [
+      "Read(scripts/coder-agent/opencode-go-eggproject-deepseek-v4.1-flash.env)",
+      "Read(scripts/coder-agent/xkiro-gpt-6-luna.env)",
+      "Read(scripts/coder-agent/opencode-go-3pixel-deepseek-v4.1-flash.env)",
       "Read(scripts/coder-agent/.env)"
     ]
   },
@@ -61,7 +64,8 @@
   },
   "includeCoAuthoredBy": false,
   "env": {
-    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "48"
   },
   "feedbackDrafts": "off",
   "outputStyle": "Concise",
@@ -70,6 +74,34 @@
     "angular-cli",
     "playwright-test",
     "linear-server",
-    "spring-tools"
-  ]
+    "spring-tools",
+    "exa",
+    "docmost"
+  ],
+  "plansDirectory": ".claude/plans",
+  "enabledPlugins": {
+    "framed-output@easter-skill-framed-output": true,
+    "git@mi-skill-git": true,
+    "docmost-design@mi-skill-docmost-design": true
+  },
+  "extraKnownMarketplaces": {
+    "easter-skill-framed-output": {
+      "source": {
+        "source": "github",
+        "repo": "EggProject/easter-skill-framed-output"
+      }
+    },
+    "mi-skill-docmost-design": {
+      "source": {
+        "source": "github",
+        "repo": "mimukodik/mi-skill-docmost-design"
+      }
+    },
+    "mi-skill-git": {
+      "source": {
+        "source": "github",
+        "repo": "mimukodik/mi-skill-git"
+      }
+    }
+  }
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "MiBolt Shop Frontend"
+  short_description: "Storefront, checkout, payment app and shop mocks"
+  default_prompt: "Use $mibolt-shop-frontend to add a new catalogue filter that survives a reload."

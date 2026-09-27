@@ -1,0 +1,65 @@
+> Task :services:commerce:prepareOpenApiSpec
+> Task :services:commerce:processResources
+> Task :services:commerce:processTestResources
+
+> Task :services:commerce:openApiGenerate
+[openApiGenerate] Worker isolation: classloader (fast startup, but generator classes accumulate in Gradle daemon Metaspace - consider workerIsolation = "process" if you hit metaspace pressure)
+OpenAPI 3.1 support is still in beta. To report an issue related to 3.1 spec, please kindly open an issue in the Github repo: https://github.com/openAPITools/openapi-generator.
+'generateJsonIncludeAnnotations' is not set. Defaulting to false: no @JsonInclude annotations are generated and property inclusion is governed entirely by the global ObjectMapper (7.23.0-equivalent output). Set 'generateJsonIncludeAnnotations=false' to keep this behavior and silence this warning, or 'generateJsonIncludeAnnotations=true' to emit spec-honest @JsonInclude annotations (see 'optionalNonNullPropertyJsonInclude'). Note: before 7.24.0 released output had no field-level @JsonInclude, so leaving this unset preserves that behavior.
+'generateJsonSetterNullsAnnotations' is not set. Defaulting to false: no @JsonSetter(nulls = ...) annotations are generated and deserialization null-handling is governed entirely by the global ObjectMapper (7.23.0-equivalent output). Set 'generateJsonSetterNullsAnnotations=false' to keep this behavior and silence this warning, or 'generateJsonSetterNullsAnnotations=true' to emit @JsonSetter(nulls = ...) on optional non-nullable fields.
+Failed to get the schema name: null
+Circular reference detected in allOf for $ref: FacetValue. Skipping.
+############################################################################################
+# Thanks for using OpenAPI Generator.                                                      #
+# We appreciate your support! Please consider donating to help us maintain this project.   #
+# https://opencollective.com/openapi_generator/donate                                      #
+############################################################################################
+Successfully generated code to @REPO@/backend/services/commerce/build/generated/openapi
+
+> Task :services:commerce:compileJava
+
+> Task :services:commerce:classes
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+> Task :services:commerce:resolveMainClassName
+> Task :services:commerce:bootJar
+> Task :services:commerce:jar
+> Task :services:commerce:assemble
+
+> Task :services:commerce:compileTestJava
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: @REPO@/backend/services/commerce/src/test/java/com/example/mi_bolt_backend/admin/catalog/AdminMediaServiceTest.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :services:commerce:testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :services:commerce:test
+test: 360 tests, 360 passed, 0 failed, 0 skipped
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :services:commerce:integrationTest
+
+2026-09-27T04:40:09.195+02:00  INFO 76072 --- [mi-bolt-backend] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-09-27T04:40:09.442+02:00  INFO 76072 --- [mi-bolt-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-09-27T04:40:09.444+02:00  INFO 76072 --- [mi-bolt-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-09-27T04:40:09.446+02:00  INFO 76072 --- [mi-bolt-backend] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-09-27T04:40:09.446+02:00  INFO 76072 --- [mi-bolt-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-09-27T04:40:09.447+02:00  INFO 76072 --- [mi-bolt-backend] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+
+> Task :services:commerce:integrationTest
+integrationTest: 415 tests, 415 passed, 0 failed, 0 skipped
+
+> Task :services:commerce:jacocoTestCoverageVerification
+> Task :services:commerce:jacocoTestReport
+> Task :services:commerce:pmdMain
+> Task :services:commerce:pmdTest
+> Task :services:commerce:check
+> Task :services:commerce:build
+
+[Incubating] Problems report is available at: file://@REPO@/backend/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1m 4s
+15 actionable tasks: 15 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html

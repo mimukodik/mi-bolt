@@ -1,0 +1,153 @@
+
+> mi-bolt@0.0.0 test
+> ng test --reporters minimal --no-watch
+
+Using Vitest configuration file: @REPO@/frontend/projects/storefront/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [4.395 seconds] - 2026-09-27T02:37:24.099Z
+
+▲ [WARNING] File 'tests/setup-msw.ts' not found in TypeScript compilation. [plugin angular-compiler]
+
+  The file will be bundled and included in the output but will not be type-checked at build time. To remove this message you can add the file to the TypeScript program via the 'files' or 'include' property.
+
+
+
+ RUN  v4.1.11 @REPO@/frontend
+      Coverage enabled with v8
+
+
+ Test Files  74 passed (74)
+      Tests  1219 passed (1219)
+   Start at  04:37:24
+   Duration  19.50s (transform 9.77s, setup 12.59s, import 17.01s, tests 58.09s, environment 60.55s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    91.6 |    88.38 |   90.83 |   93.95 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 91.6% ( 4024/4393 )
+Branches     : 88.38% ( 2466/2790 )
+Functions    : 90.83% ( 892/982 )
+Lines        : 93.95% ( 3339/3554 )
+================================================================================
+Using Vitest configuration file: @REPO@/frontend/projects/demo-payment/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [1.930 seconds] - 2026-09-27T02:37:45.855Z
+
+
+ RUN  v4.1.11 @REPO@/frontend
+      Coverage enabled with v8
+
+
+ Test Files  2 passed (2)
+      Tests  23 passed (23)
+   Start at  04:37:45
+   Duration  1.77s (transform 150ms, setup 408ms, import 447ms, tests 736ms, environment 870ms)
+
+ % Coverage report from v8
+-----------------|---------|----------|---------|---------|-------------------
+File             | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-----------------|---------|----------|---------|---------|-------------------
+All files        |   96.69 |    91.86 |   92.59 |      99 |                   
+-----------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 96.69% ( 117/121 )
+Branches     : 91.86% ( 79/86 )
+Functions    : 92.59% ( 25/27 )
+Lines        : 99% ( 100/101 )
+================================================================================
+Using Vitest configuration file: @REPO@/frontend/projects/admin/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [4.407 seconds] - 2026-09-27T02:37:52.142Z
+
+
+ RUN  v4.1.11 @REPO@/frontend
+      Coverage enabled with v8
+
+
+ Test Files  69 passed (69)
+      Tests  835 passed (835)
+   Start at  04:37:52
+   Duration  12.65s (transform 3.97s, setup 14.12s, import 23.31s, tests 54.42s, environment 56.56s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   96.01 |    92.36 |   98.25 |   97.49 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 96.01% ( 2675/2786 )
+Branches     : 92.36% ( 1596/1728 )
+Functions    : 98.25% ( 619/630 )
+Lines        : 97.49% ( 2214/2271 )
+================================================================================
+Using Vitest configuration file: @REPO@/frontend/projects/core-api/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [0.685 seconds] - 2026-09-27T02:38:05.556Z
+
+
+ RUN  v4.1.11 @REPO@/frontend
+      Coverage enabled with v8
+
+
+ Test Files  3 passed (3)
+      Tests  21 passed (21)
+   Start at  04:38:05
+   Duration  512ms (transform 24ms, setup 359ms, import 26ms, tests 19ms, environment 725ms)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 100% ( 52/52 )
+Branches     : 100% ( 26/26 )
+Functions    : 100% ( 11/11 )
+Lines        : 100% ( 47/47 )
+================================================================================
+Using Vitest configuration file: @REPO@/frontend/projects/shop-mocks/vitest.config.ts
+❯ Building...
+✔ Building...
+Application bundle generation complete. [0.892 seconds] - 2026-09-27T02:38:07.009Z
+
+▲ [WARNING] File 'tests/setup-msw.ts' not found in TypeScript compilation. [plugin angular-compiler]
+
+  The file will be bundled and included in the output but will not be type-checked at build time. To remove this message you can add the file to the TypeScript program via the 'files' or 'include' property.
+
+
+
+ RUN  v4.1.11 @REPO@/frontend
+      Coverage enabled with v8
+
+
+ Test Files  16 passed (16)
+      Tests  429 passed (429)
+   Start at  04:38:07
+   Duration  1.64s (transform 1.25s, setup 4.15s, import 2.65s, tests 1.21s, environment 7.84s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   89.85 |    83.06 |   95.17 |   94.73 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 89.85% ( 2019/2247 )
+Branches     : 83.06% ( 1182/1423 )
+Functions    : 95.17% ( 335/352 )
+Lines        : 94.73% ( 1798/1898 )
+================================================================================
