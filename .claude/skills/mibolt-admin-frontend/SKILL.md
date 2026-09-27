@@ -384,14 +384,13 @@ Then run the check below, and run it as well after an edit to any other file thi
 references cite by `path:line`, since an edit that only shifts lines leaves an anchor on the
 wrong line, and the check still passes it as long as the number stays inside the file. It checks
 every path, `path:line` anchor and command, and `--show-anchors` prints each anchored line; read
-that line against what the text says about it:
+that line against what the text says about it. Run it from the directory that holds the MiBolt
+skills, since the paths rule at the top of this skill makes the script's path relative to that
+directory:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs --show-anchors mibolt-admin-frontend
 ```
-
-Run it from the directory that holds the MiBolt skills: the paths rule at the top of this skill
-makes the script's path relative to that directory.
 
 A range longer than ten lines ends in `... (+N more lines)`, so read its rest in the file. The
 script neither checks nor prints the bare "(line N)" and "(lines N-M)" numbers in sections
