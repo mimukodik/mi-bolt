@@ -202,7 +202,8 @@ response that changed, and the checks under "Verify".
 Each line names a rule and where it is written or enforced; the owner carries the detail.
 
 - **No type assertion, `as const` aside.** ESLint enforces it for the admin
-  (`frontend/eslint.config.mjs:389-391`), stricter than for the rest of the workspace; the written
+  (`frontend/eslint.config.mjs:389-391`) and for two contract files
+  (`frontend/eslint.config.mjs:441-443`), stricter than for the rest of the workspace; the written
   rule is `mibolt-frontend-code-standards` ("Types"). First check whether a generic already
   carries the type: the generated `invoke<P, R>` returns an `Observable<R>` of the
   operation's own response type, and `invoke$Response<P, R>` an `Observable<StrictHttpResponse<R>>`
