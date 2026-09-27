@@ -100,8 +100,10 @@ on 2026-09-26: re-measure it before relying on it.
   `frontend/projects/admin/src/mocks/`, which it starts in the browser
   (`frontend/projects/admin/src/main.ts:18`); the lint rule that keeps it off
   the shop SDK and mocks is `mibolt-frontend-code-standards`'s.
-- **The catalogue feeds these places:** the backend's startup seeding
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:54`);
+- **The catalogue feeds these places:** the backend's startup seeding, which
+  loads only into an empty product table
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:76-79`),
+  so a changed catalogue needs the database emptied first;
   `frontend/scripts/build-catalog-fixture.mjs`, which writes
   `frontend/docs/api/fixtures/catalog.json` for the shop mocks
   (`frontend/projects/shop-mocks/src/browser.ts:32`); the contract suite,
