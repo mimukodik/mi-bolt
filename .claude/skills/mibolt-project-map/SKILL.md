@@ -94,8 +94,12 @@ on 2026-09-26: re-measure it before relying on it.
   unit specs import, and whose handlers the Node contract suite imports by
   relative path
   (`frontend/tests/contract/operation-matrix.spec.ts:36-56`). The admin app
-  uses its own client and mocks instead; the lint rule that keeps it off the
-  shop SDK and mocks is `mibolt-frontend-code-standards`'s.
+  uses its own client and mocks instead, the client in
+  `frontend/projects/admin/src/app/api/generated/`
+  (`frontend/projects/admin/src/app/app.config.ts:12`) and the mocks in
+  `frontend/projects/admin/src/mocks/`, which it starts in the browser
+  (`frontend/projects/admin/src/main.ts:18`); the lint rule that keeps it off
+  the shop SDK and mocks is `mibolt-frontend-code-standards`'s.
 - **The catalogue feeds these places:** the backend's startup seeding
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:54`);
   `frontend/scripts/build-catalog-fixture.mjs`, which writes
