@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MiBolt Commerce API
-  version: 2.3.0
+  version: 2.4.0
   description: >-
     Contract-first commerce API for the MiBolt webshop. No real payment,
     fulfillment or email takes place; the shop is a demonstration and says so in
@@ -159,6 +159,14 @@ paths:
         in: query
         description: Curated selection for the home page. At most four entries, in
           curated order.
+        schema:
+          type: boolean
+      - name: promotion
+        in: query
+        description: >-
+          When true, returns only non-archived products whose promotion is
+          active according to server time and whose entry contains at least
+          one discounted variant. Independent from the featured selection.
         schema:
           type: boolean
       - name: sort
@@ -1949,6 +1957,22 @@ components:
           type: string
           enum:
           - HUF
+    DiscountMoney:
+      type: object
+      additionalProperties: false
+      required:
+      - amount
+      - currency
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 100000000
+          description: Positive whole Hungarian forints, not ISO minor units.
+        currency:
+          type: string
+          enum:
+          - HUF
     StorageGb:
       type: integer
       enum:
@@ -2029,6 +2053,9 @@ components:
           type: string
         price:
           $ref: '#/components/schemas/Money'
+        originalPrice:
+          $ref: '#/components/schemas/Money'
+          description: Normal price when this variant has an active promotion.
         availability:
           $ref: '#/components/schemas/Availability'
     Variant:
@@ -2064,6 +2091,9 @@ components:
           $ref: '#/components/schemas/StorageGb'
         price:
           $ref: '#/components/schemas/Money'
+        originalPrice:
+          $ref: '#/components/schemas/Money'
+          description: Normal price when this variant has an active promotion.
         availability:
           $ref: '#/components/schemas/Availability'
         maxQuantity:
@@ -2139,6 +2169,27 @@ components:
         releasedAt:
           type: string
           format: date
+        promotion:
+          $ref: '#/components/schemas/ActivePromotion'
+          description: Present only while the server considers the promotion active.
+    ActivePromotion:
+      type: object
+      additionalProperties: false
+      required:
+      - text
+      - startAt
+      - endAt
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 280
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
     CatalogItem:
       description: >-
         One list entry: a product at one storage size. Carries a concrete price,
@@ -2165,6 +2216,9 @@ components:
           variantSlug:
             type: string
           price:
+            $ref: '#/components/schemas/Money'
+          originalPrice:
+            description: Normal price, present only when this displayed variant has an active discount.
             $ref: '#/components/schemas/Money'
           availability:
             $ref: '#/components/schemas/Availability'
@@ -3288,6 +3342,8 @@ components:
           $ref: '#/components/schemas/StorageGb'
         price:
           $ref: '#/components/schemas/Money'
+        discountPrice:
+          $ref: '#/components/schemas/DiscountMoney'
         stock:
           type: integer
           minimum: 0
@@ -3347,6 +3403,16 @@ components:
         updatedAt:
           type: string
           format: date-time
+        promotionStartAt:
+          type: string
+          format: date-time
+        promotionEndAt:
+          type: string
+          format: date-time
+        promotionText:
+          type: string
+          minLength: 1
+          maxLength: 280
         highlights:
           type: array
           items:
@@ -3413,6 +3479,8 @@ components:
           $ref: '#/components/schemas/StorageGb'
         price:
           $ref: '#/components/schemas/Money'
+        discountPrice:
+          $ref: '#/components/schemas/DiscountMoney'
         stock:
           type: integer
           minimum: 0
@@ -3463,6 +3531,16 @@ components:
         featured:
           type: boolean
           description: At most four active products are featured (422 FEATURED_LIMIT).
+        promotionStartAt:
+          type: string
+          format: date-time
+        promotionEndAt:
+          type: string
+          format: date-time
+        promotionText:
+          type: string
+          minLength: 1
+          maxLength: 280
         highlights:
           type: array
           minItems: 1

@@ -49,6 +49,11 @@ export interface ListProducts$Params {
  * Curated selection for the home page. At most four entries, in curated order.
  */
   featured?: boolean;
+
+/**
+ * When true, returns only non-archived products whose promotion is active according to server time and whose entry contains at least one discounted variant. Independent from the featured selection.
+ */
+  promotion?: boolean;
   sort?: ProductSort;
   page?: number;
   pageSize?: 12 | 24;
@@ -66,6 +71,7 @@ export function listProducts(http: HttpClient, rootUrl: string, params?: ListPro
     rb.query('inStock', params.inStock, {});
     rb.query('is5g', params.is5g, {});
     rb.query('featured', params.featured, {});
+    rb.query('promotion', params.promotion, {});
     rb.query('sort', params.sort, {});
     rb.query('page', params.page, {});
     rb.query('pageSize', params.pageSize, {});

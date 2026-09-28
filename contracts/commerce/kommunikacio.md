@@ -227,6 +227,16 @@ contradictory state where `quantity` is greater than `maxQuantity`.
 banner. Swallowing them silently is forbidden — the user would see a price or
 quantity change with no explanation.
 
+### 7.3 Timed promotions
+
+The server decides promotion activity from its injected UTC clock using
+`startAt <= now < end`; archived products are never active. While active,
+catalogue `price` is the chargeable variant discount and `originalPrice`
+contains the normal price; outside the window `originalPrice` and `promotion`
+are omitted. `promotion=true` filters independently from `featured=true`, and
+cart reconciliation applies the same effective-price policy before checkout
+and order totals are calculated.
+
 ---
 
 ## 8. The whole flow

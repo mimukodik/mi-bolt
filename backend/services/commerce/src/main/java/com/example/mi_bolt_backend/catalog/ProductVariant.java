@@ -33,6 +33,9 @@ public class ProductVariant {
 	@Column(name = "price_huf", nullable = false)
 	private long priceHuf;
 
+	@Column(name = "discount_price_huf")
+	private Long discountPriceHuf;
+
 	@Column(nullable = false)
 	private Integer stock;
 
@@ -82,6 +85,14 @@ public class ProductVariant {
 
 	public void setPriceHuf(long priceHuf) {
 		this.priceHuf = priceHuf;
+	}
+
+	public Long getDiscountPriceHuf() {
+		return discountPriceHuf;
+	}
+
+	public void setDiscountPriceHuf(Long discountPriceHuf) {
+		this.discountPriceHuf = discountPriceHuf;
 	}
 
 	public Integer getStock() {

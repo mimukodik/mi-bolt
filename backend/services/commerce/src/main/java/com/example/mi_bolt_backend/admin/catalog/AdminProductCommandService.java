@@ -197,6 +197,9 @@ public class AdminProductCommandService {
 		product.setRank(input.getRank());
 		product.setPopularityScore(input.getPopularityScore());
 		product.setFeatured(Boolean.TRUE.equals(input.getFeatured()));
+		product.setPromotionStartAt(input.getPromotionStartAt());
+		product.setPromotionEndAt(input.getPromotionEndAt());
+		product.setPromotionText(strip(input.getPromotionText()));
 
 		Map<String, ProductColor> currentColors = new HashMap<>();
 		for (ProductColor c : product.getColors()) {
@@ -238,6 +241,7 @@ public class AdminProductCommandService {
 				if (variant != null) {
 					variant.setSlug(v.getSlug());
 					variant.setPriceHuf(v.getPrice().getAmount());
+					variant.setDiscountPriceHuf(v.getDiscountPrice() == null ? null : (long) v.getDiscountPrice().getAmount());
 					variant.setStock(v.getStock());
 				}
 				else {
@@ -248,6 +252,7 @@ public class AdminProductCommandService {
 					variant.setColor(colorByCode.get(colorCode));
 					variant.setStorageGb(storageGb);
 					variant.setPriceHuf(v.getPrice().getAmount());
+					variant.setDiscountPriceHuf(v.getDiscountPrice() == null ? null : (long) v.getDiscountPrice().getAmount());
 					variant.setStock(v.getStock());
 					product.getVariants().add(variant);
 				}
@@ -329,6 +334,9 @@ public class AdminProductCommandService {
 		product.setRank(input.getRank());
 		product.setPopularityScore(input.getPopularityScore());
 		product.setFeatured(Boolean.TRUE.equals(input.getFeatured()));
+		product.setPromotionStartAt(input.getPromotionStartAt());
+		product.setPromotionEndAt(input.getPromotionEndAt());
+		product.setPromotionText(strip(input.getPromotionText()));
 
 		addHighlights(product, input.getHighlights());
 
@@ -366,6 +374,7 @@ public class AdminProductCommandService {
 				variant.setColor(colorByCode.get(v.getColorCode()));
 				variant.setStorageGb(v.getStorageGb().getValue());
 				variant.setPriceHuf(v.getPrice().getAmount());
+				variant.setDiscountPriceHuf(v.getDiscountPrice() == null ? null : (long) v.getDiscountPrice().getAmount());
 				variant.setStock(v.getStock());
 				product.getVariants().add(variant);
 			}

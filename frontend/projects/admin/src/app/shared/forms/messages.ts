@@ -13,6 +13,9 @@ export const MESSAGES = {
   hexPattern: 'Formátum: #RRGGBB.',
   integer: 'Egész számot adj meg.',
   priceMax: 'Legfeljebb 100 000 000 Ft.',
+  discountLower: 'A kedvezményes ár legyen alacsonyabb a normál árnál.',
+  promotionIncomplete: 'A promóció minden mezőjét és legalább egy kedvezményes árat tölts ki.',
+  promotionPeriod: 'A zárás legyen később a kezdésnél.',
   featuredLimit: 'Legfeljebb 4 kiemelt termék lehet.',
   highlightsMin: 'Legalább egy kiemelés kell.',
   highlightsMax: 'Legfeljebb 6 kiemelés adható meg.',
@@ -40,6 +43,10 @@ export const SERVER_FIELD_MESSAGES: Readonly<Record<string, string>> = {
   SLUG_IMMUTABLE: 'A slug létrehozás után nem módosítható.',
   UNKNOWN_IMAGE: 'A kép nem található; töltsd fel újra.',
   FEATURED_LIMIT: 'Legfeljebb {max} kiemelt termék lehet.',
+  PROMOTION_FIELDS_INCOMPLETE:
+    'A promóció minden mezőjét és legalább egy kedvezményes árat tölts ki.',
+  PROMOTION_PERIOD_INVALID: 'A zárás legyen később a kezdésnél.',
+  DISCOUNT_NOT_LOWER: 'A kedvezményes ár legyen alacsonyabb a normál árnál.',
 };
 
 /** Shown when a code has no Hungarian message yet (the shop's precedent, contact-server-errors.ts). */

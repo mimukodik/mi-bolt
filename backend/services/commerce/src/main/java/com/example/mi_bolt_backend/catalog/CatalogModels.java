@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.mi_bolt_backend.api.model.Availability;
+import com.example.mi_bolt_backend.api.model.ActivePromotion;
 import com.example.mi_bolt_backend.api.model.CatalogItem;
 import com.example.mi_bolt_backend.api.model.ColorFacetValue;
 import com.example.mi_bolt_backend.api.model.ColorOption;
@@ -47,7 +48,7 @@ public final class CatalogModels {
 	}
 
 	public static CatalogItem toCatalogItem(CatalogData.CatalogItemData data) {
-		return new CatalogItem(
+		CatalogItem item = new CatalogItem(
 				data.id(),
 				data.slug(),
 				data.brand(),
@@ -63,6 +64,9 @@ public final class CatalogModels {
 				data.maxQuantity(),
 				toImage(data.image()),
 				toColorOptions(data.colors()));
+		item.setOriginalPrice(nullableMoney(data.originalPriceAmount()));
+		item.setPromotion(toPromotion(data.promotion()));
+		return item;
 	}
 
 	public static Product toProduct(CatalogData.ProductData data) {
@@ -74,7 +78,7 @@ public final class CatalogModels {
 		for (CatalogData.SpecGroupData g : data.specGroups()) {
 			groups.add(toSpecGroup(g));
 		}
-		return new Product(
+		Product product = new Product(
 				data.id(),
 				data.slug(),
 				data.brand(),
@@ -85,10 +89,12 @@ public final class CatalogModels {
 				data.description(),
 				variants,
 				groups);
+		product.setPromotion(toPromotion(data.promotion()));
+		return product;
 	}
 
 	public static Variant toVariant(CatalogData.VariantData data) {
-		return new Variant(
+		Variant variant = new Variant(
 				data.id(),
 				data.slug(),
 				data.colorCode(),
@@ -99,6 +105,8 @@ public final class CatalogModels {
 				data.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK,
 				data.maxQuantity(),
 				List.of(toImage(data.image())));
+		variant.setOriginalPrice(nullableMoney(data.originalPriceAmount()));
+		return variant;
 	}
 
 	public static SpecGroup toSpecGroup(CatalogData.SpecGroupData data) {
@@ -139,20 +147,30 @@ public final class CatalogModels {
 	private static List<ColorOption> toColorOptions(List<CatalogData.ColorOptionData> colors) {
 		List<ColorOption> out = new ArrayList<>();
 		for (CatalogData.ColorOptionData c : colors) {
-			out.add(new ColorOption(
+			ColorOption option = new ColorOption(
 					c.colorCode(),
 					c.colorName(),
 					c.swatchHex(),
 					c.variantId(),
 					c.variantSlug(),
 					money(c.priceAmount()),
-					c.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK));
+					c.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK);
+			option.setOriginalPrice(nullableMoney(c.originalPriceAmount()));
+			out.add(option);
 		}
 		return out;
 	}
 
 	private static Money money(int amount) {
 		return new Money(amount, Money.CurrencyEnum.HUF);
+	}
+
+	private static Money nullableMoney(Integer amount) {
+		return amount == null ? null : money(amount);
+	}
+
+	private static ActivePromotion toPromotion(CatalogData.ActivePromotionData data) {
+		return data == null ? null : new ActivePromotion(data.text(), data.startAt(), data.endAt());
 	}
 
 	private static ProductPage.PageSizeEnum pageSizeEnum(int pageSize) {

@@ -47,7 +47,7 @@ class CatalogServiceTest {
 	private void useCatalogue(List<Product> catalogue) {
 		ProductRepository productRepository = mock(ProductRepository.class);
 		SpecGroupRepository specGroupRepository = mock(SpecGroupRepository.class);
-		service = new CatalogService(productRepository, specGroupRepository);
+		service = new CatalogService(productRepository, specGroupRepository, new PromotionPricing(java.time.Clock.systemUTC()));
 		when(productRepository.findAllWithColors()).thenReturn(catalogue);
 		when(productRepository.fetchHighlights(ArgumentMatchers.anyList())).thenReturn(catalogue);
 		when(productRepository.fetchVariants(ArgumentMatchers.anyList())).thenReturn(catalogue);
@@ -84,7 +84,7 @@ class CatalogServiceTest {
 	@Test
 	void defaultListReturnsTwelveEntriesInRecommendedOrder() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.items()).hasSize(12);
 		assertThat(page.total()).isEqualTo(12);
 		assertThat(page.totalPages()).isEqualTo(1);
@@ -97,15 +97,59 @@ class CatalogServiceTest {
 	@Test
 	void featuredTrueCapsAtFourEntries() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, true, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, true, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.items()).hasSize(4);
 		assertThat(page.total()).isEqualTo(4);
 	}
 
 	@Test
+	void promotionFilterIsIndependentAndReturnsEffectivePrice() {
+		List<Product> catalogue = buildCatalogue();
+		Product promoted = catalogue.get(0);
+		promoted.setPromotionStartAt(OffsetDateTime.parse("2020-01-01T00:00:00Z"));
+		promoted.setPromotionEndAt(OffsetDateTime.parse("2099-01-01T00:00:00Z"));
+		promoted.setPromotionText("Adventi ajánlat");
+		promoted.getVariants().forEach(variant -> variant.setDiscountPriceHuf(9_999L));
+		useCatalogue(catalogue);
+
+		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
+				null, null, null, null, null, true, ProductSort.RECOMMENDED, 1, 12);
+
+		assertThat(page.items()).allMatch(item -> item.promotion() != null);
+		assertThat(page.items().get(0).priceAmount()).isEqualTo(9_999);
+		assertThat(page.items().get(0).originalPriceAmount()).isNotNull();
+	}
+
+	@Test
+	void promotionFilterOnlyReturnsStorageEntriesWithADiscountedVariant() {
+		List<Product> catalogue = buildCatalogue();
+		Product promoted = catalogue.stream()
+				.filter(product -> product.getVariants().stream()
+						.map(ProductVariant::getStorageGb)
+						.distinct()
+						.count() > 1)
+				.findFirst()
+				.orElseThrow();
+		promoted.setPromotionStartAt(OffsetDateTime.parse("2020-01-01T00:00:00Z"));
+		promoted.setPromotionEndAt(OffsetDateTime.parse("2099-01-01T00:00:00Z"));
+		promoted.setPromotionText("Adventi ajánlat");
+		ProductVariant discounted = promoted.getVariants().get(0);
+		discounted.setDiscountPriceHuf(discounted.getPriceHuf() - 1);
+		useCatalogue(catalogue);
+
+		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
+				null, null, null, null, null, true, ProductSort.RECOMMENDED, 1, 12);
+
+		assertThat(page.items()).hasSize(1);
+		assertThat(page.items().get(0).storageGb()).isEqualTo(discounted.getStorageGb());
+		assertThat(page.items().get(0).variantId()).isEqualTo(discounted.getId());
+		assertThat(page.items().get(0).originalPriceAmount()).isEqualTo(discounted.getPriceHuf().intValue());
+	}
+
+	@Test
 	void featuredCapClampsEveryFacetCount() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, true, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, true, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(4);
 		assertThat(page.facets().inStock()).isEqualTo(4);
 		assertThat(page.facets().is5g()).isEqualTo(4);
@@ -125,7 +169,7 @@ class CatalogServiceTest {
 	@Test
 	void maxQuantityClampsToFive() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		Map<String, Integer> maxById = new HashMap<>();
 		for (CatalogData.CatalogItemData item : page.items()) {
 			maxById.put(item.variantId(), item.maxQuantity());
@@ -139,7 +183,7 @@ class CatalogServiceTest {
 	@Test
 	void disjunctiveBrandFacetCountWhenBrandIsSelected() {
 		CatalogData.ProductPageData page = service.listProducts(null, List.of("Nokia"), null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(1);
 		assertThat(page.facets().brands()).hasSize(4);
 		assertThat(page.facets().brands().get(0).value()).isEqualTo("Apple");
@@ -170,10 +214,10 @@ class CatalogServiceTest {
 	@Test
 	void qRelevanceOrderAndNfcNormalization() {
 		CatalogData.ProductPageData upper = service.listProducts("IPHONE", null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(upper.total()).isEqualTo(4);
 		CatalogData.ProductPageData byPosition = service.listProducts("i", null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		List<String> slugs = new ArrayList<>();
 		for (CatalogData.CatalogItemData item : byPosition.items()) {
 			if (!slugs.contains(item.slug())) {
@@ -186,7 +230,7 @@ class CatalogServiceTest {
 	@Test
 	void qEmptyMeansNoFilter() {
 		CatalogData.ProductPageData page = service.listProducts("   ", null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(12);
 	}
 
@@ -200,7 +244,7 @@ class CatalogServiceTest {
 				List.of(variant("nfd-phone--solo--128", "solo-128", "solo", 128, 100000, 5)));
 		useCatalogue(new ArrayList<>(List.of(p)));
 		CatalogData.ProductPageData page = service.listProducts("jégkék", null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(1);
 		assertThat(page.items().get(0).slug()).isEqualTo("nfd-phone");
 	}
@@ -208,21 +252,21 @@ class CatalogServiceTest {
 	@Test
 	void sortPriceDescLeadsApple256() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.PRICE_DESC, 1, 12);
+				null, null, null, null, null, null, ProductSort.PRICE_DESC, 1, 12);
 		assertThat(page.items().get(0).variantId()).isEqualTo("apple-iphone-16--midnight--256");
 	}
 
 	@Test
 	void sortPriceAscLeadsNokia() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.PRICE_ASC, 1, 12);
+				null, null, null, null, null, null, ProductSort.PRICE_ASC, 1, 12);
 		assertThat(page.items().get(0).slug()).isEqualTo("nokia-105");
 	}
 
 	@Test
 	void sortNameAscLeadsApple() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.NAME_ASC, 1, 12);
+				null, null, null, null, null, null, ProductSort.NAME_ASC, 1, 12);
 		assertThat(page.items().get(0).brand()).isEqualTo("Apple");
 		assertThat(page.items().get(0).storageGb()).isEqualTo(128);
 	}
@@ -230,7 +274,7 @@ class CatalogServiceTest {
 	@Test
 	void sortNameDescLeadsSamsung() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.NAME_DESC, 1, 12);
+				null, null, null, null, null, null, ProductSort.NAME_DESC, 1, 12);
 		assertThat(page.items().get(0).brand()).isEqualTo("Samsung");
 		assertThat(page.items().get(0).storageGb()).isEqualTo(128);
 	}
@@ -238,14 +282,14 @@ class CatalogServiceTest {
 	@Test
 	void sortNewestLeadsSamsung() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.NEWEST, 1, 12);
+				null, null, null, null, null, null, ProductSort.NEWEST, 1, 12);
 		assertThat(page.items().get(0).slug()).isEqualTo("samsung-galaxy-s25");
 	}
 
 	@Test
 	void sortPopularityLeadsApple128() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.POPULARITY, 1, 12);
+				null, null, null, null, null, null, ProductSort.POPULARITY, 1, 12);
 		assertThat(page.items().get(0).slug()).isEqualTo("apple-iphone-16");
 		assertThat(page.items().get(0).storageGb()).isEqualTo(128);
 	}
@@ -253,7 +297,7 @@ class CatalogServiceTest {
 	@Test
 	void emptyResultYieldsZeroZeroPriceRange() {
 		CatalogData.ProductPageData page = service.listProducts("zzz-nothing-matches", null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isZero();
 		assertThat(page.facets().priceRange().min()).isZero();
 		assertThat(page.facets().priceRange().max()).isZero();
@@ -262,7 +306,7 @@ class CatalogServiceTest {
 	@Test
 	void minPriceGreaterThanMaxPriceIsInvalidRequest() {
 		assertThatThrownBy(() -> service.listProducts(null, null, null, null,
-				500000, 100, null, null, null, ProductSort.RECOMMENDED, 1, 12))
+				500000, 100, null, null, null, null, ProductSort.RECOMMENDED, 1, 12))
 				.isInstanceOf(DomainException.class)
 				.matches(ex -> ((DomainException) ex).code() == ErrorCode.INVALID_REQUEST);
 	}
@@ -270,7 +314,7 @@ class CatalogServiceTest {
 	@Test
 	void invalidPageSizeIsInvalidRequest() {
 		assertThatThrownBy(() -> service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 13))
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 13))
 				.isInstanceOf(DomainException.class)
 				.matches(ex -> ((DomainException) ex).code() == ErrorCode.INVALID_REQUEST);
 	}
@@ -339,7 +383,7 @@ class CatalogServiceTest {
 	@Test
 	void priceRangeCoversFeaturedCappedEntries() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, true, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, true, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.facets().priceRange().min()).isEqualTo(299990);
 		assertThat(page.facets().priceRange().max()).isEqualTo(399990);
 	}
@@ -355,7 +399,7 @@ class CatalogServiceTest {
 	void displayedColourFollowsInStockFilter() {
 		useCatalogue(buildProbePhone());
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, Boolean.TRUE, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, Boolean.TRUE, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(1);
 		assertThat(page.items()).hasSize(1);
 		assertThat(page.items().get(0).variantId()).isEqualTo("probe-phone--beta--128");
@@ -368,7 +412,7 @@ class CatalogServiceTest {
 	void displayedColourFollowsMinPriceFilter() {
 		useCatalogue(buildProbePhone());
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				150000, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				150000, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(1);
 		assertThat(page.items()).hasSize(1);
 		assertThat(page.items().get(0).variantId()).isEqualTo("probe-phone--beta--128");
@@ -381,12 +425,12 @@ class CatalogServiceTest {
 	void inStockFacetCountsOnlyEntriesTheFilterWouldKeep() {
 		useCatalogue(buildProbePhone());
 		CatalogData.ProductPageData pageAlpha = service.listProducts(null, null, null, List.of("alpha"),
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(pageAlpha.facets().inStock()).isZero();
 		assertThat(pageAlpha.total()).isEqualTo(1);
 
 		CatalogData.ProductPageData pageAlphaInStock = service.listProducts(null, null, null, List.of("alpha"),
-				null, null, Boolean.TRUE, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, Boolean.TRUE, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(pageAlphaInStock.total()).isZero();
 	}
 
@@ -415,7 +459,7 @@ class CatalogServiceTest {
 
 		useCatalogue(new ArrayList<>(List.of(x, y)));
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, true, ProductSort.PRICE_DESC, 1, 12);
+				null, null, null, null, true, null, ProductSort.PRICE_DESC, 1, 12);
 		assertThat(page.items()).extracting(CatalogData.CatalogItemData::priceAmount)
 				.containsExactly(500000, 400000, 300000, 200000);
 		assertThat(page.facets().priceRange().min()).isEqualTo(200000);
@@ -425,7 +469,7 @@ class CatalogServiceTest {
 	@Test
 	void hugePageReturnsEmptyItems() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
-				null, null, null, null, null, ProductSort.RECOMMENDED, 200000000, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 200000000, 12);
 		assertThat(page.items()).isEmpty();
 		assertThat(page.total()).isEqualTo(12);
 		assertThat(page.totalPages()).isEqualTo(1);
@@ -435,7 +479,7 @@ class CatalogServiceTest {
 	@Test
 	void colourFilterKeepsEveryBrandStorageAndColourInFacets() {
 		CatalogData.ProductPageData page = service.listProducts(null, null, null, List.of("black"),
-				null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
+				null, null, null, null, null, null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(1);
 		assertThat(page.facets().brands()).hasSize(4);
 		assertThat(page.facets().brands().get(0).value()).isEqualTo("Apple");

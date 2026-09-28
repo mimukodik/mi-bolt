@@ -17,6 +17,9 @@ export interface AdminProductInput {
   is5g: boolean;
   name: string;
   popularityScore: number;
+  promotionEndAt?: string;
+  promotionStartAt?: string;
+  promotionText?: string;
   rank: number;
   releasedAt: string;
 

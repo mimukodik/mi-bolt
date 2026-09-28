@@ -12,6 +12,29 @@
   color: var(--color-text-on-primary);
 }
 
+.card--promotion {
+  border-color: #176b3a;
+}
+
+.price-label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--type-helper);
+  line-height: var(--line-height-body);
+}
+
+.original-price {
+  display: inline-block;
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-helper);
+  text-decoration: line-through;
+}
+
+.promotion-price {
+  color: #176b3a;
+}
+
 .media {
   display: block;
   text-decoration: none;

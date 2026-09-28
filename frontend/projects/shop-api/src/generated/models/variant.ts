@@ -16,6 +16,11 @@ export interface Variant {
    * Effective per-line cap for this variant. Zero means it cannot be ordered, which is consistent with availability out_of_stock.
    */
   maxQuantity: number;
+
+  /**
+   * Normal price when this variant has an active promotion.
+   */
+  originalPrice?: Money;
   price: Money;
 
   /**

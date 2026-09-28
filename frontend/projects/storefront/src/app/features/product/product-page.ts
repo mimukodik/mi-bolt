@@ -197,6 +197,11 @@ export class ProductPage {
     return variant !== null ? variant.price : null;
   });
 
+  readonly originalPriceText = computed(() => {
+    const amount = this.vm().selectedVariant?.originalPrice?.amount;
+    return amount === undefined ? null : `${PriceBlock.formatHuf(amount)} Ft`;
+  });
+
   readonly devicePriceStatus = computed<'idle' | 'loading' | 'success' | 'empty' | 'error'>(() => {
     const v = this.vm();
     if (v.status === 'loading') return 'loading';

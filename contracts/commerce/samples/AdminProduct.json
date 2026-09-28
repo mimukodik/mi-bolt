@@ -9,6 +9,9 @@
   "rank": 0,
   "popularityScore": 0,
   "featured": false,
+  "promotionStartAt": "2026-12-01T00:00:00+01:00",
+  "promotionEndAt": "2026-12-24T23:59:59+01:00",
+  "promotionText": "Adventi kedvezmény a készlet erejéig.",
   "status": "active",
   "version": 1,
   "highlights": [
@@ -38,6 +41,10 @@
       "storageGb": 128,
       "price": {
         "amount": 149990,
+        "currency": "HUF"
+      },
+      "discountPrice": {
+        "amount": 139990,
         "currency": "HUF"
       },
       "stock": 10

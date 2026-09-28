@@ -73,6 +73,20 @@ export class ProductCard {
    *  price, falls back to the item-level price for single-colour items. */
   readonly price = computed(() => this.selectedColor()?.price ?? this.product().price);
 
+  readonly originalPrice = computed(() => {
+    const selected = this.selectedColor();
+    return selected === null
+      ? (this.product().originalPrice ?? null)
+      : (selected.originalPrice ?? null);
+  });
+
+  readonly originalPriceText = computed(() => {
+    const amount = this.originalPrice()?.amount;
+    return amount === undefined ? null : `${PriceBlock.formatHuf(amount)} Ft`;
+  });
+
+  readonly promoted = computed(() => this.product().promotion !== undefined);
+
   /** The colour name currently shown on the card. */
   readonly colorName = computed<string>(() => this.selectedColor()?.colorName ?? '');
 

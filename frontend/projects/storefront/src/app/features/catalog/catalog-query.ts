@@ -80,6 +80,7 @@ export interface CatalogQuery {
   readonly inStock?: boolean;
   readonly is5g?: boolean;
   readonly featured?: boolean;
+  readonly promotion?: boolean;
   readonly sort?: Sort;
   readonly page: number;
   readonly pageSize: 12 | 24;
@@ -159,6 +160,7 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     inStock?: boolean;
     is5g?: boolean;
     featured?: boolean;
+    promotion?: boolean;
     sort?: Sort;
     page: number;
     pageSize: 12 | 24;
@@ -226,6 +228,12 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     if (parsed !== null) query.featured = parsed;
   }
 
+  const promotionRaw = params.get('promotion');
+  if (promotionRaw !== null) {
+    const parsed = parseBoolean(promotionRaw);
+    if (parsed !== null) query.promotion = parsed;
+  }
+
   const sortRaw = params.get('sort');
   if (sortRaw !== null) {
     const trimmed = sortRaw.trim();
@@ -260,6 +268,7 @@ export const CATALOG_QUERY_KEYS = [
   'inStock',
   'is5g',
   'featured',
+  'promotion',
   'sort',
   'page',
   'pageSize',
@@ -307,6 +316,7 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
   if (query.inStock !== undefined) params.set('inStock', String(query.inStock));
   if (query.is5g !== undefined) params.set('is5g', String(query.is5g));
   if (query.featured !== undefined) params.set('featured', String(query.featured));
+  if (query.promotion !== undefined) params.set('promotion', String(query.promotion));
 
   if (query.sort !== undefined) params.set('sort', query.sort);
 
@@ -381,6 +391,9 @@ export function buildChips(q: CatalogQuery): readonly AppliedChip[] {
   }
   if (q.featured === true) {
     chips.push({ id: 'featured', name: 'featured', label: 'Kiemelt termékek' });
+  }
+  if (q.promotion === true) {
+    chips.push({ id: 'promotion', name: 'promotion', label: 'Adventi ajánlatok' });
   }
   return chips;
 }

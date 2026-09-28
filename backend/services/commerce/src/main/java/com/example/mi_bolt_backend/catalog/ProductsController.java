@@ -43,11 +43,12 @@ public class ProductsController implements CatalogApi {
 			Boolean inStock,
 			Boolean is5g,
 			Boolean featured,
+			Boolean promotion,
 			ProductSort sort,
 			Integer page,
 			Integer pageSize) {
 		return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(CatalogModels.toProductPage(catalogService.listProducts(q, brand, storageGb, color,
-				minPrice, maxPrice, inStock, is5g, featured, sort, page, pageSize)));
+				minPrice, maxPrice, inStock, is5g, featured, promotion, sort, page, pageSize)));
 	}
 
 	@Override

@@ -110,6 +110,7 @@ function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
   if (a.inStock !== b.inStock) return false;
   if (a.is5g !== b.is5g) return false;
   if (a.featured !== b.featured) return false;
+  if (a.promotion !== b.promotion) return false;
   if (a.sort !== b.sort) return false;
   if (a.page !== b.page) return false;
   if (a.pageSize !== b.pageSize) return false;
@@ -144,6 +145,7 @@ function toSdkParams(q: CatalogQuery): Parameters<typeof listProducts>[2] {
   if (q.inStock !== undefined) params.inStock = q.inStock;
   if (q.is5g !== undefined) params.is5g = q.is5g;
   if (q.featured !== undefined) params.featured = q.featured;
+  if (q.promotion !== undefined) params.promotion = q.promotion;
   if (q.sort !== undefined) params.sort = q.sort;
   params.page = q.page;
   params.pageSize = q.pageSize;
@@ -427,6 +429,11 @@ export class CatalogFacade {
   /** Set the `featured` flag; pass `undefined` to clear the filter. */
   setFeatured(value: boolean | undefined): void {
     this.setFilters({ featured: value });
+  }
+
+  /** Set the active-promotion flag; pass `undefined` to clear the filter. */
+  setPromotion(value: boolean | undefined): void {
+    this.setFilters({ promotion: value });
   }
 
   /** Reset every filter back to the documented defaults. */

@@ -49,6 +49,8 @@ export class PriceBlock {
   readonly layout = input<'stack' | 'row'>('stack');
   /** Inverse colours for a navy card: white label, lime amount. */
   readonly inverse = input(false);
+  /** High-contrast green for an active promotional amount. */
+  readonly promotion = input(false);
   /** False where the row already names the amount (a `<dt>` or an option
    *  title beside it), so the label is not printed twice. */
   readonly showLabel = input(true);

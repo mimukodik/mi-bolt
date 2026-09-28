@@ -11,6 +11,11 @@ export interface ColorOption {
   availability: Availability;
   colorCode: string;
   colorName: string;
+
+  /**
+   * Normal price when this variant has an active promotion.
+   */
+  originalPrice?: Money;
   price: Money;
   swatchHex: string;
   variantId: string;

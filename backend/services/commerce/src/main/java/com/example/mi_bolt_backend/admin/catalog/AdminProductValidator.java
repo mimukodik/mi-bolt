@@ -57,8 +57,39 @@ public class AdminProductValidator {
 		validateHighlights(input, errors);
 		validateColors(input, errors);
 		validateVariants(input, errors);
+		validatePromotion(input, errors);
 		validateSpecGroups(input, errors);
 		return errors;
+	}
+
+	private static void validatePromotion(AdminProductInput input, List<FieldError> errors) {
+		boolean hasStart = input.getPromotionStartAt() != null;
+		boolean hasEnd = input.getPromotionEndAt() != null;
+		boolean hasText = input.getPromotionText() != null;
+		boolean hasDiscount = input.getVariants() != null && input.getVariants().stream()
+				.filter(java.util.Objects::nonNull)
+				.anyMatch(variant -> variant.getDiscountPrice() != null);
+		boolean any = hasStart || hasEnd || hasText || hasDiscount;
+		if (any && !(hasStart && hasEnd && hasText && hasDiscount)) {
+			if (!hasStart) errors.add(new FieldError("/promotionStartAt", "PROMOTION_FIELDS_INCOMPLETE"));
+			if (!hasEnd) errors.add(new FieldError("/promotionEndAt", "PROMOTION_FIELDS_INCOMPLETE"));
+			if (!hasText) errors.add(new FieldError("/promotionText", "PROMOTION_FIELDS_INCOMPLETE"));
+			if (!hasDiscount) errors.add(new FieldError("/variants", "PROMOTION_FIELDS_INCOMPLETE"));
+		}
+		if (hasText && input.getPromotionText().isBlank()) {
+			errors.add(new FieldError("/promotionText", "NOTBLANK"));
+		}
+		if (hasStart && hasEnd && !input.getPromotionStartAt().isBefore(input.getPromotionEndAt())) {
+			errors.add(new FieldError("/promotionEndAt", "PROMOTION_PERIOD_INVALID"));
+		}
+		if (input.getVariants() == null) return;
+		for (int i = 0; i < input.getVariants().size(); i++) {
+			AdminProductVariantInput variant = input.getVariants().get(i);
+			if (variant == null || variant.getDiscountPrice() == null || variant.getPrice() == null) continue;
+			if (variant.getDiscountPrice().getAmount() >= variant.getPrice().getAmount()) {
+				errors.add(new FieldError("/variants/" + i + "/discountPrice", "DISCOUNT_NOT_LOWER"));
+			}
+		}
 	}
 
 	private static void addBlank(List<FieldError> errors, String path, String value) {

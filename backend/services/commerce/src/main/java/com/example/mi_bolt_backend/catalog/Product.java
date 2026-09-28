@@ -52,6 +52,15 @@ public class Product {
 	@Column(nullable = false)
 	private boolean featured;
 
+	@Column(name = "promotion_start_at")
+	private OffsetDateTime promotionStartAt;
+
+	@Column(name = "promotion_end_at")
+	private OffsetDateTime promotionEndAt;
+
+	@Column(name = "promotion_text", length = 280)
+	private String promotionText;
+
 	@Version
 	@Column(nullable = false)
 	private long version;
@@ -152,6 +161,30 @@ public class Product {
 
 	public void setFeatured(boolean featured) {
 		this.featured = featured;
+	}
+
+	public OffsetDateTime getPromotionStartAt() {
+		return promotionStartAt;
+	}
+
+	public void setPromotionStartAt(OffsetDateTime promotionStartAt) {
+		this.promotionStartAt = promotionStartAt;
+	}
+
+	public OffsetDateTime getPromotionEndAt() {
+		return promotionEndAt;
+	}
+
+	public void setPromotionEndAt(OffsetDateTime promotionEndAt) {
+		this.promotionEndAt = promotionEndAt;
+	}
+
+	public String getPromotionText() {
+		return promotionText;
+	}
+
+	public void setPromotionText(String promotionText) {
+		this.promotionText = promotionText;
 	}
 
 	public long getVersion() {

@@ -1,0 +1,23 @@
+<adm-section-card title="Promóció" [number]="4">
+  <p class="mt-0 text-sm text-[var(--mat-sys-on-surface-variant)]">
+    A kezdés, zárás, szöveg és legalább egy változat kedvezményes ára együtt menthető.
+  </p>
+  <div class="grid gap-3 md:grid-cols-2">
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Kezdés</mat-label>
+      <input matInput type="datetime-local" [formField]="form().promotionStartAt" />
+      <mat-error>{{ error(form().promotionStartAt()) }}</mat-error>
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Zárás</mat-label>
+      <input matInput type="datetime-local" [formField]="form().promotionEndAt" />
+      <mat-error>{{ error(form().promotionEndAt()) }}</mat-error>
+    </mat-form-field>
+    <mat-form-field class="md:col-span-2" subscriptSizing="dynamic">
+      <mat-label>Promóciós szöveg</mat-label>
+      <textarea matInput rows="3" [formField]="form().promotionText"></textarea>
+      <mat-hint align="end">{{ form().promotionText().value().length }}/280</mat-hint>
+      <mat-error>{{ error(form().promotionText()) }}</mat-error>
+    </mat-form-field>
+  </div>
+</adm-section-card>

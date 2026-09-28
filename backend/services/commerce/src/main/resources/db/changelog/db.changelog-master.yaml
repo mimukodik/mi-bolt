@@ -21,3 +21,5 @@ databaseChangeLog:
       file: db/changelog/changes/0010-demo-access.yaml
   - include:
       file: db/changelog/changes/0011-order-payment-intent-unique.yaml
+  - include:
+      file: db/changelog/changes/0012-product-promotions.yaml

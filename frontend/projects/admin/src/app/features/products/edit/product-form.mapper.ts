@@ -10,6 +10,7 @@ const COLOR_IMAGE_ID_POINTER = /^\/colors\/(\d+)\/imageId$/;
 const VARIANT_COLOR_CODE_POINTER = /^\/variants\/(\d+)\/colorCode$/;
 const VARIANT_SLUG_POINTER = /^\/variants\/(\d+)\/slug$/;
 const VARIANT_PRICE_POINTER = /^\/variants\/(\d+)\/price(?:\/amount)?$/;
+const VARIANT_DISCOUNT_POINTER = /^\/variants\/(\d+)\/discountPrice(?:\/amount)?$/;
 const HIGHLIGHT_POINTER = /^\/highlights\/(\d+)$/;
 
 /** Local midnight for `date`, parsed without a time-zone shift (`new Date(y, m - 1, d)`). */
@@ -24,6 +25,17 @@ function formatLocalDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function toLocalDateTime(value: string | undefined): string {
+  if (value === undefined) return '';
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function toOffsetDateTime(value: string): string | undefined {
+  return value === '' ? undefined : new Date(value).toISOString();
 }
 
 /** Reads a value the edit schema requires non-null before submission, or throws naming `pointer`. */
@@ -56,6 +68,9 @@ export function toFormModel(product: AdminProduct): ProductFormModel {
     rank: product.rank,
     popularityScore: product.popularityScore,
     featured: product.featured,
+    promotionStartAt: toLocalDateTime(product.promotionStartAt),
+    promotionEndAt: toLocalDateTime(product.promotionEndAt),
+    promotionText: product.promotionText ?? '',
     highlights: product.highlights.map((text) => ({ key: newKey(), text })),
     colors,
     variants: product.variants.map((variant) => ({
@@ -64,6 +79,7 @@ export function toFormModel(product: AdminProduct): ProductFormModel {
       colorKey: colorKeyByCode.get(variant.colorCode) ?? null,
       storageGb: variant.storageGb,
       price: variant.price.amount,
+      discountPrice: variant.discountPrice?.amount ?? null,
       stock: variant.stock,
     })),
     specGroups: product.specGroups.map((group) => ({
@@ -110,6 +126,9 @@ export function toProductInput(model: ProductFormModel): AdminProductInput {
       colorCode,
       storageGb,
       price: { amount: price, currency: 'HUF' },
+      ...(variant.discountPrice === null
+        ? {}
+        : { discountPrice: { amount: variant.discountPrice, currency: 'HUF' as const } }),
       stock,
     };
   });
@@ -124,6 +143,9 @@ export function toProductInput(model: ProductFormModel): AdminProductInput {
     rank,
     popularityScore,
     featured: model.featured,
+    promotionStartAt: toOffsetDateTime(model.promotionStartAt),
+    promotionEndAt: toOffsetDateTime(model.promotionEndAt),
+    promotionText: model.promotionText.trim() === '' ? undefined : model.promotionText.trim(),
     highlights: model.highlights.map((highlight) => highlight.text),
     colors,
     variants,
@@ -151,6 +173,10 @@ export function toModelPointer(pointer: string): string {
   const variantPrice = VARIANT_PRICE_POINTER.exec(pointer);
   if (variantPrice !== null) {
     return `/variants/${variantPrice[1]}/price`;
+  }
+  const variantDiscount = VARIANT_DISCOUNT_POINTER.exec(pointer);
+  if (variantDiscount !== null) {
+    return `/variants/${variantDiscount[1]}/discountPrice`;
   }
   const highlight = HIGHLIGHT_POINTER.exec(pointer);
   if (highlight !== null) {

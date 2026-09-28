@@ -315,6 +315,9 @@ export class CatalogPage {
       case 'featured':
         this.facade.setFeatured(undefined);
         break;
+      case 'promotion':
+        this.facade.setPromotion(undefined);
+        break;
     }
   }
 

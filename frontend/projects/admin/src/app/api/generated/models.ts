@@ -20,6 +20,7 @@ export type { AdminSpecRow } from './models/admin-spec-row';
 export type { AdminUser } from './models/admin-user';
 export type { AdminUserCreated } from './models/admin-user-created';
 export type { AdminUserCreateRequest } from './models/admin-user-create-request';
+export type { DiscountMoney } from './models/discount-money';
 export type { FieldError } from './models/field-error';
 export type { Image } from './models/image';
 export type { Money } from './models/money';

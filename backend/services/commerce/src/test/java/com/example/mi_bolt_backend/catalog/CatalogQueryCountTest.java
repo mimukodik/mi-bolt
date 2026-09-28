@@ -30,7 +30,7 @@ class CatalogQueryCountTest {
 	@Test
 	void listRunsFiveQueries() {
 		Statistics stats = statistics();
-		catalogService.listProducts(null, null, null, null, null, null, null, null, null,
+		catalogService.listProducts(null, null, null, null, null, null, null, null, null, null,
 				ProductSort.RECOMMENDED, 1, 12);
 		assertThat(stats.getPrepareStatementCount()).isEqualTo(5);
 	}

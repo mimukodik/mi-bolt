@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.mi_bolt_backend.catalog.CatalogService;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
 import com.example.mi_bolt_backend.catalog.ProductVariantRepository;
+import com.example.mi_bolt_backend.catalog.PromotionPricing;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
 import com.example.mi_bolt_backend.session.ShopSession;
@@ -35,17 +36,20 @@ public class CartService {
 	private final ShopSessionRepository sessions;
 	private final SessionService sessionService;
 	private final Clock clock;
+	private final PromotionPricing promotionPricing;
 
 	public CartService(CartRepository carts,
 			ProductVariantRepository variants,
 			ShopSessionRepository sessions,
 			SessionService sessionService,
-			Clock clock) {
+			Clock clock,
+			PromotionPricing promotionPricing) {
 		this.carts = carts;
 		this.variants = variants;
 		this.sessions = sessions;
 		this.sessionService = sessionService;
 		this.clock = clock;
+		this.promotionPricing = promotionPricing;
 	}
 
 	public CartData.CartView getCart(ShopSession current) {
@@ -106,12 +110,12 @@ public class CartService {
 		}
 		ReconciliationResult result = reconcile(cart);
 		if (line == null) {
-			line = new CartItem(cart, variant, merged, variant.getPriceHuf(), now());
+			line = new CartItem(cart, variant, merged, promotionPricing.effectivePrice(variant), now());
 			cart.getItems().add(line);
 		}
 		else {
 			line.setQuantity(merged, now());
-			line.setUnitPriceHuf(variant.getPriceHuf(), now());
+			line.setUnitPriceHuf(promotionPricing.effectivePrice(variant), now());
 		}
 		result.markMutated();
 		return finalize(cart, session, result);
@@ -214,6 +218,7 @@ public class CartService {
 			int max = CatalogService.orderableMax(variant);
 			int oldQty = item.getQuantity();
 			long oldPrice = item.getUnitPriceHuf();
+			long effectivePrice = promotionPricing.effectivePrice(variant);
 			if (max == 0) {
 				iterator.remove();
 				result.add(new CartData.Notice(N_ITEM_REMOVED, variant.getId(), variant.getProduct().getName(),
@@ -225,10 +230,10 @@ public class CartService {
 					result.add(new CartData.Notice(N_QUANTITY_REDUCED, variant.getId(), variant.getProduct().getName(),
 							new CartData.NoticeParams(null, oldQty, max)));
 				}
-				if (oldPrice != variant.getPriceHuf()) {
-					item.setUnitPriceHuf(variant.getPriceHuf(), now());
+				if (oldPrice != effectivePrice) {
+					item.setUnitPriceHuf(effectivePrice, now());
 					result.add(new CartData.Notice(N_PRICE_CHANGED, variant.getId(), variant.getProduct().getName(),
-							new CartData.NoticeParams(null, Math.toIntExact(oldPrice), Math.toIntExact(variant.getPriceHuf()))));
+							new CartData.NoticeParams(null, Math.toIntExact(oldPrice), Math.toIntExact(effectivePrice))));
 				}
 			}
 		}

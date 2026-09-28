@@ -31,7 +31,7 @@ function variant(
   price: number,
   stock: number,
 ): VariantModel {
-  return { key: newKey(), id, colorKey, storageGb, price, stock };
+  return { key: newKey(), id, colorKey, storageGb, price, discountPrice: null, stock };
 }
 
 @Component({

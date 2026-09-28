@@ -37,6 +37,13 @@
             <span matTextSuffix>Ft</span>
             <mat-error>{{ variant.price().errors()[0]?.message }}</mat-error>
           </mat-form-field>
+          <mat-form-field class="w-44" subscriptSizing="dynamic">
+            <mat-label>Kedvezményes ár</mat-label>
+            <input matInput type="number" [formField]="variant.discountPrice" />
+            <span matTextSuffix>Ft</span>
+            <mat-hint>Opcionális</mat-hint>
+            <mat-error>{{ variant.discountPrice().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
           <mat-form-field class="w-28" subscriptSizing="dynamic">
             <mat-label>Készlet</mat-label>
             <input matInput type="number" [formField]="variant.stock" />

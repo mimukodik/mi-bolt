@@ -25,6 +25,7 @@ import com.example.mi_bolt_backend.catalog.Product;
 import com.example.mi_bolt_backend.catalog.ProductColor;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
 import com.example.mi_bolt_backend.catalog.ProductVariantRepository;
+import com.example.mi_bolt_backend.catalog.PromotionPricing;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
 import com.example.mi_bolt_backend.session.ShopSession;
@@ -80,7 +81,7 @@ class CartServiceTest {
 			return cart;
 		});
 
-		service = new CartService(carts, variants, sessions, sessionService, clock);
+		service = new CartService(carts, variants, sessions, sessionService, clock, new PromotionPricing(clock));
 	}
 
 	@Test
@@ -261,6 +262,21 @@ class CartServiceTest {
 		assertThat(view.totalQuantity()).isEqualTo(2);
 		assertThat(view.subtotal()).isEqualTo(2L * PRICE_HUF);
 		assertThat(view.version()).isEqualTo(2L);
+	}
+
+	@Test
+	void activePromotionDiscountIsStoredAndTotalledInCart() {
+		product.setPromotionStartAt(now().minusMinutes(1));
+		product.setPromotionEndAt(now().plusMinutes(1));
+		product.setPromotionText("Adventi ajánlat");
+		navy.setDiscountPriceHuf(249_990L);
+		Cart cart = newCartNow();
+		when(carts.findBySessionIdWithItems(SESSION_ID)).thenReturn(Optional.of(cart));
+
+		CartData.CartView view = service.addItem(session, VARIANT_ID, 2);
+
+		assertThat(view.items().get(0).unitPrice()).isEqualTo(249_990L);
+		assertThat(view.subtotal()).isEqualTo(499_980L);
 	}
 
 	@Test

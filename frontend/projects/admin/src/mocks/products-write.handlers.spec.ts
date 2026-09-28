@@ -66,6 +66,39 @@ describe('productsWriteHandlers', () => {
       expect(db.products.get(49)).toBeDefined();
     });
 
+    it('creates a product with its complete promotion fields and variant discount', async () => {
+      const db = setup();
+      const product5 = requireProduct(db, 5);
+      const base = inputOf(product5);
+      const firstPrice = base.variants[0].price.amount;
+      const discountAmount = firstPrice - 1;
+      const input: AdminProductInput = {
+        ...base,
+        slug: 'honor-600-lite-advent',
+        featured: false,
+        promotionStartAt: '2026-12-01T00:00:00+01:00',
+        promotionEndAt: '2026-12-24T00:00:00+01:00',
+        promotionText: 'Adventi ajánlat',
+        variants: base.variants.map((variant, index) => ({
+          ...variant,
+          ...(index === 0 ? { discountPrice: { amount: discountAmount, currency: 'HUF' } } : {}),
+        })),
+      };
+
+      const response = await post(productsUrl(), db, input);
+
+      expect(response.status).toBe(201);
+      const body = await jsonRecord(response);
+      expect(readString(body, 'promotionStartAt')).toBe('2026-12-01T00:00:00+01:00');
+      expect(readString(body, 'promotionEndAt')).toBe('2026-12-24T00:00:00+01:00');
+      expect(readString(body, 'promotionText')).toBe('Adventi ajánlat');
+      const firstVariant = readArray(body, 'variants')[0];
+      expectRecord(firstVariant);
+      const discountPrice = firstVariant['discountPrice'];
+      expectRecord(discountPrice);
+      expect(readNumber(discountPrice, 'amount')).toBe(discountAmount);
+    });
+
     it('rejects without the XSRF header (403)', async () => {
       const db = setup();
       const product5 = requireProduct(db, 5);

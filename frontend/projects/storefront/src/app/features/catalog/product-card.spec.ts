@@ -110,10 +110,13 @@ function makeItem(opts: {
   readonly availability?: 'in_stock' | 'out_of_stock';
   readonly imageSrc?: string;
   readonly is5g?: boolean;
+  readonly originalPrice?: number;
+  readonly promoted?: boolean;
   readonly extraColors?: readonly {
     colorName: string;
     swatchHex: string;
     price?: number;
+    originalPrice?: number;
     availability?: 'in_stock' | 'out_of_stock';
   }[];
 }): CatalogItem {
@@ -130,6 +133,7 @@ function makeItem(opts: {
     variantId,
     variantSlug,
     price,
+    ...(opts.originalPrice === undefined ? {} : { originalPrice: money(opts.originalPrice) }),
     availability: opts.availability ?? 'in_stock',
   };
   const extraColors: readonly ColorOption[] = (opts.extraColors ?? []).map((entry) => {
@@ -141,6 +145,7 @@ function makeItem(opts: {
       variantId: `${opts.id}-${String(storageVal)}-${extraCode}`,
       variantSlug: `${opts.slug}-${extraCode}-${String(storageVal)}`,
       price: money(entry.price ?? opts.price ?? 339_990),
+      ...(entry.originalPrice === undefined ? {} : { originalPrice: money(entry.originalPrice) }),
       availability: entry.availability ?? 'in_stock',
     };
   });
@@ -153,6 +158,15 @@ function makeItem(opts: {
       opts.highlights !== undefined ? [...opts.highlights] : ['6,7″ kijelző', '50 MP kamera'],
     is5g: opts.is5g ?? true,
     releasedAt: '2026-01-01',
+    ...(opts.promoted === true
+      ? {
+          promotion: {
+            text: 'Adventi ajánlat',
+            startAt: '2026-12-01T00:00:00Z',
+            endAt: '2026-12-24T00:00:00Z',
+          },
+        }
+      : {}),
     storageGb: storageVal,
     variantId,
     variantSlug,
@@ -249,6 +263,52 @@ describe('T13-AC04 ProductCard', () => {
     const root = getRootElement(fixture);
     const priceRoot = queryElement(root, 'app-price-block .root');
     expect(priceRoot.getAttribute('data-size')).toBe('md');
+  });
+
+  it('marks an active promotion and pairs the crossed-out normal price with green discount', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        price: 299_990,
+        originalPrice: 339_990,
+        promoted: true,
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(queryElement(root, '[data-testid="product-card"]').classList).toContain(
+      'card--promotion',
+    );
+    expect(queryElement(root, '.original-price').textContent).toContain('339');
+    expect(queryElement(root, 'app-price-block .root').hasAttribute('data-promotion')).toBe(true);
+  });
+
+  it('removes the crossed-out price when selecting a colour without a discount', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        price: 299_990,
+        originalPrice: 339_990,
+        promoted: true,
+        extraColors: [{ colorName: 'Kék', swatchHex: '#0044aa', price: 319_990 }],
+      }),
+    );
+    fixture.detectChanges();
+
+    const swatches = queryAllElements(getRootElement(fixture), '.swatch');
+    swatches[1]?.click();
+    fixture.detectChanges();
+
+    expect(getRootElement(fixture).querySelector('.original-price')).toBeNull();
+    expect(
+      queryElement(getRootElement(fixture), '[data-testid="price-amount"]').textContent,
+    ).toContain('319');
   });
 
   it('renders the matching variant color label and storage bucket together', () => {

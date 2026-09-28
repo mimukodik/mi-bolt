@@ -7,6 +7,7 @@ import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
 import { Hero } from './hero';
 import { FeaturedProducts, type FeaturedState } from './featured-products';
 import { HowDemoWorks } from './how-demo-works';
+import { PromotionBanner } from './promotion-banner';
 
 /**
  * `HomePage` — the marketing entry screen (S1).
@@ -30,7 +31,7 @@ import { HowDemoWorks } from './how-demo-works';
  */
 @Component({
   selector: 'app-home-page',
-  imports: [Hero, FeaturedProducts, HowDemoWorks],
+  imports: [Hero, PromotionBanner, FeaturedProducts, HowDemoWorks],
   templateUrl: './home-page.html',
   styleUrl: './home-page.scss',
 })

@@ -3,6 +3,7 @@ package com.example.mi_bolt_backend.admin.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,6 +15,7 @@ import com.example.mi_bolt_backend.api.model.AdminProductVariantInput;
 import com.example.mi_bolt_backend.api.model.AdminSpecGroup;
 import com.example.mi_bolt_backend.api.model.AdminSpecRow;
 import com.example.mi_bolt_backend.api.model.FieldError;
+import com.example.mi_bolt_backend.api.model.DiscountMoney;
 import com.example.mi_bolt_backend.api.model.Money;
 import com.example.mi_bolt_backend.api.model.StorageGb;
 
@@ -230,6 +232,42 @@ class AdminProductValidatorTest {
 						new FieldError("/brand", "NOTBLANK"),
 						new FieldError("/colors/1/code", "DUPLICATE_COLOR_CODE"),
 						new FieldError("/variants/0/colorCode", "UNKNOWN_COLOR"));
+	}
+
+	@Test
+	void incompletePromotionPointsAtMissingFields() {
+		AdminProductInput input = validInput();
+		input.setPromotionStartAt(OffsetDateTime.parse("2026-12-01T00:00:00Z"));
+
+		assertThat(validator.validate(input)).containsExactly(
+				new FieldError("/promotionEndAt", "PROMOTION_FIELDS_INCOMPLETE"),
+				new FieldError("/promotionText", "PROMOTION_FIELDS_INCOMPLETE"),
+				new FieldError("/variants", "PROMOTION_FIELDS_INCOMPLETE"));
+	}
+
+	@Test
+	void promotionEndMustBeAfterStart() {
+		AdminProductInput input = validPromotion();
+		input.setPromotionEndAt(input.getPromotionStartAt());
+		assertThat(validator.validate(input))
+				.containsExactly(new FieldError("/promotionEndAt", "PROMOTION_PERIOD_INVALID"));
+	}
+
+	@Test
+	void discountMustRemainLowerWhenNormalPriceChanges() {
+		AdminProductInput input = validPromotion();
+		input.getVariants().get(0).setPrice(new Money(90_000, Money.CurrencyEnum.HUF));
+		assertThat(validator.validate(input))
+				.containsExactly(new FieldError("/variants/0/discountPrice", "DISCOUNT_NOT_LOWER"));
+	}
+
+	private static AdminProductInput validPromotion() {
+		AdminProductInput input = validInput();
+		input.setPromotionStartAt(OffsetDateTime.parse("2026-12-01T00:00:00Z"));
+		input.setPromotionEndAt(OffsetDateTime.parse("2026-12-24T00:00:00Z"));
+		input.setPromotionText("Adventi ajánlat");
+		input.getVariants().get(0).setDiscountPrice(new DiscountMoney(90_000, DiscountMoney.CurrencyEnum.HUF));
+		return input;
 	}
 
 	private static AdminProductInput validInput() {

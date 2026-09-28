@@ -21,6 +21,7 @@ export interface VariantModel {
   colorKey: string | null;
   storageGb: StorageGb | null;
   price: number | null;
+  discountPrice: number | null;
   stock: number | null;
 }
 
@@ -46,6 +47,9 @@ export interface ProductFormModel {
   rank: number | null;
   popularityScore: number | null;
   featured: boolean;
+  promotionStartAt: string;
+  promotionEndAt: string;
+  promotionText: string;
   highlights: HighlightModel[];
   colors: ColorModel[];
   variants: VariantModel[];
@@ -66,7 +70,15 @@ export function emptyColor(): ColorModel {
 }
 
 export function emptyVariant(colorKey: string | null): VariantModel {
-  return { key: newKey(), id: null, colorKey, storageGb: null, price: null, stock: 0 };
+  return {
+    key: newKey(),
+    id: null,
+    colorKey,
+    storageGb: null,
+    price: null,
+    discountPrice: null,
+    stock: 0,
+  };
 }
 
 export function emptySpecRow(): SpecRowModel {
@@ -89,6 +101,9 @@ export function emptyProductForm(): ProductFormModel {
     rank: null,
     popularityScore: null,
     featured: false,
+    promotionStartAt: '',
+    promotionEndAt: '',
+    promotionText: '',
     highlights: [emptyHighlight()],
     colors: [color],
     variants: [emptyVariant(color.key)],

@@ -48,6 +48,11 @@
   color: var(--color-accent);
 }
 
+.root[data-promotion] .amount,
+.root[data-promotion] .currency {
+  color: #176b3a;
+}
+
 .amount--error,
 .amount--placeholder {
   color: var(--color-text-secondary);

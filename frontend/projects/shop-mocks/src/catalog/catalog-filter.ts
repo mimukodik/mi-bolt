@@ -27,6 +27,7 @@ const CONTRACT_PARAMETERS = [
   'inStock',
   'is5g',
   'featured',
+  'promotion',
   'sort',
   'page',
   'pageSize',
@@ -53,6 +54,7 @@ export interface CatalogFilter {
   inStock?: boolean;
   is5g?: boolean;
   featured?: boolean;
+  promotion?: boolean;
   sort: ProductSort;
   page: number;
   pageSize: 12 | 24;
@@ -216,6 +218,17 @@ export function parseListProductsParams(params: URLSearchParams): ParseListProdu
     filter.featured = featuredRaw === 'true';
   }
 
+  const promotionRaw = params.get('promotion');
+  if (promotionRaw !== null) {
+    if (promotionRaw !== 'true' && promotionRaw !== 'false') {
+      return {
+        ok: false,
+        error: { kind: 'invalid-value', parameter: 'promotion', detail: 'promotion is invalid' },
+      };
+    }
+    filter.promotion = promotionRaw === 'true';
+  }
+
   const sortRaw = params.get('sort');
   if (sortRaw !== null) {
     if (!isProductSort(sortRaw)) {
@@ -327,6 +340,12 @@ function passesProductFilters(entry: CatalogEntry, filter: CatalogFilter): boole
   }
   if (filter.is5g !== undefined && entry.product.is5g !== filter.is5g) return false;
   if (filter.featured !== undefined && entry.ranking.featured !== filter.featured) {
+    return false;
+  }
+  if (
+    filter.promotion !== undefined &&
+    (entry.product.promotion !== undefined) !== filter.promotion
+  ) {
     return false;
   }
   if (filter.storageGb.length > 0 && !filter.storageGb.includes(entry.storageGb)) {

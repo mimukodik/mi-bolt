@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0012-product-promotions
+      author: mi-bolt
+      comment: |
+        BOLT-3 stores one nullable promotion window and message per product,
+        plus an optional whole-HUF discount per variant. Existing rows keep
+        all four values NULL, so the migration is additive and promotions
+        remain disabled until an admin saves a complete group.
+      changes:
+        - addColumn:
+            tableName: product
+            columns:
+              - column:
+                  name: promotion_start_at
+                  type: timestamp with time zone
+              - column:
+                  name: promotion_end_at
+                  type: timestamp with time zone
+              - column:
+                  name: promotion_text
+                  type: varchar(280)
+        - addColumn:
+            tableName: product_variant
+            columns:
+              - column:
+                  name: discount_price_huf
+                  type: bigint
+        - sql:
+            comment: BOLT-3 — product promotion fields are all absent or all valid
+            sql: >-
+              ALTER TABLE product ADD CONSTRAINT ck_product_promotion_fields
+              CHECK ((promotion_start_at IS NULL AND promotion_end_at IS NULL AND promotion_text IS NULL)
+              OR (promotion_start_at IS NOT NULL AND promotion_end_at IS NOT NULL
+              AND promotion_text IS NOT NULL AND promotion_start_at < promotion_end_at
+              AND CHAR_LENGTH(TRIM(promotion_text)) BETWEEN 1 AND 280))
+        - sql:
+            comment: BOLT-3 — a variant discount is positive and below its normal price
+            sql: >-
+              ALTER TABLE product_variant ADD CONSTRAINT ck_product_variant_discount_price
+              CHECK (discount_price_huf IS NULL
+              OR (discount_price_huf > 0 AND discount_price_huf < price_huf))

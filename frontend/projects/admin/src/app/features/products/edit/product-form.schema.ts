@@ -93,6 +93,47 @@ export function productFormSchema(context: ProductFormSchemaContext): Schema<Pro
         : null;
     });
 
+    maxLength(path.promotionText, 280, { message: MESSAGES.maxLength(280) });
+    validateTree(path, (ctx) => {
+      const value = ctx.value();
+      const hasStart = value.promotionStartAt !== '';
+      const hasEnd = value.promotionEndAt !== '';
+      const hasText = value.promotionText.trim() !== '';
+      const hasDiscount = value.variants.some((variant) => variant.discountPrice !== null);
+      const any = hasStart || hasEnd || hasText || hasDiscount;
+      if (!any || (hasStart && hasEnd && hasText && hasDiscount)) return null;
+      if (!hasStart)
+        return {
+          kind: 'promotionIncomplete',
+          message: MESSAGES.promotionIncomplete,
+          fieldTree: ctx.fieldTree.promotionStartAt,
+        };
+      if (!hasEnd)
+        return {
+          kind: 'promotionIncomplete',
+          message: MESSAGES.promotionIncomplete,
+          fieldTree: ctx.fieldTree.promotionEndAt,
+        };
+      if (!hasText)
+        return {
+          kind: 'promotionIncomplete',
+          message: MESSAGES.promotionIncomplete,
+          fieldTree: ctx.fieldTree.promotionText,
+        };
+      return {
+        kind: 'promotionIncomplete',
+        message: MESSAGES.promotionIncomplete,
+        fieldTree: ctx.fieldTree.variants,
+      };
+    });
+    validate(path.promotionEndAt, (ctx) => {
+      const end = ctx.value();
+      const start = ctx.valueOf(path.promotionStartAt);
+      return start !== '' && end !== '' && new Date(start).getTime() >= new Date(end).getTime()
+        ? { kind: 'promotionPeriod', message: MESSAGES.promotionPeriod }
+        : null;
+    });
+
     minLength(path.highlights, 1, { message: MESSAGES.highlightsMin });
     maxLength(path.highlights, 6, { message: MESSAGES.highlightsMax });
     applyEach(path.highlights, (highlight) => {
@@ -195,6 +236,18 @@ export function productFormSchema(context: ProductFormSchemaContext): Schema<Pro
       });
       min(variant.price, 0, { message: MESSAGES.notNegative });
       max(variant.price, 100_000_000, { message: MESSAGES.priceMax });
+
+      validate(variant.discountPrice, (ctx) => {
+        const discount = ctx.value();
+        const price = ctx.valueOf(variant.price);
+        if (discount === null) return null;
+        if (!Number.isInteger(discount)) return { kind: 'integer', message: MESSAGES.integer };
+        return price !== null && discount >= price
+          ? { kind: 'discountLower', message: MESSAGES.discountLower }
+          : null;
+      });
+      min(variant.discountPrice, 1, { message: MESSAGES.notNegative });
+      max(variant.discountPrice, 100_000_000, { message: MESSAGES.priceMax });
 
       required(variant.stock, { message: MESSAGES.required });
       validate(variant.stock, ({ value }) => {

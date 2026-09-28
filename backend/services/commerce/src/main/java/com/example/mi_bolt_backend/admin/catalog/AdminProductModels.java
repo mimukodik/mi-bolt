@@ -9,6 +9,7 @@ import com.example.mi_bolt_backend.api.model.AdminProductListColor;
 import com.example.mi_bolt_backend.api.model.AdminProductListItem;
 import com.example.mi_bolt_backend.api.model.AdminProductStatus;
 import com.example.mi_bolt_backend.api.model.AdminProductVariant;
+import com.example.mi_bolt_backend.api.model.DiscountMoney;
 import com.example.mi_bolt_backend.api.model.AdminSpecGroup;
 import com.example.mi_bolt_backend.api.model.AdminSpecRow;
 import com.example.mi_bolt_backend.api.model.Money;
@@ -89,13 +90,15 @@ final class AdminProductModels {
 
 		List<AdminProductVariant> variants = new ArrayList<>();
 		for (ProductVariant v : p.getVariants()) {
-			variants.add(new AdminProductVariant(
+			AdminProductVariant variant = new AdminProductVariant(
 					v.getId(),
 					v.getSlug(),
 					v.getColor().getCode(),
 					StorageGb.fromValue(v.getStorageGb()),
 					money((int) v.getPriceHuf()),
-					v.getStock()));
+					v.getStock());
+			variant.setDiscountPrice(discountMoney(v.getDiscountPriceHuf()));
+			variants.add(variant);
 		}
 
 		List<AdminSpecGroup> specGroups = new ArrayList<>();
@@ -126,6 +129,9 @@ final class AdminProductModels {
 				specGroups);
 		detail.setArchivedAt(p.getArchivedAt());
 		detail.setUpdatedAt(p.getUpdatedAt());
+		detail.setPromotionStartAt(p.getPromotionStartAt());
+		detail.setPromotionEndAt(p.getPromotionEndAt());
+		detail.setPromotionText(p.getPromotionText());
 		return detail;
 	}
 
@@ -135,5 +141,9 @@ final class AdminProductModels {
 
 	private static Money money(int amount) {
 		return new Money(amount, Money.CurrencyEnum.HUF);
+	}
+
+	private static DiscountMoney discountMoney(Long amount) {
+		return amount == null ? null : new DiscountMoney(Math.toIntExact(amount), DiscountMoney.CurrencyEnum.HUF);
 	}
 }

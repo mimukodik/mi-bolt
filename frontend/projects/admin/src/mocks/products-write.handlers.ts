@@ -59,8 +59,9 @@ type Read<T> = T | undefined | Malformed;
 
 type ReadPrice = Partial<Money>;
 type ReadColor = Partial<AdminProductColorInput>;
-type ReadVariant = Omit<Partial<AdminProductVariantInput>, 'price'> & {
+type ReadVariant = Omit<Partial<AdminProductVariantInput>, 'price' | 'discountPrice'> & {
   readonly price?: ReadPrice;
+  readonly discountPrice?: ReadPrice;
 };
 type ReadSpecRow = Partial<AdminSpecRow>;
 type ReadSpecGroup = Omit<Partial<AdminSpecGroup>, 'rows'> & {
@@ -86,13 +87,23 @@ const TOP_MEMBERS = [
   'rank',
   'popularityScore',
   'featured',
+  'promotionStartAt',
+  'promotionEndAt',
+  'promotionText',
   'highlights',
   'colors',
   'variants',
   'specGroups',
 ] as const;
 const COLOR_MEMBERS = ['code', 'name', 'swatchHex', 'imageId', 'alt'] as const;
-const VARIANT_MEMBERS = ['slug', 'colorCode', 'storageGb', 'price', 'stock'] as const;
+const VARIANT_MEMBERS = [
+  'slug',
+  'colorCode',
+  'storageGb',
+  'price',
+  'discountPrice',
+  'stock',
+] as const;
 const PRICE_MEMBERS = ['amount', 'currency'] as const;
 const SPEC_GROUP_MEMBERS = ['title', 'rows'] as const;
 const SPEC_ROW_MEMBERS = ['label', 'value'] as const;
@@ -259,9 +270,11 @@ function readVariantShape(obj: Record<string, unknown>): ReadVariant | Malformed
   if (storageGb === MALFORMED) return MALFORMED;
   const price = readObject(obj['price'], PRICE_MEMBERS, readPriceShape);
   if (price === MALFORMED) return MALFORMED;
+  const discountPrice = readObject(obj['discountPrice'], PRICE_MEMBERS, readPriceShape);
+  if (discountPrice === MALFORMED) return MALFORMED;
   const stock = readInteger(obj['stock']);
   if (stock === MALFORMED) return MALFORMED;
-  return { slug, colorCode, storageGb, price, stock };
+  return { slug, colorCode, storageGb, price, discountPrice, stock };
 }
 
 function readSpecRowShape(obj: Record<string, unknown>): ReadSpecRow | Malformed {
@@ -303,6 +316,12 @@ async function readProductInput(request: Request): Promise<ReadInput | Malformed
   if (popularityScore === MALFORMED) return MALFORMED;
   const featured = readBoolean(body['featured']);
   if (featured === MALFORMED) return MALFORMED;
+  const promotionStartAt = readString(body['promotionStartAt']);
+  if (promotionStartAt === MALFORMED) return MALFORMED;
+  const promotionEndAt = readString(body['promotionEndAt']);
+  if (promotionEndAt === MALFORMED) return MALFORMED;
+  const promotionText = readString(body['promotionText']);
+  if (promotionText === MALFORMED) return MALFORMED;
   const highlights = readStringList(body['highlights']);
   if (highlights === MALFORMED) return MALFORMED;
   const colors = readObjectList(body['colors'], COLOR_MEMBERS, readColorShape);
@@ -322,6 +341,9 @@ async function readProductInput(request: Request): Promise<ReadInput | Malformed
     rank,
     popularityScore,
     featured,
+    promotionStartAt,
+    promotionEndAt,
+    promotionText,
     highlights,
     colors,
     variants,
@@ -436,6 +458,19 @@ function variantsErrors(variants: ReadInput['variants']): FieldError[] {
           stock < 0 ? [fieldError(`${base}/stock`, 'MIN')] : [],
         ),
       );
+      if (variant.discountPrice !== undefined) {
+        errors.push(
+          ...requiredOr(variant.discountPrice.amount, `${base}/discountPrice/amount`, (amount) => {
+            const priceErrors: FieldError[] = [];
+            if (amount < 1) priceErrors.push(fieldError(`${base}/discountPrice/amount`, 'MIN'));
+            if (amount > 100_000_000) {
+              priceErrors.push(fieldError(`${base}/discountPrice/amount`, 'MAX'));
+            }
+            return priceErrors;
+          }),
+          ...requiredOr(variant.discountPrice.currency, `${base}/discountPrice/currency`, () => []),
+        );
+      }
     });
     return errors;
   });
@@ -494,6 +529,9 @@ function beanValidationErrors(input: ReadInput): FieldError[] {
   errors.push(...requiredOr(input.rank, '/rank', () => []));
   errors.push(...requiredOr(input.popularityScore, '/popularityScore', () => []));
   errors.push(...requiredOr(input.featured, '/featured', () => []));
+  if (input.promotionText !== undefined && input.promotionText.length > 280) {
+    errors.push(fieldError('/promotionText', 'SIZE'));
+  }
   errors.push(...highlightsErrors(input.highlights));
   errors.push(...colorsErrors(input.colors));
   errors.push(...variantsErrors(input.variants));
@@ -571,7 +609,39 @@ function validatorErrors(input: ReadInput): FieldError[] {
     if (variantId.length > 80) {
       errors.push(fieldError(`${base}/colorCode`, 'VARIANT_ID_TOO_LONG', { max: 80 }));
     }
+    if (
+      variant.discountPrice !== undefined &&
+      variant.price !== undefined &&
+      requireDefined(variant.discountPrice.amount) >= requireDefined(variant.price.amount)
+    ) {
+      errors.push(fieldError(`${base}/discountPrice`, 'DISCOUNT_NOT_LOWER'));
+    }
   });
+
+  const hasStart = input.promotionStartAt !== undefined;
+  const hasEnd = input.promotionEndAt !== undefined;
+  const hasText = input.promotionText !== undefined;
+  const hasDiscount = requireDefined(input.variants).some(
+    (variant) => variant?.discountPrice !== undefined,
+  );
+  const anyPromotion = hasStart || hasEnd || hasText || hasDiscount;
+  if (anyPromotion && !(hasStart && hasEnd && hasText && hasDiscount)) {
+    if (!hasStart) errors.push(fieldError('/promotionStartAt', 'PROMOTION_FIELDS_INCOMPLETE'));
+    if (!hasEnd) errors.push(fieldError('/promotionEndAt', 'PROMOTION_FIELDS_INCOMPLETE'));
+    if (!hasText) errors.push(fieldError('/promotionText', 'PROMOTION_FIELDS_INCOMPLETE'));
+    if (!hasDiscount) errors.push(fieldError('/variants', 'PROMOTION_FIELDS_INCOMPLETE'));
+  }
+  if (hasText && javaIsBlank(requireDefined(input.promotionText))) {
+    errors.push(fieldError('/promotionText', 'NOTBLANK'));
+  }
+  if (
+    hasStart &&
+    hasEnd &&
+    Date.parse(requireDefined(input.promotionStartAt)) >=
+      Date.parse(requireDefined(input.promotionEndAt))
+  ) {
+    errors.push(fieldError('/promotionEndAt', 'PROMOTION_PERIOD_INVALID'));
+  }
 
   requireDefined(input.specGroups).forEach((group, index) => {
     const base = `/specGroups/${String(index)}`;
@@ -609,6 +679,9 @@ function toAdminProductInput(input: ReadInput): AdminProductInput {
     rank: requireDefined(input.rank),
     popularityScore: requireDefined(input.popularityScore),
     featured: requireDefined(input.featured),
+    ...(input.promotionStartAt === undefined ? {} : { promotionStartAt: input.promotionStartAt }),
+    ...(input.promotionEndAt === undefined ? {} : { promotionEndAt: input.promotionEndAt }),
+    ...(input.promotionText === undefined ? {} : { promotionText: input.promotionText }),
     highlights: requireDefined(input.highlights).map((item) => requireDefined(item)),
     colors: requireDefined(input.colors).map((color) => {
       const value = requireDefined(color);
@@ -623,11 +696,20 @@ function toAdminProductInput(input: ReadInput): AdminProductInput {
     variants: requireDefined(input.variants).map((variant) => {
       const value = requireDefined(variant);
       const price = requireDefined(value.price);
+      const discountPrice = value.discountPrice;
       return {
         slug: requireDefined(value.slug),
         colorCode: requireDefined(value.colorCode),
         storageGb: requireDefined(value.storageGb),
         price: { amount: requireDefined(price.amount), currency: requireDefined(price.currency) },
+        ...(discountPrice === undefined
+          ? {}
+          : {
+              discountPrice: {
+                amount: requireDefined(discountPrice.amount),
+                currency: requireDefined(discountPrice.currency),
+              },
+            }),
         stock: requireDefined(value.stock),
       };
     }),
@@ -807,6 +889,7 @@ function buildVariant(input: AdminProductVariantInput, productSlug: string): Adm
     colorCode: input.colorCode,
     storageGb: input.storageGb,
     price: input.price,
+    ...(input.discountPrice === undefined ? {} : { discountPrice: input.discountPrice }),
     stock: input.stock,
   };
 }
@@ -830,6 +913,9 @@ function buildProduct(input: AdminProductInput, db: MockDb, meta: ProductMeta): 
     rank: input.rank,
     popularityScore: input.popularityScore,
     featured: input.featured,
+    ...(input.promotionStartAt === undefined ? {} : { promotionStartAt: input.promotionStartAt }),
+    ...(input.promotionEndAt === undefined ? {} : { promotionEndAt: input.promotionEndAt }),
+    ...(input.promotionText === undefined ? {} : { promotionText: javaStrip(input.promotionText) }),
     status: meta.status,
     version: meta.version,
     ...(meta.archivedAt === undefined ? {} : { archivedAt: meta.archivedAt }),

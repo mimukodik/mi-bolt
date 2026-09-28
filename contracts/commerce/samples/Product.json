@@ -10,6 +10,11 @@
   ],
   "is5g": true,
   "releasedAt": "2026-01-15",
+  "promotion": {
+    "text": "Adventi kedvezmény a készlet erejéig.",
+    "startAt": "2026-12-01T00:00:00+01:00",
+    "endAt": "2026-12-24T23:59:59+01:00"
+  },
   "description": "Példa telefon a katalógusbemutatóhoz.",
   "variants": [
     {
@@ -20,6 +25,10 @@
       "swatchHex": "#000000",
       "storageGb": 128,
       "price": {
+        "amount": 139990,
+        "currency": "HUF"
+      },
+      "originalPrice": {
         "amount": 149990,
         "currency": "HUF"
       },

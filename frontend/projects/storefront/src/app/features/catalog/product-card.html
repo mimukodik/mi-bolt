@@ -1,4 +1,8 @@
-<article class="card flex flex-col gap-3" data-testid="product-card">
+<article
+  class="card flex flex-col gap-3"
+  data-testid="product-card"
+  [class.card--promotion]="promoted()"
+>
   <a
     class="media"
     [attr.aria-label]="ariaLabel()"
@@ -56,7 +60,22 @@
       </p>
     }
     <div class="price-row mt-auto">
-      <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
+      @if (originalPriceText(); as original) {
+        <span class="price-label">Egyszeri készülékár</span>
+        <span class="original-price">{{ original }}</span>
+        <div class="promotion-price">
+          <app-price-block
+            label="Kedvezményes ár"
+            size="md"
+            status="success"
+            [money]="price()"
+            [promotion]="true"
+            [showLabel]="false"
+          />
+        </div>
+      } @else {
+        <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
+      }
       @if (isOutOfStock()) {
         <p class="stock" data-testid="product-card-stock">Elfogyott</p>
       }

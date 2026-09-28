@@ -279,6 +279,7 @@ export class FilterPanel {
     if (q.inStock !== undefined) return true;
     if (q.is5g !== undefined) return true;
     if (q.featured === true) return true;
+    if (q.promotion === true) return true;
     return false;
   });
 
@@ -394,6 +395,7 @@ export class FilterPanel {
       inStock: undefined,
       is5g: undefined,
       featured: undefined,
+      promotion: undefined,
     });
   }
 

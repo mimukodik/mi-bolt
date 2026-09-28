@@ -26,6 +26,7 @@ import { BasicsSection } from './sections/basics-section';
 import { ColorsSection } from './sections/colors-section';
 import { DisplayCard } from './sections/display-card';
 import { HighlightsSection } from './sections/highlights-section';
+import { PromotionSection } from './sections/promotion-section';
 import { SpecGroupsSection } from './sections/spec-groups-section';
 import { VariantsSection } from './sections/variants-section';
 
@@ -55,6 +56,7 @@ const PRODUCT_ID_PATTERN = /^[1-9][0-9]*$/;
     SectionCard,
     BasicsSection,
     HighlightsSection,
+    PromotionSection,
     ColorsSection,
     VariantsSection,
     SpecGroupsSection,

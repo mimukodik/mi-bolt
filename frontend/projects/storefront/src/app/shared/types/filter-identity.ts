@@ -12,6 +12,6 @@ import type { CatalogFilters } from '../../features/catalog/catalog-query';
  * this widening resolves.
  */
 export interface FilterIdentity {
-  readonly name: keyof CatalogFilters | 'q' | 'featured';
+  readonly name: keyof CatalogFilters | 'q' | 'featured' | 'promotion';
   readonly value?: string | number;
 }

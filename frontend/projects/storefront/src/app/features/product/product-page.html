@@ -84,6 +84,9 @@
               }
 
               <section aria-label="Árak" class="prices">
+                @if (originalPriceText(); as original) {
+                  <span class="text-sm text-white/70 line-through">{{ original }}</span>
+                }
                 <app-price-block
                   label="Készülékár"
                   size="lg"

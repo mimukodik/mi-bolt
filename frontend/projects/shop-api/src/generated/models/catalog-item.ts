@@ -16,6 +16,11 @@ export type CatalogItem = ProductBase & {
 'variantId': string;
 'variantSlug': string;
 'price': Money;
+
+/**
+ * Normal price, present only when this displayed variant has an active discount.
+ */
+'originalPrice'?: Money;
 'availability': Availability;
 'maxQuantity': number;
 'image': Image;
