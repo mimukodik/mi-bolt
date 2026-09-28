@@ -77,8 +77,8 @@ there, and it needs Java 21+, which `mise install`'s pinned Java satisfies.
 The directory is gitignored, so every checkout, worktrees included, needs
 its own run; a second run skips the download when the checksum matches, and
 `--force` downloads it again. Reconnect the server in Claude Code afterward
-with `/mcp`, or trust and restart the project in Codex and verify it with
-`codex mcp list`.
+with `/mcp`, or start or restart Codex from the repository root, trust the
+project, and verify it with `codex mcp list`.
 
 ## 👤 Start the apps: which mode when
 
