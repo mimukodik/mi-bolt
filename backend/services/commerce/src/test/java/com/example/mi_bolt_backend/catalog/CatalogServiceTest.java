@@ -5,8 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDate;
 import java.text.Normalizer;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ class CatalogServiceTest {
 	private void useCatalogue(List<Product> catalogue) {
 		ProductRepository productRepository = mock(ProductRepository.class);
 		SpecGroupRepository specGroupRepository = mock(SpecGroupRepository.class);
-		service = new CatalogService(productRepository, specGroupRepository, new PromotionPricing(java.time.Clock.systemUTC()));
+		service = new CatalogService(productRepository, specGroupRepository, new PromotionPricing(Clock.systemUTC()));
 		when(productRepository.findAllWithColors()).thenReturn(catalogue);
 		when(productRepository.fetchHighlights(ArgumentMatchers.anyList())).thenReturn(catalogue);
 		when(productRepository.fetchVariants(ArgumentMatchers.anyList())).thenReturn(catalogue);
