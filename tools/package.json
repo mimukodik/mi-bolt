@@ -4,7 +4,6 @@
   "type": "module",
   "workspaces": ["catalog-import"],
   "scripts": {
-    "claude:memory": "tsx agent-memory.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p catalog-import/tsconfig.json --noEmit",
     "test": "vitest run"
   },

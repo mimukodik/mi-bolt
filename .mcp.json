@@ -37,16 +37,6 @@
         "-jar",
         "${CLAUDE_PROJECT_DIR:-.}/.spring-tools/spring-boot-language-server-standalone-exec.jar"
       ]
-    },
-    "docmost": {
-      "type": "http",
-      "url": "https://docs.mimukodik.hu/mcp",
-      "headers": {
-        "Authorization": "Bearer ${DOCMOST_API_KEY}"
-      }
-    }, "exa": {
-      "type": "http",
-      "url": "https://mcp.exa.ai/mcp"
     }
   }
 }
