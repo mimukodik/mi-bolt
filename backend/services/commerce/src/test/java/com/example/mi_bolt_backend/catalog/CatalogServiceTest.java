@@ -143,7 +143,7 @@ class CatalogServiceTest {
 		assertThat(page.items()).hasSize(1);
 		assertThat(page.items().get(0).storageGb()).isEqualTo(discounted.getStorageGb());
 		assertThat(page.items().get(0).variantId()).isEqualTo(discounted.getId());
-		assertThat(page.items().get(0).originalPriceAmount()).isEqualTo(discounted.getPriceHuf().intValue());
+		assertThat(page.items().get(0).originalPriceAmount()).isEqualTo(Math.toIntExact(discounted.getPriceHuf()));
 	}
 
 	@Test
@@ -200,7 +200,7 @@ class CatalogServiceTest {
 	void disjunctiveColorFacetCountWhenBrandAndColorAreSelected() {
 		CatalogData.ProductPageData page = service.listProducts(null,
 				List.of("Samsung"), null, List.of("navy"), null, null, null, null, null,
-				ProductSort.RECOMMENDED, 1, 12);
+				null, ProductSort.RECOMMENDED, 1, 12);
 		assertThat(page.total()).isEqualTo(3);
 		Map<String, Integer> counts = new HashMap<>();
 		for (CatalogData.ColorFacetValueData c : page.facets().colors()) {

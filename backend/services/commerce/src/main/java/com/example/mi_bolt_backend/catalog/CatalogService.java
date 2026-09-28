@@ -339,10 +339,8 @@ public class CatalogService {
 	}
 
 	private boolean isPromotedEntry(Entry entry) {
-		if (!promotionPricing.isActive(entry.product)) {
-			return false;
-		}
-		return entry.product.getVariants().stream()
+		return promotionPricing.isActive(entry.product)
+				&& entry.product.getVariants().stream()
 				.anyMatch(variant -> variant.getStorageGb() != null
 						&& variant.getStorageGb() == entry.storage
 						&& variant.getDiscountPriceHuf() != null);
