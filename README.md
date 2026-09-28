@@ -70,13 +70,15 @@ tools/install-spring-tools-mcp.sh
 
 Downloads the Spring Tools language server JAR (v2.4.0, about 98 MB,
 SHA256-checked against cdn.spring.io) into `.spring-tools/` at the
-repository root. The root `.mcp.json` starts it with `java -jar` as the
-`spring-tools` MCP server, which fails to connect until the JAR is there,
-and it needs Java 21+, which `mise install`'s pinned Java satisfies. The
-directory is gitignored, so every checkout, worktrees included, needs its
-own run; a second run skips the download when the checksum matches, and
+repository root. The root `.mcp.json` configures Claude Code, while
+`.codex/config.toml` configures Codex; both start the JAR with `java -jar` as
+the `spring-tools` MCP server. The server fails to connect until the JAR is
+there, and it needs Java 21+, which `mise install`'s pinned Java satisfies.
+The directory is gitignored, so every checkout, worktrees included, needs
+its own run; a second run skips the download when the checksum matches, and
 `--force` downloads it again. Reconnect the server in Claude Code afterward
-with `/mcp`.
+with `/mcp`, or trust and restart the project in Codex and verify it with
+`codex mcp list`.
 
 ## 👤 Start the apps: which mode when
 
