@@ -1,0 +1,47 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+[mcp_servers.angular-cli]
+command = "npx"
+cwd = "frontend"
+args = [
+  "-y",
+  "@angular/cli",
+  "mcp",
+]
+
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = [
+  "-y",
+  "chrome-devtools-mcp@latest",
+  "--isolated",
+  "--headless",
+  "--experimental-screencast",
+]
+
+[mcp_servers.playwright-test]
+command = "npx"
+cwd = "frontend"
+args = [
+  "playwright",
+  "run-test-mcp-server",
+  "-c",
+  "playwright.config.ts",
+]
+
+[mcp_servers.spring-tools]
+command = "java"
+cwd = "."
+args = [
+  "-Xmx1024m",
+  "-Djdk.util.zip.disableZip64ExtraFieldValidation=true",
+  "-Dspring.config.location=classpath:/application.properties",
+  "-Dspring.profiles.active=file-logging",
+  "-Dlogging.file.name=.spring-tools/boot-ls.log",
+  "-Dlogging.level.root=INFO",
+  "-Dspring.ai.mcp.server.stdio=true",
+  "-Dlanguageserver.enabled=false",
+  "-Dspring.boot.ls.project.dir=backend",
+  "-jar",
+  ".spring-tools/spring-boot-language-server-standalone-exec.jar",
+]
