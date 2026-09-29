@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
   template: `
     <a class="promotion-banner" routerLink="/telefonok" [queryParams]="{ promotion: true }">
       <span aria-hidden="true" class="promotion-banner__tree">🎄</span>
-      <span>Válassz kiemelt adventi ajánlataink közül.</span>
+      <span>Válaszd ki kedvenc adventi ajánlatodat!</span>
       <span aria-hidden="true" class="promotion-banner__arrow">→</span>
     </a>
   `,
