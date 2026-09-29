@@ -126,7 +126,7 @@ Canonical examples; copy the pattern of the closest one:
   `frontend/projects/admin/src/app/features/products/list/product-list.store.ts`,
   `frontend/projects/admin/src/app/features/products/list/product-list.query.ts`,
   `frontend/projects/admin/src/app/features/products/list/product-list.data-source.ts`.
-- A create and edit form over a store that keeps the `ETag`:
+- A create and edit form over a store that saves under `If-Match: "<version>"`:
   `frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`,
   `frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts`,
   `frontend/projects/admin/src/app/features/products/edit/product-form.schema.ts`,

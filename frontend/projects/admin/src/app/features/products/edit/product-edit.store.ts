@@ -2,25 +2,26 @@
 // MIM-353, plan F18 part 2 of 2.
 //
 // `ProductEditStore` is the facade the edit page reads and writes through.
-// The contract is data-only — a `load` that fetches one product with its
-// `ETag`, a `create` and a `save` that PUT through the same `If-Match`
-// header the read got, and the two auxiliary loads that drive the form's
-// `featuredCount` gauge and the brand select. HTTP is reached through the
-// generated SDK's `invoke$Response` so `If-Match` lands verbatim via
-// `withIfMatch`; each save is a discriminated union so the page can branch
-// on it without inspecting a Problem body.
+// The contract is data-only — a `load` that fetches one product, a
+// `create`, a `save` that PUTs with `If-Match: "<version>"` of the product it
+// last read or wrote, and the two auxiliary loads that drive the form's
+// `featuredCount` gauge and the brand select. The precondition comes from the
+// body's `version`, not the `ETag` header: a proxy that compresses the
+// response may weaken the header to `W/"<version>"` (Cloudflare does, MIM-453),
+// and the API accepts only the strong form. Each save is a discriminated union
+// so the page can branch on it without inspecting a Problem body.
 //
 // `load` never rejects — it absorbs any non-404 status into
 // `loadStatus: 'error'`. Saves never reject either: every failure is
 // encoded in the returned `SaveResult` so the page can show a field-level
 // error, a stale-etag conflict, or a generic failure from one place.
 //
-// `save` throws when called before `load` because there is no etag to send
-// in `If-Match`; the page guards against it, and the throw is a programmer
+// `save` throws when called before `load` because there is no version to
+// send in `If-Match`; the page guards against it, and the throw is a programmer
 // error rather than a runtime state. A response that arrives after a newer
 // `load()` has started leaves the store showing the newer product.
 
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -53,19 +54,22 @@ export class ProductEditStore {
   #generation = 0;
 
   readonly #product = signal<AdminProduct | null>(null);
-  readonly #etag = signal<string | null>(null);
   readonly #loadStatus = signal<'idle' | 'loading' | 'ready' | 'not-found' | 'error'>('idle');
   readonly #featuredCount = signal<number | null>(null);
   readonly #brands = signal<readonly string[]>([]);
 
   readonly product: Signal<AdminProduct | null> = this.#product.asReadonly();
-  readonly etag: Signal<string | null> = this.#etag.asReadonly();
+  /** The `If-Match` value the next `save` sends: the loaded product's `version`, quoted. */
+  readonly etag: Signal<string | null> = computed(() => {
+    const product = this.#product();
+    return product === null ? null : `"${String(product.version)}"`;
+  });
   readonly loadStatus: Signal<'idle' | 'loading' | 'ready' | 'not-found' | 'error'> =
     this.#loadStatus.asReadonly();
   readonly featuredCount: Signal<number | null> = this.#featuredCount.asReadonly();
   readonly brands: Signal<readonly string[]> = this.#brands.asReadonly();
 
-  /** Fetch one product together with its `ETag`. Never rejects. */
+  /** Fetch one product. Never rejects. */
   async load(productId: number): Promise<void> {
     const generation = ++this.#generation;
     this.#loadStatus.set('loading');
@@ -75,13 +79,11 @@ export class ProductEditStore {
       );
       if (generation !== this.#generation) return;
       this.#product.set(response.body);
-      this.#etag.set(response.headers.get('ETag'));
       this.#loadStatus.set('ready');
     } catch (error: unknown) {
       if (generation !== this.#generation) return;
       if (error instanceof HttpErrorResponse && error.status === 404) {
         this.#product.set(null);
-        this.#etag.set(null);
         this.#loadStatus.set('not-found');
         return;
       }
@@ -98,7 +100,6 @@ export class ProductEditStore {
       );
       if (generation === this.#generation) {
         this.#product.set(response.body);
-        this.#etag.set(response.headers.get('ETag'));
       }
       return { kind: 'saved', product: response.body };
     } catch (error: unknown) {
@@ -112,10 +113,10 @@ export class ProductEditStore {
     }
   }
 
-  /** Replace the loaded product with `If-Match: <current etag>`. Throws when called before `load`. */
+  /** Replace the loaded product with `If-Match: "<its version>"`. Throws when called before `load`. */
   async save(input: AdminProductInput): Promise<SaveResult> {
     const product = this.#product();
-    const etag = this.#etag();
+    const etag = this.etag();
     if (product === null || etag === null) {
       throw new Error('save before load');
     }
@@ -130,7 +131,6 @@ export class ProductEditStore {
       );
       if (generation === this.#generation) {
         this.#product.set(response.body);
-        this.#etag.set(response.headers.get('ETag'));
       }
       return { kind: 'saved', product: response.body };
     } catch (error: unknown) {

@@ -122,16 +122,19 @@ The 401 round trip:
 
 ## 5. If-Match and Problem handling
 
-- The admin has its own `withIfMatch(etag)` and `ifMatchInterceptor`
+- The admin has its own `withIfMatch(precondition)` and `ifMatchInterceptor`
   (`frontend/projects/admin/src/app/core/api/if-match.interceptor.ts:1-13`), which copy the given
   string into `If-Match` verbatim. It does not use the `withIfMatch` of `@mi-bolt/core-api`, and
   the generated client leaves the `If-Match` parameter out (`frontend/ng-openapi-gen.admin.json:12`).
 - Archive and restore on the list send the row's `version` quoted, `"<version>"`
   (`frontend/projects/admin/src/app/features/products/list/product-list.store.ts:185-187`). The
-  edit page's save sends the `ETag` its GET returned, read from the `Observable` of the whole
-  response that `invoke$Response` returns
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:68-90` and
-  `frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:115-150`).
+  edit page's save does the same with the `version` of the product it last read or wrote
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:72-92` and
+  `frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:116-150`).
+- Never copy the `ETag` response header into `If-Match`. Cloudflare, in front of every
+  `bolt*.mimukodik.hu` host, weakens a strong `ETag` to `W/"<version>"` when it compresses the
+  response, and the API accepts only the strong form, so a copied header fails with 400
+  `INVALID_REQUEST` (MIM-453).
 - A 412 means someone else saved first. The list answers it with a snack-bar and `retry()`; the
   edit page opens `ConflictDialog`, whose only way out reloads the product and drops the edits.
 - `frontend/projects/admin/src/app/core/api/problem.ts` is where a Problem body is read.
@@ -158,12 +161,12 @@ The 401 round trip:
   switches on, such as `DeleteResult`
   (`frontend/projects/admin/src/app/features/admins/admins.store.ts:20-25`), `RowActionResult`
   (`frontend/projects/admin/src/app/features/products/list/product-list.store.ts:61-65`) and
-  `SaveResult` (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:42-46`),
+  `SaveResult` (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:43-47`),
   or it sets a status signal. `ProductEditStore.save` throws only when called before `load`,
   which is a programmer error rather than a runtime state.
 - `ProductEditStore` bumps a generation counter on every `load()` and ignores a response that
   resolves after a newer load started
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:52-53`).
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit.store.ts:53-54`).
 - The overview's four cards each hold a `Loadable<T>` with the kinds `loading`, `ready` and
   `error`. The type is local to
   `frontend/projects/admin/src/app/features/overview/overview.component.ts:62-65`, not shared.

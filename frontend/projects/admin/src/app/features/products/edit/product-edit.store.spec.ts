@@ -5,13 +5,14 @@
  * The store talks to the admin SDK through Angular's `HttpClient` over MSW,
  * so every request is matched by `productsReadHandlers`/`productsWriteHandlers`
  * driving a per-test `MockDb`. The tests run against the real interceptor
- * stack (`withXhr`, `ifMatchInterceptor`) so the ETag round-trip the store
- * relies on is exercised end to end.
+ * stack (`withXhr`, `ifMatchInterceptor`) so the `If-Match` precondition
+ * the store derives from the product's `version` is exercised end to end.
  *
- * Covering `if-match` is captured by a wrapping MSW handler in test 5: the
- * store sends `If-Match: "<version>"` and the handler records the header it
- * saw, so a regression in `withIfMatch` or `withIfMatch(etag)` would fail that
- * case rather than pass on the ETag alone.
+ * `If-Match` is captured by wrapping MSW handlers in the save cases: the store
+ * sends `If-Match: "<version>"` built from the product body, and the handler
+ * records the header it saw, so a regression in `withIfMatch` or in where the
+ * store takes the version from fails those cases. One case serves weak ETags
+ * on the GET and the PUT, as Cloudflare does when it compresses (MIM-453).
  *
  * Expected catalogue values (`productsReadHandlers` answers `ETag: "<version>"`
  * with the seeded version, currently `0`; a future bump of the seed would
@@ -214,6 +215,35 @@ describe('ProductEditStore', () => {
     if (!isSaved(result)) throw new Error('expected saved');
     expect(result.product.version).toBe(seeded.version + 1);
     expect(s.etag()).toBe(`"${String(seeded.version + 1)}"`);
+  });
+
+  it('weak ETags (W/"<version>") on the GET and the PUT → every save sends If-Match "<version>" from the body', async () => {
+    signedIn();
+    const s = store();
+    await s.load(1);
+    const body = s.product();
+    if (body === null) throw new Error('expected product');
+
+    const observedIfMatch: (string | null)[] = [];
+    let current: AdminProduct = body;
+    server?.use(
+      http.get('/api/v1/admin/products/:productId', () =>
+        HttpResponse.json(current, { headers: { ETag: `W/"${String(current.version)}"` } }),
+      ),
+      http.put('/api/v1/admin/products/:productId', ({ request }) => {
+        observedIfMatch.push(request.headers.get('If-Match'));
+        current = { ...current, version: current.version + 1 };
+        return HttpResponse.json(current, { headers: { ETag: `W/"${String(current.version)}"` } });
+      }),
+    );
+    await s.load(1);
+
+    const first = await s.save(inputOf(body));
+    const second = await s.save(inputOf(body));
+
+    expect(observedIfMatch).toEqual([`"${String(body.version)}"`, `"${String(body.version + 1)}"`]);
+    expect(isSaved(first)).toBe(true);
+    expect(isSaved(second)).toBe(true);
   });
 
   it('save in save-conflict → conflict, product and etag unchanged', async () => {
