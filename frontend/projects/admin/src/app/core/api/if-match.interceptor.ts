@@ -2,9 +2,9 @@ import { HttpContext, HttpContextToken, type HttpInterceptorFn } from '@angular/
 
 const IF_MATCH = new HttpContextToken<string | null>(() => null);
 
-/** Carries the server's ETag verbatim into the If-Match header of one request. */
-export function withIfMatch(etag: string): HttpContext {
-  return new HttpContext().set(IF_MATCH, etag);
+/** Carries a precondition (`"<version>"`, built from a response body) verbatim into the If-Match header of one request. */
+export function withIfMatch(precondition: string): HttpContext {
+  return new HttpContext().set(IF_MATCH, precondition);
 }
 
 export const ifMatchInterceptor: HttpInterceptorFn = (request, next) => {
