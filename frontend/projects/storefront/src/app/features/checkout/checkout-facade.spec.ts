@@ -1038,8 +1038,8 @@ describe('payment intents', () => {
     expect(checkoutKeys.activeIntentId()).toBeNull();
   });
 
-  it('F-31b: re-saving the same delivery and card payment keeps the paid intent', async () => {
-    const { checkout, id } = await setupPaidCardDraft();
+  it('F-31b: re-saving checkout sections advances the draft and drops the paid intent', async () => {
+    const { checkout } = await setupPaidCardDraft();
     expect(
       (
         await checkout.updateDelivery({
@@ -1050,8 +1050,9 @@ describe('payment intents', () => {
     ).toBe(true);
     expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
     expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
-    expect(checkout.paymentIntent()?.id).toBe(id);
-    expect(checkoutKeys.activeIntentId()).toBe(id);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
   });
 
   it('F-31c: a session read whose total differs from the paid amount drops the intent', async () => {
@@ -1299,7 +1300,7 @@ describe('payment intents', () => {
     expect(returning.intentDropped()).toBe('refused');
   });
 
-  it('F-32: a contact or billing write keeps the held intent', async () => {
+  it('F-32: a contact or billing write drops the held intent even at the same total', async () => {
     const checkout = await setupCompleteCardDraft();
     const created = await checkout.createPaymentIntent();
     expect(created.ok).toBe(true);
@@ -1308,8 +1309,9 @@ describe('payment intents', () => {
     expect((await checkout.updateContact(VALID_CONTACT)).ok).toBe(true);
     expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
 
-    expect(checkout.paymentIntent()?.id).toBe(created.value.id);
-    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
   });
 });
 

@@ -14,7 +14,7 @@ import { test, expect } from '../fixtures/coverage';
 // later load boots from what the app itself saved.
 const SNAPSHOT_KEY = 'mi-bolt.snapshot.default';
 const SEEDED_MARKER_KEY = 'mi-bolt.story-seeded';
-const CORRUPT_ENTRY = '{"schemaVersion":4,"providerId":"mi-bolt",';
+const CORRUPT_ENTRY = '{"schemaVersion":5,"providerId":"mi-bolt",';
 
 // The product page mounts its purchase call to action twice, both present in the
 // DOM: the inner button of `add-to-cart-button` is the press at 1024px and
@@ -188,7 +188,7 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         await expect(cartLines.nth(0).getByTestId('cart-line-name')).toHaveText(phoneName);
         await expect(cartLines.nth(0).getByTestId('cart-line-quantity')).toHaveText('1 db');
 
-        // The stored entry is valid JSON again, carries `schemaVersion` 4 and
+        // The stored entry is valid JSON again, carries `schemaVersion` 5 and
         // holds exactly that one line in `cart.items`: the shop saved a fresh
         // snapshot in place of the corrupt one. The read comes after the
         // assertions above proved the cart page rendered.
@@ -225,7 +225,7 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         }, SNAPSHOT_KEY);
 
         expect(snapshotShape.parses).toBe(true);
-        expect(snapshotShape.schemaVersion).toBe(4);
+        expect(snapshotShape.schemaVersion).toBe(5);
         expect(snapshotShape.itemCount).toBe(1);
 
         // No `pageerror` fired during the whole scenario.

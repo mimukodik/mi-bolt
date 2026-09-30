@@ -8,7 +8,7 @@ import { test, expect } from '../fixtures/coverage';
 // projects/shop-mocks/src/persistence.ts), and the tab-scoped demo session id
 // under `mi-bolt.demo-session` (`demoSessionInterceptor` in
 // projects/core-api/src/demo-session.interceptor.ts). `Persistence.hydrate`
-// accepts the document this scenario installs (version 4, saved just now, its
+// accepts the document this scenario installs (version 5, saved just now, its
 // top-level `expiresAt` in the future), and the SEEDED CART's own `expiresAt`
 // is what expires: `CartStore.ensureFreshCart` answers 410 `CART_EXPIRED` on
 // the first read, forgets that cart, and the read after it creates a fresh
@@ -38,7 +38,7 @@ const PAGE_SIZE = 12;
 const IN_STOCK_TEXT = 'Raktáron a demó készletben';
 
 // The version the mock writes today (`SNAPSHOT_SCHEMA_VERSION`).
-const CURRENT_SCHEMA_VERSION = 4;
+const CURRENT_SCHEMA_VERSION = 5;
 
 // The expired read is produced inside the service worker, so it is observed
 // through the page's own console record. The evidence in that record is the

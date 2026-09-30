@@ -352,6 +352,15 @@ export class CheckoutFacade {
           );
           this.sessionWritable.set(session);
           this.adoptPriceNotice(session);
+          if (
+            this.paymentIntentWritable() !== null &&
+            (body.contact !== undefined ||
+              body.billing !== undefined ||
+              body.delivery !== undefined ||
+              body.payment !== undefined)
+          ) {
+            this.clearHeldIntent('stale');
+          }
           this.dropStaleIntent(session);
           this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
@@ -612,7 +621,8 @@ export class CheckoutFacade {
    * the amount the intent paid, drops it and its stored id, so the review
    * step asks for a new payment instead of placing the order on a stale
    * one or dead-ending on a 409 (owner: a card order is never closed
-   * without paying for it). A re-save that changes neither keeps it.
+   * without paying for it). Successful section writes also advance the
+   * server's draft revision and clear the held intent in patch().
    * Runs wherever the intent or the session is adopted — a section
    * write, a session refetch, or a read of the intent — so the order the
    * two arrive in cannot leave a stale intent in the signal.

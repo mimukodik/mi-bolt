@@ -21,7 +21,7 @@ const SEEDED_MARKER_KEY = 'mi-bolt.story-seeded';
 // the older entry claims. The version policy is what rejects the entry, so the
 // top-level `savedAt`/`expiresAt` are left in the future and the age check never
 // comes into it.
-const CURRENT_SCHEMA_VERSION = 4;
+const CURRENT_SCHEMA_VERSION = 5;
 const OLD_SCHEMA_VERSION = 3;
 
 // The mock's `getMedia` handler serves the image bytes behind the contract URL
@@ -251,7 +251,7 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         await addControl.click();
         await expect(cartBadge).toHaveText('1');
 
-        // The stored entry is the shop's own valid snapshot: `schemaVersion` 4,
+        // The stored entry is the shop's own valid snapshot: `schemaVersion` 5,
         // the `mi-bolt` provider, its timestamps and a cart holding exactly the
         // added line. The read comes after the badge proved the add landed.
         snapshotRaw = await readSnapshotRaw();
@@ -394,7 +394,7 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         await expect(cartLines).toHaveCount(1);
         await expect(cartLines.nth(0).getByTestId('cart-line-name')).toHaveText(phoneName);
 
-        // The stored entry is the shop's own again, still at `schemaVersion` 4
+        // The stored entry is the shop's own again, still at `schemaVersion` 5
         // and holding only that one line.
         const stored = parseSnapshot(await readSnapshotRaw());
         expect(stored.parses).toBe(true);

@@ -1157,19 +1157,15 @@ describe('CheckoutStore.seedFromSnapshot / toPersistedDraft (MIM-212 Unit 1)', (
     } satisfies PersistedCheckoutDraft;
     checkout.seedFromSnapshot('sess-with', seeded);
 
-    expect(checkout.toPersistedDraft('sess-with')).toEqual({
-      ...seeded,
-      contact: { fullName: 'redacted', email: 'redacted@example.invalid', phone: '+36000000000' },
-      billing: {
-        name: 'redacted',
-        address: { countryCode: 'HU', postalCode: '0000', city: 'redacted', line1: 'redacted' },
-      },
-    });
+    expect(checkout.toPersistedDraft('sess-with')).toEqual(seeded);
     const current = checkout.get('sess-with');
     expect(current.ok).toBe(true);
     if (!current.ok) return;
     expect(current.session.contact).toEqual(seeded.contact);
     expect(current.session.billing).toEqual(seeded.billing);
+    expect(checkout.releaseSnapshotDraft('sess-with')).toBe(true);
+    expect(checkout.toPersistedDraft('sess-with')).toBeUndefined();
+    expect(checkout.toPersistedDraft('sess-with', true)).toEqual(seeded);
   });
 });
 
@@ -2120,10 +2116,16 @@ describe('checkout draft storage: card path only (E016)', () => {
     expect(state.captured).not.toBeNull();
     expect(state.captured?.checkoutDraft).toBeDefined();
     expect(state.captured?.checkoutDraft?.contact).toEqual({
-      fullName: 'redacted',
-      email: 'redacted@example.invalid',
-      phone: '+36000000000',
+      fullName: 'Teszt Elek',
+      email: 'teszt.elek@pelda.hu',
+      phone: '+36301234567',
     });
+    expect(state.captured?.checkoutDraft?.billing).toEqual(VALID_BILLING);
+    expect(state.captured?.checkoutDraft?.delivery).toEqual({
+      optionId: 'home_delivery',
+      address: VALID_DELIVERY_ADDRESS,
+    });
+    expect(state.captured?.checkoutDraft?.revision).toBe(1);
   });
 
   it('D-03 the draft rides through the payment page', async () => {
@@ -2144,10 +2146,11 @@ describe('checkout draft storage: card path only (E016)', () => {
     expect(d03.captured).not.toBeNull();
     expect(d03.captured?.checkoutDraft).toBeDefined();
     expect(d03.captured?.checkoutDraft?.contact).toEqual({
-      fullName: 'redacted',
-      email: 'redacted@example.invalid',
-      phone: '+36000000000',
+      fullName: 'Teszt Elek',
+      email: 'teszt.elek@pelda.hu',
+      phone: '+36301234567',
     });
+    expect(d03.captured?.checkoutDraft).toEqual(d02Snap?.checkoutDraft);
   });
 
   it('D-04 the first checkout read after the return drops the stored draft and keeps it on the page', async () => {
@@ -2180,7 +2183,12 @@ describe('checkout draft storage: card path only (E016)', () => {
     expectRecord(get1Body['contact']);
     const contact = get1Body['contact'];
     expectRecord(contact);
-    expect(contact['email']).toBe('redacted@example.invalid');
+    expect(contact['email']).toBe('teszt.elek@pelda.hu');
+    expect(get1Body['billing']).toEqual(VALID_BILLING);
+    expect(get1Body['delivery']).toEqual({
+      optionId: 'home_delivery',
+      address: VALID_DELIVERY_ADDRESS,
+    });
     expect(c04.n).toBe(1);
     expect(d04.captured).not.toBeNull();
     expect(d04.captured?.checkoutDraft).toBeUndefined();
@@ -2260,7 +2268,7 @@ describe('checkout draft storage: card path only (E016)', () => {
     expect(items.length).toBe(1);
   });
 
-  it('D-06 an unpaid intent keeps the draft only while the draft pays by card', async () => {
+  it('D-06 a section write invalidates the temporary card draft even at the same total', async () => {
     const state = { captured: null as MockSnapshot | null };
     const counter = { n: 0 };
     installCapture(state, counter);
@@ -2271,12 +2279,59 @@ describe('checkout draft storage: card path only (E016)', () => {
 
     await patchPaymentOnly('"3"', 'card');
     expect(state.captured).not.toBeNull();
-    expect(state.captured?.checkoutDraft).toBeDefined();
-    expect(state.captured?.checkoutDraft?.payment).toEqual({ method: 'card' });
+    expect(state.captured?.checkoutDraft).toBeUndefined();
 
     await patchPaymentOnly('"4"', 'cash_on_delivery');
     expect(state.captured).not.toBeNull();
     expect(state.captured?.checkoutDraft).toBeUndefined();
+  });
+
+  it('D-07 an expired unread intent cannot authorize storing personal fields', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    installCapture(state, { n: 0 });
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d07');
+    expect(state.captured?.checkoutDraft?.contact).toBeDefined();
+    const intent = state.captured?.paymentIntents[0];
+    if (intent === undefined) throw new Error('intent not captured');
+    clock.advanceMs(Date.parse(intent.expiresAt) - Date.parse(clock.now()));
+    const cart = cartStore.current;
+    const checkout = checkoutStore.current;
+    const order = orderStore.current;
+    if (cart === null || checkout === null || order === null) throw new Error('stores missing');
+    const expired = buildSnapshot({ cart, checkout, order }, SESSION_1, Date.parse(clock.now()));
+    expect(expired.checkoutDraft).toBeUndefined();
+    expect(JSON.stringify(expired)).not.toContain('teszt.elek@pelda.hu');
+  });
+
+  it('D-08 editing a hydrated draft ends its temporary persistence exception', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d08');
+    installCapture(state, counter, state.captured);
+    await patchFullCardDraft('"3"');
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+  });
+
+  it('D-09 accepting prices alone does not invalidate an unchanged card draft', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    installCapture(state, { n: 0 });
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d09');
+    const revision = state.captured?.checkoutDraft?.revision;
+    const result = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+      body: JSON.stringify({ acceptedPriceVersion: 3 }),
+    });
+    expect(result.status).toBe(200);
+    expect(state.captured?.checkoutDraft?.revision).toBe(revision);
+    expect(state.captured?.checkoutDraft?.contact).toBeDefined();
   });
 });
 

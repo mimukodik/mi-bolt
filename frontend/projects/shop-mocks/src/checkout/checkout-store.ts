@@ -356,13 +356,14 @@ export class CheckoutStore {
     const draft: CheckoutDraft = {
       ...existing,
       ...normalized,
-      revision: (existing.revision ?? 0) + 1,
+      revision: (existing.revision ?? 0) + (presentSections.length > 0 ? 1 : 0),
     };
 
     // Bump through the cart so version moves, then build the wire.
     const touched = this.cart().touch(sessionId);
     if (!touched.ok) return { ok: false, problem: touched.problem };
     this.drafts.set(sessionId, draft);
+    if (presentSections.length > 0) this.draftsFromSnapshot.delete(sessionId);
     const readAfter = this.read(sessionId);
     if (!readAfter.ok) return readAfter;
     return { ok: true, session: readAfter.session };
@@ -459,28 +460,9 @@ export class CheckoutStore {
     if (!cardPaymentInFlight && !this.draftsFromSnapshot.has(sessionId)) {
       return undefined;
     }
-    const address: BillingDetails['address'] = {
-      countryCode: 'HU',
-      postalCode: '0000',
-      city: 'redacted',
-      line1: 'redacted',
-    };
-    return {
-      ...draft,
-      ...(draft.contact === undefined
-        ? {}
-        : {
-            contact: {
-              fullName: 'redacted',
-              email: 'redacted@example.invalid',
-              phone: '+36000000000',
-            },
-          }),
-      ...(draft.billing === undefined ? {} : { billing: { name: 'redacted', address } }),
-      ...(draft.delivery?.optionId !== 'home_delivery'
-        ? {}
-        : { delivery: { optionId: 'home_delivery', address } }),
-    };
+    // Preserve the shopper's fields only for the existing card round-trip
+    // exception. The durable commercial snapshot carries no shopper details.
+    return { ...draft };
   }
 
   // ---------------------------------------------------------------------------

@@ -15,7 +15,7 @@ const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: standard stories', () => {
   test(
-    '[E081] changing home delivery to pickup keeps the total and keeps the started card payment',
+    '[E081] changing home delivery to pickup keeps the total and invalidates the started card payment',
     { tag: '@integration' },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
@@ -286,12 +286,15 @@ test.describe('Checkout: standard stories', () => {
 
       // 8. Read the payment area of the review page.
       await test.step('8. Read the payment area of the review page.', async () => {
-        // The intent started for the old total still matches the unchanged
-        // total, so the page keeps it and starts no new payment.
+        // BOLT-5 binds the intent to the accepted checkout draft: changing
+        // delivery invalidates it even when the total is unchanged.
         await expect(reviewPayment).toHaveText('Bankkártya');
-        await expect(reviewPaymentStatus).toHaveText('A fizetés nem fejeződött be.');
-        await expect(page.getByTestId('review-payment-back').getByRole('button')).toHaveText(
-          'Vissza a fizetéshez',
+        await expect(reviewPaymentStatus).toHaveText(
+          'A korábbi kártyás fizetés már nem érvényes, mert közben megváltozott a rendelés. Indíts új fizetést.',
+        );
+        await expect(page.getByTestId('review-payment-back')).toHaveCount(0);
+        await expect(page.getByTestId('review-payment-new').getByRole('button')).toHaveText(
+          'Új fizetés indítása',
         );
 
         // No price change is announced, and a card order is still never placed

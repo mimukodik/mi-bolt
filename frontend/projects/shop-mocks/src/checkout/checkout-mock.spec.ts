@@ -223,13 +223,21 @@ describe('accepted payment commercial snapshot', () => {
       const savedCart = cart.toPersistedCart(SESSION_1);
       const savedDraft = checkout.toPersistedDraft(SESSION_1, true);
       if (savedCart === undefined || savedDraft === undefined) throw new Error('snapshot failed');
-      expect(JSON.stringify({ state, savedDraft })).not.toContain(VALID_CONTACT.email);
-      expect(JSON.stringify({ state, savedDraft })).not.toContain(VALID_BILLING.address.line1);
+      expect(JSON.stringify(state)).not.toContain(VALID_CONTACT.email);
+      expect(JSON.stringify(state)).not.toContain(VALID_BILLING.address.line1);
+      // Only the temporary round-trip draft carries shopper details; the
+      // accepted commercial state remains independent of them.
+      expect(savedDraft.contact).toEqual(draft.session.contact);
+      expect(savedDraft.billing).toEqual(VALID_BILLING);
+      expect(savedDraft.revision).toBe(checkout.draftRevision(SESSION_1));
       repriced = true;
       const restoredCart = new CartStore(options, lookup);
       restoredCart.seedFromSnapshot(SESSION_1, savedCart);
       const restoredCheckout = new CheckoutStore(options, () => restoredCart);
       restoredCheckout.seedFromSnapshot(SESSION_1, savedDraft);
+      expect(restoredCheckout.toPersistedDraft(SESSION_1)).toEqual(savedDraft);
+      expect(restoredCheckout.releaseSnapshotDraft(SESSION_1)).toBe(true);
+      expect(restoredCheckout.toPersistedDraft(SESSION_1)).toBeUndefined();
       const restoredOrder = new OrderStore(
         options,
         restoredCheckout,

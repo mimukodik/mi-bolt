@@ -759,10 +759,28 @@ export class OrderStore {
    * session read already happens on every intent check.
    */
   hasCardPaymentInFlight(sessionId: string): boolean {
+    const cart = this.cart().toPersistedCart(sessionId);
+    if (cart === undefined) return false;
     for (const [intentId, stored] of this.intents) {
-      if (stored.sessionId === sessionId && stored.status === 'requires_action') {
-        if (!this.usedIntentIds.has(intentId)) return true;
-      }
+      const lines = stored.approvedItems ?? stored.approvedCart?.items.map(toOrderLine);
+      if (
+        stored.sessionId === sessionId &&
+        stored.status === 'requires_action' &&
+        Date.parse(this.options.clock.now()) < Date.parse(stored.expiresAt) &&
+        Date.parse(this.options.clock.now()) < Date.parse(cart.expiresAt) &&
+        !this.usedIntentIds.has(intentId) &&
+        stored.draftRevision === this.checkout.draftRevision(sessionId) &&
+        stored.draftFingerprint === this.checkout.draftFingerprint(sessionId) &&
+        (stored.approvedCart?.id ?? stored.approvedCartId) === cart.id &&
+        stored.basketRevision === (cart.basketRevision ?? 0) &&
+        lines?.length === cart.items.length &&
+        cart.items.every((item) =>
+          lines.some(
+            (line) => line.variantId === item.variantId && line.quantity === item.quantity,
+          ),
+        )
+      )
+        return true;
     }
     return false;
   }

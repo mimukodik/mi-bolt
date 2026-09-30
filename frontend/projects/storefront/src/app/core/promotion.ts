@@ -73,10 +73,14 @@ export class PromotionState {
     if (this.started) return;
     if (this.injector.get(HttpClient, null) === null) return;
     this.started = true;
-    this.refresh();
+    this.load(false);
   }
 
   refresh(): void {
+    this.load(true);
+  }
+
+  private load(notify: boolean): void {
     const generation = ++this.generation;
     clearTimeout(this.timer);
     this.injector
@@ -93,7 +97,7 @@ export class PromotionState {
             Number.isFinite(now) && start < end && (campaign.text?.trim().length ?? 0) > 0;
           this.campaign.set(valid ? campaign : null);
           this.invalidated.set(!this.active());
-          this.refreshed.next();
+          if (notify) this.refreshed.next();
           const boundary = start > now ? start : end > now ? end : null;
           if (valid && boundary !== null) {
             this.timer = setTimeout(
@@ -110,7 +114,7 @@ export class PromotionState {
           if (generation !== this.generation) return;
           this.campaign.set(null);
           this.invalidated.set(true);
-          this.refreshed.next();
+          if (notify) this.refreshed.next();
         },
       });
   }

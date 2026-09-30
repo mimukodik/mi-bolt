@@ -49,6 +49,20 @@ describe('campaign lifecycle', () => {
     startsAt: '2026-10-01T00:00:00Z',
     endsAt: '2026-10-31T23:00:00Z',
   };
+  it('does not replay catalogue requests when the initial campaign resolves', () => {
+    const invoke = vi.fn().mockReturnValue(of(active));
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), { provide: Api, useValue: { invoke } }],
+    });
+    const state = TestBed.inject(PromotionState);
+    const refreshed = vi.fn();
+    state.refreshed.subscribe(refreshed);
+    state.start();
+    expect(state.active()).toBe(true);
+    expect(refreshed).not.toHaveBeenCalled();
+    state.refresh();
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
   it('invalidates at the server boundary even with an unrelated browser clock', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2000-01-01T00:00:00Z'));
