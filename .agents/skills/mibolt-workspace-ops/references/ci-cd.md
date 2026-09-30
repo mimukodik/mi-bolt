@@ -36,12 +36,12 @@ result is `success` or `skipped` (`.github/workflows/ci.yml:61-81`).
 | `frontend` | `.github/components.yml:3-9` | `.github/workflows/frontend.yml` |
 | `backend` | `.github/components.yml:10-16` | `.github/workflows/backend.yml` |
 | `contracts` | `.github/components.yml:17-18` | `.github/workflows/contracts.yml` |
-| `tools` | `.github/components.yml:19-23` | `.github/workflows/tools.yml` |
-| `smoke` | `.github/components.yml:24-31` | `.github/workflows/smoke.yml` |
+| `tools` | `.github/components.yml:19-22` | `.github/workflows/tools.yml` |
+| `smoke` | `.github/components.yml:23-30` | `.github/workflows/smoke.yml` |
 
-`docs/monorepo.md:55-74` transcribes the same table for readers; a change that
+`docs/monorepo.md:50-69` transcribes the same table for readers; a change that
 matches no component runs only `changes` and `ci-ok`, which is green
-(`docs/monorepo.md:73-74`).
+(`docs/monorepo.md:68-69`).
 
 ## The reusable workflows
 
@@ -129,14 +129,14 @@ change:
 2. `deploy/candidate/inputs.py:15-20` and
    `deploy/tests/test-candidate.py:34-40` when the `frontend` or `backend` list
    changed;
-3. the component table at `docs/monorepo.md:62-68`;
+3. the component table at `docs/monorepo.md:57-63`;
 4. `frontend/README.md:89`, which spells out the `frontend` list in prose.
 
 **A new component also needs** its list in `.github/components.yml`, an output
 in the `changes` job (`.github/workflows/ci.yml:23-28`), a job calling its
 workflow (`.github/workflows/ci.yml:36-59` shows the shape), that job's name in
 `ci-ok`'s `needs` (`.github/workflows/ci.yml:63`), the new workflow file with
-`on: workflow_call`, and a row in `docs/monorepo.md:62-68`.
+`on: workflow_call`, and a row in `docs/monorepo.md:57-63`.
 
 ## Adding a job or a step
 
@@ -190,7 +190,7 @@ files; `deploy/candidate/README.md:91-97` runs `actionlint` by hand, and no
 
 | Symptom | Cause | Where |
 |---|---|---|
-| only `changes` and `ci-ok` ran | the change matched no component | `.github/components.yml`, `docs/monorepo.md:73-74` |
+| only `changes` and `ci-ok` ran | the change matched no component | `.github/components.yml`, `docs/monorepo.md:68-69` |
 | a component's workflow was skipped on a pull request touching it | the path is missing from that component's list | `.github/components.yml` |
 | `Candidate Build` failed at "Compute tracked build inputs" | `.github/components.yml` and `deploy/candidate/inputs.py` disagree | "Changing a path filter" above |
 | an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The candidate and deployment chain" above |

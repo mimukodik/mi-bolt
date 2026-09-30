@@ -343,7 +343,7 @@ One line each; the source named owns the rule.
 
 | Step skipped | What fails | Where it runs |
 |---|---|---|
-| regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json:32`) | the `api-drift` CI job (`.github/workflows/frontend.yml:136-159`), `mise run api:drift`, `mise run verify` (`mise.toml:67-74`) |
+| regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json:32`) | the `api-drift` CI job (`.github/workflows/frontend.yml:136-159`), `mise run api:drift`, `mise run verify` (`mise.toml:66-82`) |
 | leaving a generated file as hand-edited | the same `api:drift`, since regeneration overwrites the edit | as above |
 | updating a spec example or a sample the change invalidated | examples on a shop operation: `frontend/tests/contract/schema.spec.ts:177`; samples: `contracts/check-samples.sh` | `npm --prefix frontend run test:contract`; `mise run contracts:check` and the Contracts CI workflow (`.github/workflows/contracts.yml:24-25`) |
 | moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts:123-127`, and for an admin operation `frontend/tests/contract/sdk-split.spec.ts:141`; for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts:35`) and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts:88-108`) | `npm --prefix frontend run test:contract` |
@@ -413,7 +413,7 @@ Update this skill and its references in the same change as any of these:
 - `frontend/ng-openapi-gen.json` or `frontend/ng-openapi-gen.admin.json`;
 - the `api:*` and `fixtures:catalog*` scripts in `frontend/package.json:31-34`,
   or the root tasks behind `mise run api:generate`, `mise run api:drift` and
-  `mise run contracts:check` (`mise.toml:76-86`);
+  `mise run contracts:check` (`mise.toml:84-94`);
 - the openapi block of `backend/services/commerce/build.gradle:39-139`;
 - `frontend/projects/core-api/src/public-api.ts`;
 - `data/catalog/catalog.schema.json` or

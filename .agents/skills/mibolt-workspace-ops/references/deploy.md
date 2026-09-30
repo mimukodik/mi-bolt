@@ -141,7 +141,7 @@ at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
 `test-candidate.py` and `test-stack.py` also state theirs in their docstring.
 
 - `check-chart.py` is the only one with a mise task: `mise run deploy:check`
-  (`mise.toml:100-102`). It runs `helm lint` and `helm template` with synthetic
+  (`mise.toml:96-98`). It runs `helm lint` and `helm template` with synthetic
   values, then asserts the exact resource set, the commerce `envFrom` and `env`
   entries, the web `BACKEND_ORIGIN`, the probe paths, the Ingress and TLS shape
   (`deploy/tests/check-chart.py:50-110`), published-version labels, and six
@@ -160,8 +160,8 @@ at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
 calls `helm` as a subprocess (`deploy/tests/check-chart.py:33-42`). CI installs
 Helm v4.2.2 and uv with setup actions (`.github/workflows/candidate.yml:25`,
 `.github/workflows/candidate.yml:29-31`). The root task
-`mise run deploy:check` is in neither command table, `README.md:352-372` nor
-`docs/monorepo.md:30-50`.
+`mise run deploy:check` is in neither command table, `README.md:352-369` nor
+`docs/monorepo.md:28-45`.
 
 `docs/monorepo.md:17` describes `deploy/` as the Compose file and its wrapper;
 the chart, the candidate scripts, the checks above and `deploy/stack.sh` sit

@@ -62,15 +62,23 @@ run = "deploy/compose.sh down"
 [tasks.setup]
 description = "Install every workspace's dependencies"
 depends = ["//frontend:setup", "//backend:setup", "//tools:setup"]
-run = "npm --prefix .claude/hooks ci"
 
 [tasks.verify]
 description = "Lint, test and build every workspace, and check the contract"
-depends = [
-  "//frontend:lint", "//frontend:test", "//frontend:build",
-  "//backend:build",
-  "//tools:lint", "//tools:test", "//tools:build",
-  "contracts:check", "api:drift", "claude:hooks:test", "claude:hooks:typecheck",
+# One check at a time: `api:drift` rewrites the generated clients the frontend
+# checks read, and started together the checks leave little headroom in a
+# memory-capped environment such as an agent sandbox. `contracts:check` stays
+# a dependency so that mise installs its own tools before it runs.
+depends = ["contracts:check"]
+run = [
+  { task = "api:drift" },
+  { task = "//tools:lint" },
+  { task = "//tools:test" },
+  { task = "//tools:build" },
+  { task = "//frontend:lint" },
+  { task = "//frontend:test" },
+  { task = "//frontend:build" },
+  { task = "//backend:build" },
 ]
 
 [tasks."api:generate"]
@@ -84,18 +92,6 @@ depends = ["//frontend:api:drift"]
 [tasks."contracts:check"]
 description = "Lint the contract, validate the samples, check the sequence diagrams"
 depends = ["//contracts:check"]
-
-[tasks."claude:memory"]
-description = "The shared agent memory CLI; pass its arguments after the task name"
-run = "npm --prefix tools run --silent claude:memory --"
-
-[tasks."claude:hooks:test"]
-description = "Test the Claude Code hooks"
-run = "npm --prefix .claude/hooks test"
-
-[tasks."claude:hooks:typecheck"]
-description = "Typecheck the Claude Code hooks"
-run = "npm --prefix .claude/hooks run typecheck"
 
 [tasks."deploy:check"]
 description = "Lint and inspect the MiBolt Helm app chart with synthetic candidate values"

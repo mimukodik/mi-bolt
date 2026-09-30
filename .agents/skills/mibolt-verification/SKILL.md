@@ -349,10 +349,9 @@ limit:
   server or a browser that is already up.
 - Stop every server and close the browser before a gate or
   `mise run verify`.
-- Run the gates one after another, and `mise run verify` as
-  `MISE_JOBS=1 mise run verify`: mise otherwise runs up to eight of its
-  eleven checks at once (`references/commands.md`, "What a check writes or
-  starts").
+- Run the gates one after another. `mise run verify` does so by itself: it
+  runs its nine checks in order, one at a time (`references/commands.md`,
+  "What a check writes or starts").
 
 ### Tests and coverage
 

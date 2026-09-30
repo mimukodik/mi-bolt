@@ -52,10 +52,8 @@ mise run setup
 
 Installs every workspace's dependencies: the frontend's npm packages
 (`frontend/mise.toml`'s `setup`, `npm ci`), the backend's Gradle wrapper
-(`backend/mise.toml`'s `setup`, `./gradlew --version`), the tools
-workspace's npm packages (`tools/mise.toml`'s `setup`, `npm ci`), and the
-Claude Code hooks' own npm packages (the root `mise.toml`'s `setup` task,
-`npm --prefix .claude/hooks ci`).
+(`backend/mise.toml`'s `setup`, `./gradlew --version`), and the tools
+workspace's npm packages (`tools/mise.toml`'s `setup`, `npm ci`).
 
 ```bash
 npm --prefix frontend run e2e:install
@@ -369,9 +367,6 @@ Every task below runs from the repository root as `mise run <task>`.
 | `api:generate`           | Regenerate the frontend API clients and the backend server stubs from the contract             |
 | `api:drift`              | Fail when the committed frontend API clients differ from the contract                          |
 | `contracts:check`        | Lint the contract, validate the samples, check the sequence diagrams                           |
-| `claude:memory`          | The shared agent memory CLI; pass its arguments after the task name                            |
-| `claude:hooks:test`      | Test the Claude Code hooks                                                                     |
-| `claude:hooks:typecheck` | Typecheck the Claude Code hooks                                                                |
 
 For the npm scripts behind the frontend tasks, see
 [`frontend/README.md`](frontend/README.md); for the Gradle tasks behind the

@@ -66,7 +66,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
 - **One task graph over five `mise.toml` files.** `[monorepo] config_roots`
   (`mise.toml:8-9`) loads `frontend`, `backend`, `tools` and `contracts` as
   config roots, whose tasks are addressed as `//frontend:build` and so on.
-  `mise tasks` lists the 20 root tasks, each with a `description`;
+  `mise tasks` lists the 17 root tasks, each with a `description`;
   `mise tasks --all` adds the 23 area tasks, which carry none
   (https://mise.jdx.dev/tasks/monorepo.html). A task runs in its own config
   root by default (https://mise.jdx.dev/tasks/task-configuration.html, "dir"),
@@ -109,7 +109,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
 - **Dev tooling.** `deploy/stack.sh` gives a linked worktree a Compose stack of
   its own; `tools/dev-server/dev-server.sh` starts and stops one process on one
   port; `frontend/scripts/serve-static.mjs` serves a production build.
-- **`api:drift` checks the frontend clients only** (`mise.toml:80-82`). The
+- **`api:drift` checks the frontend clients only** (`mise.toml:88-90`). The
   backend stubs are generated into the Gradle build directory on every build
   (`backend/services/commerce/build.gradle:92`) and no file of them is tracked.
 - **`tools/` is an npm workspace root** with `catalog-import` as its member
@@ -120,7 +120,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
 
 | Task | Start at | Example to copy |
 |---|---|---|
-| a root task | `mise.toml` | `verify` (`mise.toml:67-74`) for a task made of other tasks; `db` (`mise.toml:31-33`) for one that runs a command |
+| a root task | `mise.toml` | `verify` (`mise.toml:66-82`) for a task made of other tasks; `db` (`mise.toml:31-33`) for one that runs a command |
 | an area task | the area's `mise.toml` | `frontend/mise.toml:11-21`, a `run` list |
 | a run mode, a port | `README.md:81-243`, then `mise.toml:15-60` | `stack` (`mise.toml:52-56`) |
 | a Compose service, a volume, an env var | `deploy/compose.yaml`, `deploy/.env.example` | `deploy/compose.sh` for how every Compose call is made |
@@ -138,7 +138,9 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    `//area:task` name rather than repeating its command.
 2. Pick the shape. When every step is already a task, list them under
    `depends`, which mise runs in parallel
-   (https://mise.jdx.dev/tasks/task-configuration.html, "depends"). A step that
+   (https://mise.jdx.dev/tasks/task-configuration.html, "depends"), or, when
+   they must not overlap, as `{ task = … }` entries of a `run` list, which
+   mise runs one after another, the way `verify` does. A step that
    has no task of its own goes under `run` and runs from the root, the way
    `stop` runs `deploy/compose.sh down` (`mise.toml:58-60`). A task
    that runs the contract checks and the frontend contract suite, for
@@ -155,11 +157,11 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    below).
 4. Give it a `description`: `mise tasks` prints it, and the two command tables
    repeat it word for word.
-5. Add the same row to `README.md:352-372` and to `docs/monorepo.md:30-50`.
-   Both tables list the other 19 root tasks; `mise run deploy:check`
-   (`mise.toml:100-102`) is in neither.
-6. When the workspace as a whole should pass it, add it to `verify`'s `depends`
-   (`mise.toml:67-74`). What a `verify` run writes, and that a run can leave a
+5. Add the same row to `README.md:352-369` and to `docs/monorepo.md:28-45`.
+   Both tables list the other 16 root tasks; `mise run deploy:check`
+   (`mise.toml:96-98`) is in neither.
+6. When the workspace as a whole should pass it, add it to `verify`'s `run` list
+   (`mise.toml:66-82`). What a `verify` run writes, and that a run can leave a
    tracked file outside the change modified, is in
    `mibolt-verification/references/commands.md` ("What a check writes or
    starts").
@@ -187,7 +189,7 @@ the row, and the checks `mibolt-verification` names for the change pass.
    `Publish Candidate` workflow fails for that pull request until the change is
    on `main`, because it hashes with the default branch's `inputs.py`
    (`deploy/candidate/publish.py:21`, `deploy/candidate/publish.py:185`).
-3. Update the table at `docs/monorepo.md:62-68`, and `frontend/README.md:89`
+3. Update the table at `docs/monorepo.md:57-63`, and `frontend/README.md:89`
    when the `frontend` list changed.
 
 A new component, a `workflow_run`, `schedule` or `pull_request_target`
@@ -296,7 +298,7 @@ other way.
 The deploy checks run through uv with no uv pinned at the root:
 `mise run deploy:check` runs
 `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
-(`mise.toml:100-102`), and `.github/workflows/candidate.yml:32-40` runs all
+(`mise.toml:96-98`), and `.github/workflows/candidate.yml:32-40` runs all
 six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
 
 ### Naming
@@ -356,15 +358,15 @@ machine fails on every other, CI included.
 
 | Change | Also update, or expect |
 |---|---|
-| a root task added, renamed or removed | `README.md:352-372`, `docs/monorepo.md:30-50`; `verify` when it is a gate; the workflow step when CI should run it |
+| a root task added, renamed or removed | `README.md:352-369`, `docs/monorepo.md:28-45`; `verify` when it is a gate; the workflow step when CI should run it |
 | an area task | the root task that names it as `//area:task`; the CI step that runs the same command |
 | a `start*` script | `frontend/mise.toml:29-45`; Playwright's own `ng serve` command at `frontend/playwright.config.ts:26`, which is end-to-end configuration outside this skill |
 | a dev-server port or proxy | `frontend/angular.json`, `frontend/proxy*.json`, the ports table at `README.md:229-239`, the payment URL defaults at `backend/README.md:29-30` |
 | a Compose port, service or variable | `deploy/.env.example`, `README.md:241-243`, `backend/README.md:19-31`, the slot state `deploy/stack.sh:367-383` writes, `.github/workflows/smoke.yml:19-25`, `.github/workflows/backend.yml:183-185` and `.github/workflows/backend.yml:221-222`, the chart |
 | a Compose `build:` block | `deploy/candidate/publish.py:169-184` on `main` first, `.github/workflows/candidate.yml:51-60`, `deploy/tests/test-candidate.py` |
 | a Dockerfile or NGINX file | `frontend/tests/web-image/` for an NGINX or `robots.txt` rule; expect a new image tag, because the input hash changes |
-| the `frontend` or `backend` list in `.github/components.yml` | `deploy/candidate/inputs.py:15-20` and `deploy/tests/test-candidate.py:34-40` in the same change, `docs/monorepo.md:62-68`, and `frontend/README.md:89` for the `frontend` list |
-| any other list in `.github/components.yml` | `docs/monorepo.md:62-68` |
+| the `frontend` or `backend` list in `.github/components.yml` | `deploy/candidate/inputs.py:15-20` and `deploy/tests/test-candidate.py:34-40` in the same change, `docs/monorepo.md:57-63`, and `frontend/README.md:89` for the `frontend` list |
+| any other list in `.github/components.yml` | `docs/monorepo.md:57-63` |
 | a `workflow_run`, `schedule` or `pull_request_target` workflow, or a script in `deploy/candidate/` | the `deploy/tests/*.py` check that imports the script, where there is one. Those workflows run the default branch's copy of themselves and of the scripts they call, `deploy/candidate/publish.py` and the `deploy/candidate/inputs.py` it imports included (`deploy/candidate/publish.py:21`), so a change there takes effect only once it is on `main`; `.github/workflows/candidate.yml` runs the pull request's own `deploy/candidate/inputs.py` and `deploy/candidate/build_metadata.py` (`.github/workflows/candidate.yml:28`, `.github/workflows/candidate.yml:65`) |
 | the chart | `deploy/helm/mi-bolt/values.schema.json`, `deploy/tests/check-chart.py`, the Secret key list at `deploy/helm/mi-bolt/README.md:12-16` |
 

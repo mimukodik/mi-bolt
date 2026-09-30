@@ -98,7 +98,7 @@ on any other value (`frontend/projects/admin/src/mocks/seed.ts:64-68`).
 
 A change under `data/catalog/**` runs the frontend, backend and smoke CI
 branches (`.github/components.yml:6`, `.github/components.yml:13`,
-`.github/components.yml:28`).
+`.github/components.yml:27`).
 
 ## 5. A catalogue change, step by step
 

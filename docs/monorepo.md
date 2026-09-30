@@ -15,13 +15,11 @@ deployment compose file, and the import/agent tooling. This page is the map;
 | `contracts/commerce/`      | The one OpenAPI contract (`openapi.yaml`), its `samples/`, its `sequences/` (PlantUML), and `kommunikacio.md`.                                                                          |
 | `data/catalog/`            | The tracked product catalogue: `catalog.json`, `catalog.schema.json`, and the product `images/`.                                                                                        |
 | `deploy/`                  | The container stack: `compose.yaml` and the `compose.sh` wrapper.                                                                                                                       |
-| `tools/`                   | The import script and agent tooling that run outside the frontend and backend workspaces (`catalog-import/`, `agent-memory/`).                                                          |
+| `tools/`                   | The import script and the dev-server helper that run outside the frontend and backend workspaces (`catalog-import/`, `dev-server/`).                                                    |
 | `.github/`                 | The CI workflows and the `components.yml` path filters they read.                                                                                                                       |
-| `.claude/`                 | The agent rules, skills, agent definitions and shared memory for this workspace.                                                                                                        |
 | `mise.toml`                | The root command list; see "Root commands" below.                                                                                                                                       |
 | `README.md`                | The monorepo's entry point: install, start modes, workflows, command reference.                                                                                                         |
 | `frontend/README.md`       | The Angular workspace: projects, npm scripts, configurations, tests.                                                                                                                    |
-| `CLAUDE.md`                | The Angular/TypeScript conventions this repository follows.                                                                                                                             |
 
 ## Root commands
 
@@ -45,9 +43,6 @@ Every task below runs from the repository root as `mise run <task>`.
 | `api:generate`           | Regenerate the frontend API clients and the backend server stubs from the contract             |
 | `api:drift`              | Fail when the committed frontend API clients differ from the contract                          |
 | `contracts:check`        | Lint the contract, validate the samples, check the sequence diagrams                           |
-| `claude:memory`          | The shared agent memory CLI; pass its arguments after the task name                            |
-| `claude:hooks:test`      | Test the Claude Code hooks                                                                     |
-| `claude:hooks:typecheck` | Typecheck the Claude Code hooks                                                                |
 
 Each workspace's own tasks live in `frontend/mise.toml`, `backend/mise.toml`,
 `tools/mise.toml` and `contracts/mise.toml`; the root tasks above call them.
@@ -64,7 +59,7 @@ needed branch succeeded or was skipped.
 | `frontend`  | `frontend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**`, `tools/ci/**`             | `.github/workflows/frontend.yml` ("Frontend")                                                                    |
 | `backend`   | `backend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**`, `tools/ci/**`              | `.github/workflows/backend.yml` ("Backend")                                                                      |
 | `contracts` | `contracts/**`                                                                                         | `.github/workflows/contracts.yml` ("Contracts")                                                                  |
-| `tools`     | `tools/**`, `mise.toml`, `.github/**`, `.claude/hooks/**`                                              | `.github/workflows/tools.yml` ("Tools")                                                                          |
+| `tools`     | `tools/**`, `mise.toml`, `.github/**`                                                                  | `.github/workflows/tools.yml` ("Tools")                                                                          |
 | `smoke`     | `frontend/**`, `backend/**`, `contracts/**`, `data/catalog/**`, `deploy/**`, `mise.toml`, `.github/**` | `.github/workflows/smoke.yml` ("Smoke"): the browser smoke specs against the compose stack built from the commit |
 
 `ci.yml` runs on every pull request whatever its base, plus on every push to

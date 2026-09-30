@@ -56,12 +56,15 @@ are described under "What a check writes or starts" below.
   calls.
 - **`mise run verify`** writes the coverage reports, the build output, the
   generated clients and the Gradle output above, and binds port 4299; it runs
-  neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:67-74`). It can
+  neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:66-82`). It can
   also leave a tracked file outside the change modified, so read
-  `git status --short` after it. mise runs up to eight tasks at once, and
-  `depends` sets no order among the tasks it lists
-  (https://mise.jdx.dev/tasks/running-tasks.html), so its checks can overlap
-  one another in the one checkout.
+  `git status --short` after it. It runs its nine checks one after another,
+  `contracts:check` first and then the eight in its `run` list in order, and
+  stops at the first that fails, so they do not overlap one another in the
+  one checkout; with mise's `--continue-on-error` flag it runs all nine and
+  lists every failure. Tasks listed together under `depends` instead start
+  up to eight at once, in no set order
+  (https://mise.jdx.dev/tasks/running-tasks.html).
 
 ## Discovery
 
@@ -231,8 +234,8 @@ in `frontend/` (installed by `mise run setup`) and the Node version pinned at
 | `npm --prefix frontend run check:payment-boot` | `frontend/package.json:15` | port 4299 free | starts processes or ports |
 | `npm --prefix frontend run check:admin-boot` | `frontend/package.json:16` | port 4299 free | starts processes or ports |
 | `mise run //frontend:build` (all eight build steps, in CI's order) | `frontend/mise.toml:11-21` | port 4299 free | writes local artefacts; starts processes or ports |
-| `mise run api:drift` | `mise.toml:80-82`, then `frontend/package.json:32` | — | rewrites tracked files |
-| `mise run api:generate`, a change step owned by `mibolt-cross-package-changes` | `mise.toml:76-78` | Java 21 for the backend half | rewrites tracked files; writes local artefacts |
+| `mise run api:drift` | `mise.toml:88-90`, then `frontend/package.json:32` | — | rewrites tracked files |
+| `mise run api:generate`, a change step owned by `mibolt-cross-package-changes` | `mise.toml:84-86` | Java 21 for the backend half | rewrites tracked files; writes local artefacts |
 | `npm --prefix frontend run fixtures:catalog:check` (manual only) | `frontend/package.json:34` | — | read-only |
 | `node frontend/scripts/check-budgets.mjs` (manual only) | the script; no npm script | the storefront's production build | read-only |
 
@@ -254,17 +257,17 @@ Gradle builds `backend/`. It needs Java 21 (`mise.toml:13`) and no database.
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `mise run contracts:check` (vacuum lint, samples, PlantUML; runs in `contracts/`) | `mise.toml:84-86`, then `contracts/mise.toml:14-19` | the tools pinned at `contracts/mise.toml:5-9` | read-only |
+| `mise run contracts:check` (vacuum lint, samples, PlantUML; runs in `contracts/`) | `mise.toml:92-94`, then `contracts/mise.toml:14-19` | the tools pinned at `contracts/mise.toml:5-9` | read-only |
 | `mise run //tools:lint` (typecheck; runs in `tools/`) | `tools/mise.toml:5-6` | `node_modules` in `tools/` | read-only |
 | `mise run //tools:test` (Vitest; runs in `tools/`) | `tools/mise.toml:8-9` | `node_modules` in `tools/` | starts processes or ports: `tools/dev-server/dev-server.test.ts` starts short-lived servers on free ports and stops them |
-| `mise run deploy:check` (renders and checks the Helm chart) | `mise.toml:100-102` | uv; `helm` on PATH | needs a missing tool |
+| `mise run deploy:check` (renders and checks the Helm chart) | `mise.toml:96-98` | uv; `helm` on PATH | needs a missing tool |
 
 ## Umbrella and setup
 
 | Command | Defined in | Needs | Class |
 |---|---|---|---|
-| `mise run verify` | `mise.toml:67-74` | everything `mise run setup` installs; Java 21; the tools pinned in `contracts/mise.toml`; port 4299 free | writes local artefacts; rewrites tracked files; starts processes or ports |
-| `mise run setup` | `mise.toml:62-65` | network access | writes local artefacts, the `node_modules/` of `frontend/` and `tools/` among them |
+| `mise run verify` | `mise.toml:66-82` | everything `mise run setup` installs; Java 21; the tools pinned in `contracts/mise.toml`; port 4299 free | writes local artefacts; rewrites tracked files; starts processes or ports |
+| `mise run setup` | `mise.toml:62-64` | network access | writes local artefacts, the `node_modules/` of `frontend/` and `tools/` among them |
 
 ## End-to-end and run modes
 
