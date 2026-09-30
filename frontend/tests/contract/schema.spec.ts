@@ -99,6 +99,7 @@ const EXPECTED_OPERATION_IDS = [
   'getOrder',
   'getPaymentIntent',
   'getProduct',
+  'getPromotion',
   'listProducts',
   'listRelatedProducts',
   'removeCartItem',
@@ -131,7 +132,7 @@ beforeAll(async () => {
 });
 
 describe('T03-AC01 operationIds', () => {
-  it('declares exactly the 19 shop operationIds of the 2.2.0 contract', () => {
+  it('declares exactly the 20 shop operationIds of the 2.4.0 contract', () => {
     const ids: string[] = [];
     for (const pathItem of Object.values(spec.paths)) {
       for (const op of Object.values(pathItem)) {

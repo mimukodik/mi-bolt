@@ -8,7 +8,7 @@
       <span aria-current="page" class="breadcrumb is-current">{{ productName() }}</span>
     </nav>
   }
-  <article class="card">
+  <article class="card" [class.card--promotion]="originalPrice() !== null">
     @switch (state()) {
       @case ('loading') {
         <div appSkeletonLeave class="loading" data-testid="product-loading">
@@ -89,6 +89,7 @@
                   size="lg"
                   [inverse]="true"
                   [money]="devicePrice()"
+                  [originalMoney]="originalPrice()"
                   [status]="devicePriceStatus()"
                 />
               </section>
@@ -184,6 +185,7 @@
       [available]="addToCartEnabled()"
       [error]="addError()"
       [money]="devicePrice()"
+      [originalMoney]="originalPrice()"
       [pending]="addPending()"
       [reason]="addToCartReason()"
       [success]="addSuccessMessage()"

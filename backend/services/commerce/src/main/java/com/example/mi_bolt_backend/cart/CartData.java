@@ -16,7 +16,11 @@ public interface CartData {
 			int totalQuantity,
 			long subtotal,
 			OffsetDateTime expiresAt,
-			List<Notice> notices) {
+			List<Notice> notices, long basketRevision) {
+		public CartView(long id, long version, List<Line> items, int lineCount, int totalQuantity,
+				long subtotal, OffsetDateTime expiresAt, List<Notice> notices) {
+			this(id, version, items, lineCount, totalQuantity, subtotal, expiresAt, notices, 0L);
+		}
 	}
 
 	record Line(

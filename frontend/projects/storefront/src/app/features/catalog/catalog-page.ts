@@ -13,6 +13,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CatalogFacade } from './catalog.facade';
+import { PromotionState } from '../../core/promotion';
 import {
   buildChips,
   CATALOG_QUERY_KEYS,
@@ -206,6 +207,11 @@ export class CatalogPage {
   readonly appliedChipCount = computed<number>(() => this.appliedChips().length);
 
   constructor() {
+    inject(PromotionState)
+      .refreshed.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.facade.refreshPromotion();
+      });
     // A new page visit: the root facade must read the list again even
     // when an earlier visit loaded the same query.
     this.facade.beginVisit();
@@ -315,12 +321,21 @@ export class CatalogPage {
       case 'featured':
         this.facade.setFeatured(undefined);
         break;
+      case 'onPromotion':
+        this.facade.setFilters({ onPromotion: undefined });
+        break;
     }
   }
 
   onClearAll(): void {
     this.focusResultCount();
     this.facade.reset();
+  }
+
+  onEmptyAction(): void {
+    if (this.facade.query().onPromotion === true)
+      this.facade.setFilters({ onPromotion: undefined });
+    else this.onClearAll();
   }
 
   onRetry(): void {

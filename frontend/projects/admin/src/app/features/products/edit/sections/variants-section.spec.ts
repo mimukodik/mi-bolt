@@ -31,7 +31,7 @@ function variant(
   price: number,
   stock: number,
 ): VariantModel {
-  return { key: newKey(), id, colorKey, storageGb, price, stock };
+  return { key: newKey(), id, colorKey, storageGb, price, salePrice: null, stock };
 }
 
 @Component({
@@ -205,8 +205,9 @@ describe('VariantsSection', () => {
     expect(rows().length).toBe(2);
     expect(rows().map(selectText)).toEqual(['Ezüst', 'Fekete']);
     expect(checkedToggle(rows()[0])).toBe('128 GB');
-    expect(inputValue(rows()[0], 'Ár')).toBe('199990');
-    expect(inputValue(rows()[1], 'Ár')).toBe('219990');
+    expect(inputValue(rows()[0], 'Alapár')).toBe('199990');
+    expect(inputValue(rows()[1], 'Alapár')).toBe('219990');
+    expect(inputValue(rows()[0], 'Akciós ár')).toBe('');
     expect(rows().map(idText)).toEqual([
       'azonosító: teszt-telefon--ezust--128',
       'azonosító: teszt-telefon--fekete--256 (új)',

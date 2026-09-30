@@ -38,6 +38,7 @@ import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 import type { OrderLine } from '@mi-bolt/api/models/order-line';
 import type { Cart } from '@mi-bolt/api/models/cart';
 import type { Money } from '@mi-bolt/api/models/money';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
 import type { StorageGb } from '@mi-bolt/api/models/storage-gb';
 import type { Address } from '@mi-bolt/api/models/address';
 import type { Contact } from '@mi-bolt/api/models/contact';
@@ -55,6 +56,7 @@ import { deriveIdempotencyKey, hashPayload } from '../idempotency';
 import type { PersistedIdempotencyRecord, IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
 import { DEFAULT_SCENARIO } from '../scenarios';
+import type { PersistedPaymentIntent } from '../persistence';
 
 export const PAYMENT_INTENT_TTL_MS = 30 * 60 * 1000;
 
@@ -68,6 +70,13 @@ export type OrderOutcome =
   { ok: true; receipt: OrderReceipt; replayed?: boolean } | { ok: false; problem: Problem };
 
 interface StoredIntent {
+  draftRevision?: number;
+  approvedCartId?: string;
+  approvedItems?: OrderLine[];
+  basketRevision?: number;
+  approvedCart?: Cart;
+  approvedSummary?: CheckoutSummary;
+  draftFingerprint?: string;
   id: string;
   sessionId: string;
   status: PaymentIntentStatus;
@@ -184,7 +193,55 @@ export class OrderStore {
     private readonly idempotency: IdempotencyStore,
     private readonly cart: () => CartStore,
     private readonly stock: StockLedger = new StockLedger(),
-  ) {}
+  ) {
+    this.cart().setAcceptedPricing((sessionId, current) => {
+      const accepted = this.acceptedSnapshot(sessionId, current);
+      const lines = accepted?.approvedItems ?? accepted?.approvedCart?.items.map(toOrderLine);
+      if (accepted?.approvedSummary === undefined || lines === undefined) return undefined;
+      const items = current.items.map((item) => {
+        const line = lines.find((approved) => approved.variantId === item.variantId);
+        return line === undefined
+          ? item
+          : { ...item, unitPrice: line.unitPrice, lineTotal: line.lineTotal };
+      });
+      return { ...current, items, subtotal: accepted.approvedSummary.subtotal, notices: [] };
+    });
+    this.checkout.setAcceptedSummary(
+      (sessionId, current) => this.acceptedSnapshot(sessionId, current)?.approvedSummary,
+    );
+  }
+
+  private acceptedSnapshot(sessionId: string, current: Cart): StoredIntent | undefined {
+    return [...this.intents.values()]
+      .reverse()
+      .find(
+        (intent) =>
+          intent.sessionId === sessionId &&
+          ['requires_action', 'pending', 'succeeded'].includes(intent.status) &&
+          (intent.status === 'succeeded' ||
+            Date.parse(this.options.clock.now()) < Date.parse(intent.expiresAt)) &&
+          !this.usedIntentIds.has(intent.id) &&
+          (intent.approvedCart?.id ?? intent.approvedCartId) === current.id &&
+          intent.basketRevision === (current.basketRevision ?? 0) &&
+          this.snapshotMatchesCart(intent, current) &&
+          intent.draftFingerprint === this.checkout.draftFingerprint(sessionId),
+      );
+  }
+
+  private snapshotMatchesCart(intent: StoredIntent, current: Cart): boolean {
+    const lines = intent.approvedItems ?? intent.approvedCart?.items.map(toOrderLine);
+    return (
+      lines?.length === current.items.length &&
+      current.items.every(
+        (item) =>
+          item.availability === 'in_stock' &&
+          item.quantity <= item.maxQuantity &&
+          lines.some(
+            (line) => line.variantId === item.variantId && line.quantity === item.quantity,
+          ),
+      )
+    );
+  }
 
   createPaymentIntent(
     sessionId: string,
@@ -234,6 +291,12 @@ export class OrderStore {
     if (!readResult.ok) return { ok: false, problem: readResult.problem };
     const { cart, draft } = readResult;
 
+    if (readResult.session.priceChanged === true)
+      return {
+        ok: false,
+        problem: this.problem(409, 'PRICE_CHANGED', 'Review and accept the updated prices', {}, []),
+      };
+
     const versionCheck = this.checkIfMatch(ifMatch, cart.version);
     if (!versionCheck.ok) return { ok: false, problem: versionCheck.problem };
 
@@ -265,6 +328,11 @@ export class OrderStore {
         ? ''
         : `&mi-scenario=${encodeURIComponent(this.options.scenario.name)}`;
     const stored: StoredIntent = {
+      basketRevision: cart.basketRevision ?? 0,
+      approvedCart: structuredClone(cart),
+      approvedSummary: structuredClone(readResult.session.summary),
+      draftFingerprint: hashPayload(draft),
+      draftRevision: this.checkout.draftRevision(sessionId),
       id,
       sessionId,
       status: 'requires_action',
@@ -294,6 +362,7 @@ export class OrderStore {
         ),
       };
     }
+    this.applyExpiry(stored);
     return { ok: true, intent: this.toWireIntent(stored) };
   }
 
@@ -340,6 +409,7 @@ export class OrderStore {
         ),
       };
     }
+    this.applyExpiry(stored);
     if (stored.status === 'succeeded' || stored.status === 'declined') {
       return {
         ok: false,
@@ -354,6 +424,15 @@ export class OrderStore {
     }
     stored.status = outcome;
     return { ok: true, intent: this.toWireIntent(stored) };
+  }
+
+  private applyExpiry(intent: StoredIntent): void {
+    if (
+      (intent.status === 'requires_action' || intent.status === 'pending') &&
+      Date.parse(this.options.clock.now()) >= Date.parse(intent.expiresAt)
+    ) {
+      intent.status = 'declined';
+    }
   }
 
   createOrder(
@@ -414,6 +493,12 @@ export class OrderStore {
     const consent = this.checkConsent(orderRequest);
     if (!consent.ok) return { ok: false, problem: consent.problem };
 
+    if (orderRequest.paymentMethod !== 'card' && readResult.session.priceChanged === true)
+      return {
+        ok: false,
+        problem: this.problem(409, 'PRICE_CHANGED', 'Review and accept the updated prices', {}, []),
+      };
+
     const completeness = this.checkCompleteness(cart, draft);
     if (!completeness.ok) return { ok: false, problem: completeness.problem };
 
@@ -448,6 +533,7 @@ export class OrderStore {
           ),
         };
       }
+      this.applyExpiry(stored);
       if (stored.status === 'requires_action') {
         return {
           ok: false,
@@ -497,7 +583,25 @@ export class OrderStore {
         };
       }
       const summaryTotal = readResult.session.summary.total;
-      if (stored.amount.amount !== summaryTotal.amount) {
+      const snapshotMatches =
+        (stored.approvedCart?.id ?? stored.approvedCartId) === cart.id &&
+        stored.basketRevision === (cart.basketRevision ?? 0) &&
+        stored.draftFingerprint === hashPayload(draft);
+      if (
+        (stored.approvedCart !== undefined || stored.approvedCartId !== undefined) &&
+        !snapshotMatches
+      )
+        return {
+          ok: false,
+          problem: this.problem(
+            422,
+            'PAYMENT_REQUIRED',
+            'The basket or checkout changed; a new payment is required',
+            {},
+            [],
+          ),
+        };
+      if (!snapshotMatches && stored.amount.amount !== summaryTotal.amount) {
         return {
           ok: false,
           problem: this.problem(
@@ -556,8 +660,13 @@ export class OrderStore {
     const orderId = this.options.ids.uuid();
     const orderNumber = this.nextOrderNumber();
     const createdAt = this.options.clock.now();
-    const summary = readResult.session.summary;
-    const items: OrderLine[] = cart.items.map(toOrderLine);
+    const approved =
+      orderRequest.paymentMethod === 'card'
+        ? this.intents.get(orderRequest.paymentIntentId)
+        : undefined;
+    const summary = approved?.approvedSummary ?? readResult.session.summary;
+    const items: OrderLine[] =
+      approved?.approvedItems ?? (approved?.approvedCart ?? cart).items.map(toOrderLine);
     const complete = completeness.draft;
     const paymentMethod = complete.payment.method;
     const receipt: OrderReceipt = {
@@ -615,13 +724,20 @@ export class OrderStore {
   seedFromSnapshot(
     sessionId: string,
     persisted: {
-      intents: readonly PaymentIntent[];
+      intents: readonly PersistedPaymentIntent[];
       receipts: readonly OrderReceipt[];
       usedIntentIds: readonly string[];
     },
   ): void {
     for (const intent of persisted.intents) {
-      this.intents.set(intent.id, { ...intent, sessionId });
+      this.intents.set(intent.id, {
+        ...intent,
+        sessionId,
+        ...(intent.approvedCartId === undefined ||
+        intent.draftRevision !== this.checkout.draftRevision(sessionId)
+          ? {}
+          : { draftFingerprint: this.checkout.draftFingerprint(sessionId) }),
+      });
     }
     for (const receipt of persisted.receipts) {
       this.orders.set(receipt.id, { receipt, sessionId });
@@ -660,13 +776,25 @@ export class OrderStore {
    * `withoutPersonalData`, so the snapshot holds no personal data.
    */
   toPersistedOrderState(sessionId: string): {
-    intents: readonly PaymentIntent[];
+    intents: readonly PersistedPaymentIntent[];
     receipts: readonly OrderReceipt[];
     usedIntentIds: readonly string[];
   } {
-    const intents: PaymentIntent[] = [];
+    const intents: PersistedPaymentIntent[] = [];
     for (const s of this.intents.values()) {
-      if (s.sessionId === sessionId) intents.push(this.toWireIntent(s));
+      if (s.sessionId === sessionId)
+        intents.push({
+          ...this.toWireIntent(s),
+          ...((s.approvedCart?.id ?? s.approvedCartId) === undefined
+            ? {}
+            : {
+                approvedCartId: s.approvedCart?.id ?? s.approvedCartId,
+                approvedItems: s.approvedItems ?? s.approvedCart?.items.map(toOrderLine),
+                approvedSummary: s.approvedSummary,
+                draftFingerprint: 'redacted',
+                draftRevision: s.draftRevision,
+              }),
+        });
     }
     const receipts: OrderReceipt[] = [];
     for (const s of this.orders.values()) {
@@ -710,6 +838,7 @@ export class OrderStore {
     return {
       id: stored.id,
       amount: stored.amount,
+      ...(stored.basketRevision === undefined ? {} : { basketRevision: stored.basketRevision }),
       createdAt: stored.createdAt,
       expiresAt: stored.expiresAt,
       redirectUrl: stored.redirectUrl,

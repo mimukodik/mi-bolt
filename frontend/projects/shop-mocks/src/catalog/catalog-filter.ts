@@ -27,6 +27,7 @@ const CONTRACT_PARAMETERS = [
   'inStock',
   'is5g',
   'featured',
+  'onPromotion',
   'sort',
   'page',
   'pageSize',
@@ -53,6 +54,7 @@ export interface CatalogFilter {
   inStock?: boolean;
   is5g?: boolean;
   featured?: boolean;
+  onPromotion?: boolean;
   sort: ProductSort;
   page: number;
   pageSize: 12 | 24;
@@ -206,6 +208,12 @@ export function parseListProductsParams(params: URLSearchParams): ParseListProdu
   }
 
   const featuredRaw = params.get('featured');
+  const promotionRaw = params.get('onPromotion');
+  if (promotionRaw !== null) {
+    if (promotionRaw !== 'true' && promotionRaw !== 'false')
+      return { ok: false, error: invalidValue('onPromotion', 'onPromotion is invalid') };
+    filter.onPromotion = promotionRaw === 'true';
+  }
   if (featuredRaw !== null) {
     if (featuredRaw !== 'true' && featuredRaw !== 'false') {
       return {
@@ -288,6 +296,8 @@ export function compareCaseInsensitive(a: string, b: string): number {
  * (CatalogService.java).
  */
 export function variantMatches(variant: Variant, filter: CatalogFilter): boolean {
+  const promoted = variant.promotion?.active === true && variant.availability === 'in_stock';
+  if (filter.onPromotion !== undefined && filter.onPromotion !== promoted) return false;
   if (filter.colors.length > 0 && !filter.colors.includes(variant.colorCode)) return false;
   const amount = variant.price.amount;
   if (filter.minPrice !== undefined && amount < filter.minPrice) return false;

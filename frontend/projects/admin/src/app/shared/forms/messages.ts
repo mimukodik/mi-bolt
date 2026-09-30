@@ -26,6 +26,9 @@ export const MESSAGES = {
 export const SERVER_FIELD_MESSAGES: Readonly<Record<string, string>> = {
   REQUIRED: 'Kötelező mező.',
   NOTBLANK: 'Kötelező mező.',
+  SALE_PRICE_RANGE: 'Az akciós ár legyen pozitív és kisebb az alapárnál.',
+  PROMOTION_INCOMPLETE: 'Add meg a közös kampány teljes időszakát.',
+  PROMOTION_INTERVAL: 'A lejáratnak a kezdés után kell lennie.',
   WRONG_PASSWORD: 'Hibás jelenlegi jelszó.',
   PASSWORD_TOO_LONG: 'A jelszó legfeljebb 72 bájt lehet.',
   EMPTY_FILE: 'A fájl üres.',

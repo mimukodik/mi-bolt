@@ -18,6 +18,7 @@
  */
 
 import type { Address } from '@mi-bolt/api/models/address';
+import { hashPayload } from '../idempotency';
 import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
 import type { Cart } from '@mi-bolt/api/models/cart';
 import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
@@ -65,6 +66,7 @@ export const FREE_SHIPPING_THRESHOLD_HUF = 30000;
 export const CASH_ON_DELIVERY_MAX_CART_HUF = 300000;
 
 interface CheckoutDraft {
+  revision?: number;
   contact?: Contact;
   billing?: BillingDetails;
   delivery?: DeliverySelection;
@@ -159,6 +161,20 @@ export function checkoutProblem(
  * first `GET /checkout` of that page load.
  */
 export class CheckoutStore {
+  private acceptedSummary?: (sessionId: string, cart: Cart) => CheckoutSummary | undefined;
+
+  setAcceptedSummary(
+    project: (sessionId: string, cart: Cart) => CheckoutSummary | undefined,
+  ): void {
+    this.acceptedSummary = project;
+  }
+
+  draftFingerprint(sessionId: string): string {
+    return hashPayload(this.drafts.get(sessionId) ?? {});
+  }
+  draftRevision(sessionId: string): number {
+    return this.drafts.get(sessionId)?.revision ?? 0;
+  }
   private readonly drafts = new Map<string, CheckoutDraft>();
   /** Sessions whose draft arrived through a hydrated snapshot and has
    *  not been confirmed by a fresh `GET /checkout` yet. While a
@@ -207,7 +223,7 @@ export class CheckoutStore {
     for (const key of PATCH_SECTIONS) {
       if (Object.prototype.hasOwnProperty.call(body, key)) presentSections.push(key);
     }
-    if (presentSections.length === 0) {
+    if (presentSections.length === 0 && body['acceptedPriceVersion'] === undefined) {
       return {
         ok: false,
         problem: this.problem(
@@ -253,6 +269,26 @@ export class CheckoutStore {
           [],
         ),
       };
+    }
+
+    if (body['acceptedPriceVersion'] !== undefined) {
+      const version = body['acceptedPriceVersion'];
+      if (typeof version !== 'number' || !Number.isSafeInteger(version))
+        return {
+          ok: false,
+          problem: this.problem(400, 'INVALID_REQUEST', 'Invalid price version', {}, []),
+        };
+      if (version !== cartResult.cart.version)
+        return {
+          ok: false,
+          problem: this.problem(
+            409,
+            'PRICE_CHANGED',
+            'Prices changed again; review current prices',
+            {},
+            [],
+          ),
+        };
     }
 
     // 422 VALIDATION_FAILED — collect every field error across all
@@ -310,10 +346,18 @@ export class CheckoutStore {
       };
     }
 
+    if (typeof body['acceptedPriceVersion'] === 'number') {
+      this.cart().acceptPrices(sessionId, body['acceptedPriceVersion']);
+    }
+
     // Merge: a present section replaces that section wholesale; an
     // absent section is retained untouched.
     const existing: CheckoutDraft = this.drafts.get(sessionId) ?? {};
-    const draft: CheckoutDraft = { ...existing, ...normalized };
+    const draft: CheckoutDraft = {
+      ...existing,
+      ...normalized,
+      revision: (existing.revision ?? 0) + 1,
+    };
 
     // Bump through the cart so version moves, then build the wire.
     const touched = this.cart().touch(sessionId);
@@ -337,14 +381,21 @@ export class CheckoutStore {
     const options = computeOptions(cart);
     const delivery = chosenDelivery(options, draft);
     const payment = chosenPayment(options, draft);
-    const summary = buildSummary(cart, delivery, payment);
+    const acceptedSummary = this.acceptedSummary?.(sessionId, cart);
+    const summary = acceptedSummary ?? buildSummary(cart, delivery, payment);
     const complete =
       draft.contact !== undefined &&
       draft.billing !== undefined &&
       cart.items.length > 0 &&
       delivery?.available === true &&
       payment?.available === true;
-    const session: CheckoutSession = { summary, complete, version: cart.version };
+    const session: CheckoutSession = {
+      summary,
+      complete,
+      version: cart.version,
+      basketRevision: cart.basketRevision ?? 0,
+      priceChanged: acceptedSummary === undefined && this.cart().hasPriceChange(sessionId),
+    };
     if (draft.contact !== undefined) session.contact = draft.contact;
     if (draft.billing !== undefined) session.billing = draft.billing;
     if (draft.delivery !== undefined) session.delivery = draft.delivery;
@@ -408,7 +459,28 @@ export class CheckoutStore {
     if (!cardPaymentInFlight && !this.draftsFromSnapshot.has(sessionId)) {
       return undefined;
     }
-    return { ...draft };
+    const address: BillingDetails['address'] = {
+      countryCode: 'HU',
+      postalCode: '0000',
+      city: 'redacted',
+      line1: 'redacted',
+    };
+    return {
+      ...draft,
+      ...(draft.contact === undefined
+        ? {}
+        : {
+            contact: {
+              fullName: 'redacted',
+              email: 'redacted@example.invalid',
+              phone: '+36000000000',
+            },
+          }),
+      ...(draft.billing === undefined ? {} : { billing: { name: 'redacted', address } }),
+      ...(draft.delivery?.optionId !== 'home_delivery'
+        ? {}
+        : { delivery: { optionId: 'home_delivery', address } }),
+    };
   }
 
   // ---------------------------------------------------------------------------

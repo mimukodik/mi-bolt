@@ -117,6 +117,10 @@ public class AdminProductValidator {
 				errors.add(new FieldError("/variants/" + i, "REQUIRED"));
 				continue;
 			}
+			if (variant.getSalePrice() != null && variant.getPrice() != null
+					&& (variant.getSalePrice().getAmount() <= 0 || variant.getSalePrice().getAmount() >= variant.getPrice().getAmount())) {
+				errors.add(new FieldError("/variants/" + i + "/salePrice/amount", "SALE_PRICE_RANGE"));
+			}
 			String colorCode = variant.getColorCode();
 			if (!knownCodes.contains(colorCode)) {
 				errors.add(new FieldError("/variants/" + i + "/colorCode", "UNKNOWN_COLOR"));

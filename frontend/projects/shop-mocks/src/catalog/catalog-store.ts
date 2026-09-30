@@ -24,6 +24,7 @@ import type {
   Variant,
 } from '@mi-bolt/api/models';
 import { isRecord } from '../is-record';
+import { promotionVariant } from './promotion';
 
 /** Fixture shape produced by `scripts/build-catalog-fixture.mjs`. */
 export interface CatalogFixture {
@@ -122,6 +123,10 @@ function colorOptionFor(
     variantSlug: v.slug,
     price: v.price,
     availability: v.availability,
+    image: v.images[0],
+    ...(v.originalPrice === undefined
+      ? {}
+      : { originalPrice: v.originalPrice, promotion: v.promotion }),
   };
 }
 
@@ -270,7 +275,10 @@ export class CatalogStore {
 
   /** Look up a product by slug. */
   getProduct(slug: string): Product | undefined {
-    return this.productsBySlug.get(slug);
+    const product = this.productsBySlug.get(slug);
+    return product === undefined
+      ? undefined
+      : { ...product, variants: product.variants.map(promotionVariant) };
   }
 
   /** Look up a product's ranking record by slug. */
@@ -280,17 +288,28 @@ export class CatalogStore {
 
   /** Look up a variant by id and return the product it belongs to. */
   getVariant(variantId: string): VariantLookup | undefined {
-    return this.variantsById.get(variantId);
+    const found = this.variantsById.get(variantId);
+    return found === undefined ? undefined : { ...found, variant: promotionVariant(found.variant) };
   }
 
   /** Every product, source order. */
   listProducts(): readonly Product[] {
-    return [...this.productsBySlug.values()];
+    return [...this.productsBySlug.values()].map((product) => ({
+      ...product,
+      variants: product.variants.map(promotionVariant),
+    }));
   }
 
   /** Every `(product, storage)` entry, in the order the store iterates them. */
   listEntries(): readonly CatalogEntry[] {
-    return this.entries;
+    return this.entries.map((entry) => {
+      const product = { ...entry.product, variants: entry.product.variants.map(promotionVariant) };
+      const variant = promotionVariant(entry.variant);
+      const colors = entry.ranking.colorOrder
+        .map((code) => colorOptionFor(product.variants, code, entry.storageGb))
+        .filter((color): color is ColorOption => color !== null);
+      return { ...entry, product, variant, colors };
+    });
   }
 }
 
@@ -319,6 +338,9 @@ export function toCatalogItem(entry: CatalogEntry): CatalogItem {
     variantId: entry.variant.id,
     variantSlug: entry.variant.slug,
     price: entry.variant.price,
+    ...(entry.variant.originalPrice === undefined
+      ? {}
+      : { originalPrice: entry.variant.originalPrice, promotion: entry.variant.promotion }),
     availability: entry.variant.availability,
     maxQuantity: entry.variant.maxQuantity,
     image,

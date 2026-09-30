@@ -1,0 +1,81 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0012-shared-campaign
+      author: mi-bolt
+      comment: BOLT-5 shared campaign and variant sale prices; existing catalogue stays unpromoted.
+      changes:
+        - createTable:
+            tableName: promotion_campaign
+            columns:
+              - column:
+                  name: id
+                  type: int
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: varchar(300)
+              - column:
+                  name: starts_at
+                  type: timestamp with time zone
+              - column:
+                  name: ends_at
+                  type: timestamp with time zone
+        - insert:
+            tableName: promotion_campaign
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1
+              - column:
+                  name: version
+                  valueNumeric: 0
+        - addColumn:
+            tableName: product_variant
+            columns:
+              - column:
+                  name: sale_price_huf
+                  type: bigint
+        - addColumn:
+            tableName: cart
+            columns:
+              - column:
+                  name: basket_revision
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: payment_intent
+            columns:
+              - column:
+                  name: snapshot_json
+                  type: varchar(20000)
+              - column:
+                  name: basket_revision
+                  type: bigint
+        - addColumn:
+            tableName: checkout_draft
+            columns:
+              - column:
+                  name: revision
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: cart
+            columns:
+              - column:
+                  name: price_changed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

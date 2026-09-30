@@ -5,6 +5,7 @@ import { CartItem } from '../models/cart-item';
 import { CartNotice } from '../models/cart-notice';
 import { Money } from '../models/money';
 export interface Cart {
+  basketRevision?: number;
 
   /**
    * Every successful operation pushes this forward, so an active shopper never loses the cart.

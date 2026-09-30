@@ -11,6 +11,7 @@ import { mediaHandlers } from './media.handlers';
 import { productsReadHandlers } from './products-read.handlers';
 import { productsWriteHandlers } from './products-write.handlers';
 import { usersHandlers } from './users.handlers';
+import { promotionHandlers } from './promotion.handlers';
 
 describe('adminHandlers', () => {
   it('combines every slice', () => {
@@ -18,6 +19,7 @@ describe('adminHandlers', () => {
     const slices = [
       ...authHandlers(db),
       ...usersHandlers(db),
+      ...promotionHandlers(db),
       ...productsReadHandlers(db),
       ...productsWriteHandlers(db),
       ...mediaHandlers(db),

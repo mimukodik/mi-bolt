@@ -28,6 +28,7 @@ import { DisplayCard } from './sections/display-card';
 import { HighlightsSection } from './sections/highlights-section';
 import { SpecGroupsSection } from './sections/spec-groups-section';
 import { VariantsSection } from './sections/variants-section';
+import { PromotionSection } from './promotion-section';
 
 const PRODUCT_ID_PATTERN = /^[1-9][0-9]*$/;
 
@@ -57,6 +58,7 @@ const PRODUCT_ID_PATTERN = /^[1-9][0-9]*$/;
     HighlightsSection,
     ColorsSection,
     VariantsSection,
+    PromotionSection,
     SpecGroupsSection,
     DisplayCard,
   ],

@@ -34,6 +34,7 @@ import { problem } from '../../../../mocks/problem';
 import { SEED_ADMIN } from '../../../../mocks/seed';
 import { productsReadHandlers } from '../../../../mocks/products-read.handlers';
 import { productsWriteHandlers } from '../../../../mocks/products-write.handlers';
+import { promotionHandlers } from '../../../../mocks/promotion.handlers';
 
 import { toFormModel } from './product-form.mapper';
 import { ProductEditPage } from './product-edit-page';
@@ -61,7 +62,7 @@ function signedIn(scenario: 'default' | 'save-conflict' = 'default'): MockDb {
   const db = createDb(scenario);
   db.sessionAdminId = SEED_ADMIN.id;
   db.xsrfToken = TEST_XSRF_TOKEN;
-  server?.use(...productsReadHandlers(db), ...productsWriteHandlers(db));
+  server?.use(...productsReadHandlers(db), ...productsWriteHandlers(db), ...promotionHandlers(db));
   return db;
 }
 

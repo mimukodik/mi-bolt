@@ -35,6 +35,7 @@
     class="header header--default sticky top-0 z-50 w-full"
     data-testid="main-header"
     role="banner"
+    [class.header--promotion]="promotion.active()"
   >
     <div
       class="header__inner flex items-center gap-4 mx-auto w-full min-h-16 px-4 py-2 lg:gap-6 lg:px-12"
@@ -63,6 +64,9 @@
         >
         <span class="brand__word tracking-wide">MiBolt</span>
       </a>
+      @if (promotion.active()) {
+        <app-halloween-decoration class="halloween-spider" kind="spider" />
+      }
       <nav aria-label="Fő navigáció" class="header__nav hidden gap-4 flex-1 justify-center lg:flex">
         @for (link of navLinks(); track link.label) {
           <a
@@ -105,6 +109,9 @@
               />
             </svg>
           </span>
+          @if (promotion.active()) {
+            <app-halloween-decoration class="halloween-pumpkin" kind="pumpkin" />
+          }
           <span class="cart__label hidden text-base lg:inline">Kosár</span>
           @if (cartFacade.itemCount() > 0) {
             <span

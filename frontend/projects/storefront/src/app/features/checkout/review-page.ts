@@ -350,8 +350,8 @@ export class ReviewPage {
 
   /** §3.7: the only way to clear `priceChange`, and therefore the
    *  only way to reach the CTA after a 409. */
-  onPriceChangeConfirmed(): void {
-    this.checkoutFacade.confirmPriceChange();
+  async onPriceChangeConfirmed(): Promise<void> {
+    await this.checkoutFacade.confirmPriceChange();
   }
 
   /** 412: replay the write that conflicted, with the current version. */

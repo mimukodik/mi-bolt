@@ -29,7 +29,7 @@ public final class CartModels {
 			notices.add(toCartNotice(notice));
 		}
 		return new Cart(String.valueOf(view.id()), Math.toIntExact(view.version()), items,
-				view.lineCount(), view.totalQuantity(), money(view.subtotal()), view.expiresAt(), notices);
+				view.lineCount(), view.totalQuantity(), money(view.subtotal()), view.expiresAt(), notices).basketRevision(view.basketRevision());
 	}
 
 	public static CartItem toCartItem(CartData.Line line) {

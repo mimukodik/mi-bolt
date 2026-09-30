@@ -42,6 +42,7 @@ import {
   toCatalogItems,
 } from './catalog-filter';
 import { buildFacets } from './catalog-facets';
+import { currentPromotion, promotionClock } from './promotion';
 
 /** Module-local store. `projects/shop-mocks/src/browser.ts` calls `loadCatalogFixture(store)`. */
 export const catalogStore: { current: CatalogStore | null } = { current: null };
@@ -376,7 +377,9 @@ function readOrigin(scope: Record<string, unknown>): string {
 
 /** Public handler factory. Hands the four handlers back to the registry. */
 export function buildCatalogHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
+  promotionClock(() => options.clock.now());
   return [
+    http.get('*/api/v1/promotion', () => HttpResponse.json(currentPromotion())),
     listProductsHandler(options),
     getProductHandler(options),
     listRelatedProductsHandler(options),

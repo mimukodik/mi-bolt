@@ -62,7 +62,7 @@ public final class CatalogModels {
 				data.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK,
 				data.maxQuantity(),
 				toImage(data.image()),
-				toColorOptions(data.colors()));
+				toColorOptions(data.colors())).originalPrice(optionalMoney(data.originalPriceAmount())).promotion(data.promotion());
 	}
 
 	public static Product toProduct(CatalogData.ProductData data) {
@@ -98,7 +98,7 @@ public final class CatalogModels {
 				money(data.priceAmount()),
 				data.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK,
 				data.maxQuantity(),
-				List.of(toImage(data.image())));
+				List.of(toImage(data.image()))).originalPrice(optionalMoney(data.originalPriceAmount())).promotion(data.promotion());
 	}
 
 	public static SpecGroup toSpecGroup(CatalogData.SpecGroupData data) {
@@ -146,10 +146,12 @@ public final class CatalogModels {
 					c.variantId(),
 					c.variantSlug(),
 					money(c.priceAmount()),
-					c.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK));
+					c.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK).originalPrice(optionalMoney(c.originalPriceAmount())).promotion(c.promotion()).image(toImage(c.image())));
 		}
 		return out;
 	}
+
+	private static Money optionalMoney(Integer amount) { return amount == null ? null : money(amount); }
 
 	private static Money money(int amount) {
 		return new Money(amount, Money.CurrencyEnum.HUF);

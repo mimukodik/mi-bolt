@@ -1,6 +1,7 @@
 package com.example.mi_bolt_backend.catalog;
 
 import java.util.ArrayList;
+import com.example.mi_bolt_backend.api.model.Promotion;
 import java.util.List;
 
 import org.springframework.http.CacheControl;
@@ -28,9 +29,16 @@ import com.example.mi_bolt_backend.api.model.StorageGb;
 public class ProductsController implements CatalogApi {
 
 	private final CatalogService catalogService;
+	private final PromotionPricing pricing;
 
-	public ProductsController(CatalogService catalogService) {
+	public ProductsController(CatalogService catalogService, PromotionPricing pricing) {
 		this.catalogService = catalogService;
+		this.pricing = pricing;
+	}
+
+	@Override
+	public ResponseEntity<Promotion> getPromotion() {
+		return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(pricing.snapshot());
 	}
 
 	@Override
@@ -43,11 +51,12 @@ public class ProductsController implements CatalogApi {
 			Boolean inStock,
 			Boolean is5g,
 			Boolean featured,
+			Boolean onPromotion,
 			ProductSort sort,
 			Integer page,
 			Integer pageSize) {
 		return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(CatalogModels.toProductPage(catalogService.listProducts(q, brand, storageGb, color,
-				minPrice, maxPrice, inStock, is5g, featured, sort, page, pageSize)));
+				minPrice, maxPrice, inStock, is5g, featured, onPromotion, sort, page, pageSize)));
 	}
 
 	@Override

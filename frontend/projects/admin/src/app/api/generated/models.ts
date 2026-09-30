@@ -15,6 +15,8 @@ export type { AdminProductStatus } from './models/admin-product-status';
 export type { AdminProductStatusFilter } from './models/admin-product-status-filter';
 export type { AdminProductVariant } from './models/admin-product-variant';
 export type { AdminProductVariantInput } from './models/admin-product-variant-input';
+export type { AdminPromotion } from './models/admin-promotion';
+export type { AdminPromotionInput } from './models/admin-promotion-input';
 export type { AdminSpecGroup } from './models/admin-spec-group';
 export type { AdminSpecRow } from './models/admin-spec-row';
 export type { AdminUser } from './models/admin-user';

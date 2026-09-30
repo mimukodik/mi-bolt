@@ -28,7 +28,7 @@ public final class OrderModels {
 
 	public static PaymentIntent toPaymentIntent(OrderData.IntentView v) {
 		return new PaymentIntent(v.id(), PaymentIntentStatus.fromValue(v.status()), money(v.amount()),
-				v.redirectUrl(), v.returnUrl(), v.createdAt(), v.expiresAt());
+				v.redirectUrl(), v.returnUrl(), v.createdAt(), v.expiresAt()).basketRevision(v.basketRevision());
 	}
 
 	public static OrderReceipt toOrderReceipt(OrderData.Receipt r) {

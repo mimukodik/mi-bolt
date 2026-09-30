@@ -59,8 +59,9 @@ type Read<T> = T | undefined | Malformed;
 
 type ReadPrice = Partial<Money>;
 type ReadColor = Partial<AdminProductColorInput>;
-type ReadVariant = Omit<Partial<AdminProductVariantInput>, 'price'> & {
+type ReadVariant = Omit<Partial<AdminProductVariantInput>, 'price' | 'salePrice'> & {
   readonly price?: ReadPrice;
+  readonly salePrice?: ReadPrice;
 };
 type ReadSpecRow = Partial<AdminSpecRow>;
 type ReadSpecGroup = Omit<Partial<AdminSpecGroup>, 'rows'> & {
@@ -92,7 +93,7 @@ const TOP_MEMBERS = [
   'specGroups',
 ] as const;
 const COLOR_MEMBERS = ['code', 'name', 'swatchHex', 'imageId', 'alt'] as const;
-const VARIANT_MEMBERS = ['slug', 'colorCode', 'storageGb', 'price', 'stock'] as const;
+const VARIANT_MEMBERS = ['slug', 'colorCode', 'storageGb', 'price', 'salePrice', 'stock'] as const;
 const PRICE_MEMBERS = ['amount', 'currency'] as const;
 const SPEC_GROUP_MEMBERS = ['title', 'rows'] as const;
 const SPEC_ROW_MEMBERS = ['label', 'value'] as const;
@@ -259,9 +260,11 @@ function readVariantShape(obj: Record<string, unknown>): ReadVariant | Malformed
   if (storageGb === MALFORMED) return MALFORMED;
   const price = readObject(obj['price'], PRICE_MEMBERS, readPriceShape);
   if (price === MALFORMED) return MALFORMED;
+  const salePrice = readObject(obj['salePrice'], PRICE_MEMBERS, readPriceShape);
+  if (salePrice === MALFORMED) return MALFORMED;
   const stock = readInteger(obj['stock']);
   if (stock === MALFORMED) return MALFORMED;
-  return { slug, colorCode, storageGb, price, stock };
+  return { slug, colorCode, storageGb, price, salePrice, stock };
 }
 
 function readSpecRowShape(obj: Record<string, unknown>): ReadSpecRow | Malformed {
@@ -409,6 +412,20 @@ function variantsErrors(variants: ReadInput['variants']): FieldError[] {
     list.forEach((variant, index) => {
       if (variant === undefined) return;
       const base = `/variants/${String(index)}`;
+      if (variant.salePrice !== undefined) {
+        const sale = variant.salePrice;
+        if (
+          sale.amount === undefined ||
+          !Number.isSafeInteger(sale.amount) ||
+          sale.amount <= 0 ||
+          sale.amount > 100_000_000 ||
+          sale.currency !== 'HUF' ||
+          variant.price?.amount === undefined ||
+          sale.amount >= variant.price.amount
+        ) {
+          errors.push(fieldError(`${base}/salePrice/amount`, 'SALE_PRICE_RANGE'));
+        }
+      }
       errors.push(
         ...requiredOr(variant.slug, `${base}/slug`, (v) =>
           patternThenSize(v, `${base}/slug`, isValidSlug, 120),
@@ -628,6 +645,14 @@ function toAdminProductInput(input: ReadInput): AdminProductInput {
         colorCode: requireDefined(value.colorCode),
         storageGb: requireDefined(value.storageGb),
         price: { amount: requireDefined(price.amount), currency: requireDefined(price.currency) },
+        ...(value.salePrice === undefined
+          ? {}
+          : {
+              salePrice: {
+                amount: requireDefined(value.salePrice.amount),
+                currency: requireDefined(value.salePrice.currency),
+              },
+            }),
         stock: requireDefined(value.stock),
       };
     }),
@@ -807,6 +832,7 @@ function buildVariant(input: AdminProductVariantInput, productSlug: string): Adm
     colorCode: input.colorCode,
     storageGb: input.storageGb,
     price: input.price,
+    ...(input.salePrice === undefined ? {} : { salePrice: input.salePrice }),
     stock: input.stock,
   };
 }

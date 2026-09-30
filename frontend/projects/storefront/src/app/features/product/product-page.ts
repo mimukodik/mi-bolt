@@ -25,6 +25,7 @@ function paramMapToSearchParams(params: ParamMap): URLSearchParams {
 }
 
 import { ProductFacade } from './product.facade';
+import { PromotionState, saleOriginal } from '../../core/promotion';
 import { ProductGallery } from './product-gallery';
 import { VariantSelector } from './variant-selector';
 import { SpecificationAccordion } from './specification-accordion';
@@ -125,6 +126,7 @@ function describeAddFailure(failure: CartError | null): string {
   styleUrl: './product-page.scss',
 })
 export class ProductPage {
+  private readonly promotionState = inject(PromotionState);
   /** Route slug passed in by `app.routes.ts`. The component also
    *  reads the same param from `ActivatedRoute` for the route-level
    *  query parameters (T16-AC02 variant query handling). */
@@ -187,6 +189,9 @@ export class ProductPage {
   readonly selectedImageId = computed<string>(() => this.vm().selectedImage?.id ?? '');
 
   readonly selectedVariant = computed(() => this.vm().selectedVariant);
+  readonly originalPrice = computed(() =>
+    this.promotionState.invalidated() ? null : saleOriginal(this.selectedVariant()),
+  );
 
   /** Every variant of the loaded product, for `VariantSelector`
    *  (FIX-50 item 4). Empty until a product has loaded. */
@@ -194,6 +199,7 @@ export class ProductPage {
 
   readonly devicePrice = computed<Money | null>(() => {
     const variant = this.vm().selectedVariant;
+    if (this.promotionState.invalidated() && variant?.originalPrice !== undefined) return null;
     return variant !== null ? variant.price : null;
   });
 
@@ -274,6 +280,11 @@ export class ProductPage {
   readonly showStickyRail = computed(() => this.state() === 'success');
 
   constructor() {
+    inject(PromotionState)
+      .refreshed.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.facade.refreshProduct();
+      });
     // A new page visit: the root facade must read the product again
     // even when an earlier visit loaded the same slug and query.
     this.facade.beginVisit();

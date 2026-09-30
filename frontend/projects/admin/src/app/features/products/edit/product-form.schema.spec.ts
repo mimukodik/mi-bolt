@@ -41,7 +41,15 @@ function validModel(): ProductFormModel {
     highlights: [{ key: 'h-1', text: 'Gyors' }],
     colors: [color],
     variants: [
-      { key: 'variant-1', id: null, colorKey: color.key, storageGb: 128, price: 100_000, stock: 5 },
+      {
+        key: 'variant-1',
+        id: null,
+        colorKey: color.key,
+        storageGb: 128,
+        price: 100_000,
+        salePrice: null,
+        stock: 5,
+      },
     ],
     specGroups: [
       { key: 'group-1', title: 'Kijelző', rows: [{ key: 'row-1', label: 'Méret', value: '6.1"' }] },

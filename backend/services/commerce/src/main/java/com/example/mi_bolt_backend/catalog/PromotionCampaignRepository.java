@@ -1,0 +1,6 @@
+package com.example.mi_bolt_backend.catalog;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PromotionCampaignRepository extends JpaRepository<PromotionCampaign, Integer> {
+}

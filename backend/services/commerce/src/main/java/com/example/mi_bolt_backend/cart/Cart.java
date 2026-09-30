@@ -41,6 +41,16 @@ public class Cart {
 	@Column(name = "expires_at", nullable = false)
 	private OffsetDateTime expiresAt;
 
+	@Column(name = "basket_revision", nullable = false)
+	private long basketRevision;
+	@Column(name = "price_changed", nullable = false)
+	private boolean priceChanged;
+	public boolean isPriceChanged() { return priceChanged; }
+	public void setPriceChanged(boolean priceChanged) { this.priceChanged = priceChanged; }
+
+	public long getBasketRevision() { return basketRevision; }
+	public void markBasketChanged() { basketRevision++; }
+
 	@OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	@OrderBy("id")
 	private List<CartItem> items = new ArrayList<>();

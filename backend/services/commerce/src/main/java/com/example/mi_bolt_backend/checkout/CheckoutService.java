@@ -19,6 +19,7 @@ import com.example.mi_bolt_backend.cart.CartRepository;
 import com.example.mi_bolt_backend.cart.CartService;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
+import com.example.mi_bolt_backend.order.PaymentSnapshotData;
 import com.example.mi_bolt_backend.session.ShopSession;
 import com.example.mi_bolt_backend.session.ShopSessionRepository;
 import com.example.mi_bolt_backend.session.SessionService;
@@ -91,11 +92,26 @@ public class CheckoutService {
 
 	public CheckoutData.Session getCheckout(ShopSession current) {
 		CartData.CartView cart = cartService.getCart(current);
+		return getCheckoutUsingCart(current, cart);
+	}
+
+	public CheckoutData.Session getCheckoutUsingCart(ShopSession current, CartData.CartView cart) {
 		ShopSession session = loadSession(current);
 		Cart cartEntity = loadCartEntity(session);
 		CheckoutDraft draft = loadOrCreateDraft(cartEntity);
 		CheckoutData.Options options = buildOptions(cart);
-		return buildView(session, cart, draft, options);
+		CheckoutData.Session view = buildView(session, cart, draft, options);
+		PaymentSnapshotData accepted = cartService.acceptedSnapshot(current);
+		return accepted == null ? view : new CheckoutData.Session(view.version(), view.contact(), view.billing(),
+				view.delivery(), view.payment(), accepted.checkout().summary(), view.complete(), view.basketRevision(), false);
+	}
+
+	public OffsetDateTime draftUpdatedAt(ShopSession current) {
+		return loadOrCreateDraft(loadCartEntity(loadSession(current))).getUpdatedAt();
+	}
+
+	public long draftRevision(ShopSession current) {
+		return loadOrCreateDraft(loadCartEntity(loadSession(current))).getRevision();
 	}
 
 	public void expectVersion(ShopSession current, String ifMatch) {
@@ -109,6 +125,7 @@ public class CheckoutService {
 		Cart cartEntity = loadCartEntity(session);
 		CheckoutData.Options options = buildOptions(cart);
 		validateUpdate(options, update);
+		if (update.acceptedPriceVersion() != null) { cartService.acceptPrice(current, update.acceptedPriceVersion()); }
 		CheckoutDraft draft = loadOrCreateDraft(cartEntity);
 		OffsetDateTime at = now();
 		applyUpdate(draft, update, at);
@@ -123,7 +140,7 @@ public class CheckoutService {
 
 	private void validateUpdate(CheckoutData.Options options, CheckoutData.Update update) {
 		if (update.contact() == null && update.billing() == null && update.delivery() == null
-				&& update.payment() == null) {
+				&& update.payment() == null && update.acceptedPriceVersion() == null) {
 			throw new DomainException(ErrorCode.VALIDATION_FAILED, "No section supplied", null,
 					List.of(new FieldError("/", "MIN_PROPERTIES")), null);
 		}
@@ -290,7 +307,7 @@ public class CheckoutService {
 				&& chosenPayment != null && chosenPayment.available();
 
 		return new CheckoutData.Session(session.getStateVersion(), contact, billing, delivery, payment,
-				summary, complete);
+				summary, complete, cart.basketRevision(), cartService.priceChanged(session));
 	}
 
 	private static CheckoutData.Summary buildSummary(CartData.CartView cart,

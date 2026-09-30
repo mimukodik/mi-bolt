@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
+import tools.jackson.databind.json.JsonMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -67,7 +68,7 @@ class PaymentIntentServiceTest {
 		when(checkoutService.getCheckout(session)).thenReturn(completeCheckout(300480L));
 
 		service = new PaymentIntentService(intents, cartService, checkoutService, clock,
-				LIFETIME, REDIRECT_PREFIX, RETURN_PREFIX);
+				LIFETIME, REDIRECT_PREFIX, RETURN_PREFIX, JsonMapper.builder().findAndAddModules().build());
 	}
 
 	// -- rule 1: order of checks in create --------------------------------------

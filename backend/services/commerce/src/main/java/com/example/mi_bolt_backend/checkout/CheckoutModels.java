@@ -78,7 +78,7 @@ public final class CheckoutModels {
 		if (view.payment() != null) {
 			session.payment(new PaymentSelection(PaymentMethodId.fromValue(view.payment().method())));
 		}
-		return session;
+		return session.basketRevision(view.basketRevision()).priceChanged(view.priceChanged());
 	}
 
 	private static CheckoutSummary toSummary(CheckoutData.Summary summary) {
@@ -121,7 +121,7 @@ public final class CheckoutModels {
 		if (request.getPayment() != null) {
 			payment = new CheckoutData.Payment(request.getPayment().getMethod().getValue());
 		}
-		return new CheckoutData.Update(contact, billing, delivery, payment);
+		return new CheckoutData.Update(contact, billing, delivery, payment, request.getAcceptedPriceVersion());
 	}
 
 	private static CheckoutData.Address fromAddress(Address a) {

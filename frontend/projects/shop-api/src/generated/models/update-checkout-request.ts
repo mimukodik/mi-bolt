@@ -10,6 +10,11 @@ import { PaymentSelection } from '../models/payment-selection';
  * Only the supplied sections are written; absent sections are retained.
  */
 export interface UpdateCheckoutRequest {
+
+  /**
+   * Explicitly accept the currently displayed price change; must equal the current session version.
+   */
+  acceptedPriceVersion?: number;
   billing?: BillingDetails;
   contact?: Contact;
   delivery?: DeliverySelection;

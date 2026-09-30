@@ -5,6 +5,7 @@ import { Money } from '../models/money';
 import { PaymentIntentStatus } from '../models/payment-intent-status';
 export interface PaymentIntent {
   amount: Money;
+  basketRevision?: number;
   createdAt: string;
 
   /**

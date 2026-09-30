@@ -31,10 +31,13 @@ export const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 interface StoredLine {
   variantId: string;
   quantity: number;
+  unitPrice?: number;
 }
 
 /** The session-keyed cart, with the bare fields the contract carries. */
 interface StoredCart {
+  basketRevision?: number;
+  priceChanged?: boolean;
   id: string;
   version: number;
   createdAt: string;
@@ -91,6 +94,21 @@ export function problemType(code: ProblemCode): string {
  */
 export class CartStore {
   private readonly carts = new Map<string, StoredCart>();
+  private acceptedPricing?: (sessionId: string, cart: Cart) => Cart | undefined;
+
+  setAcceptedPricing(project: (sessionId: string, cart: Cart) => Cart | undefined): void {
+    this.acceptedPricing = project;
+  }
+
+  hasPriceChange(sessionId: string): boolean {
+    return this.carts.get(sessionId)?.priceChanged === true;
+  }
+  acceptPrices(sessionId: string, version: number): boolean {
+    const cart = this.carts.get(sessionId);
+    if (cart?.version !== version) return false;
+    cart.priceChanged = false;
+    return true;
+  }
 
   constructor(
     private readonly options: CreateHandlersOptions,
@@ -220,9 +238,15 @@ export class CartStore {
     this.carts.set(sessionId, {
       id: persisted.id,
       version: persisted.version,
+      basketRevision: persisted.basketRevision ?? 0,
+      priceChanged: persisted.priceChanged ?? false,
       createdAt: persisted.createdAt,
       expiresAt: persisted.expiresAt,
-      lines: persisted.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+      lines: persisted.items.map((i) => ({
+        variantId: i.variantId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+      })),
     });
   }
 
@@ -239,9 +263,15 @@ export class CartStore {
     return {
       id: cart.id,
       version: cart.version,
+      basketRevision: cart.basketRevision ?? 0,
+      priceChanged: cart.priceChanged ?? false,
       createdAt: cart.createdAt,
       expiresAt: cart.expiresAt,
-      items: cart.lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+      items: cart.lines.map((l) => ({
+        variantId: l.variantId,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+      })),
     };
   }
 
@@ -322,6 +352,7 @@ export class CartStore {
       // cannot surface a half-built stored state to the wire.
       throw new Error('[cart-store] bumpAndView called without a stored cart');
     }
+    cart.basketRevision = (cart.basketRevision ?? 0) + 1;
     return this.view(sessionId, true);
   }
 
@@ -350,6 +381,24 @@ export class CartStore {
     if (cart === undefined) {
       throw new Error('[cart-store] view called without a stored cart');
     }
+    if (!bumpForMutation && this.acceptedPricing !== undefined) {
+      const items = cart.lines.flatMap((line) => {
+        const hit = this.lookup(line.variantId);
+        return hit === undefined ? [] : [toCartItem(hit, line.quantity)];
+      });
+      const accepted = this.acceptedPricing(sessionId, {
+        id: cart.id,
+        basketRevision: cart.basketRevision ?? 0,
+        version: cart.version,
+        items,
+        lineCount: items.length,
+        totalQuantity: items.reduce((total, item) => total + item.quantity, 0),
+        subtotal: { amount: 0, currency: 'HUF' },
+        expiresAt: cart.expiresAt,
+        notices: [],
+      });
+      if (accepted !== undefined) return { ok: true, cart: accepted };
+    }
     const notices: CartNotice[] = [];
     const kept: CartItem[] = [];
     const nextLines: StoredLine[] = [];
@@ -370,6 +419,17 @@ export class CartStore {
         continue;
       }
       const cap = hit.variant.maxQuantity;
+      if (line.unitPrice !== undefined && line.unitPrice !== hit.variant.price.amount) {
+        notices.push({
+          code: 'PRICE_CHANGED',
+          variantId: line.variantId,
+          productName: hit.product.name,
+          params: { from: line.unitPrice, to: hit.variant.price.amount },
+        });
+        cart.priceChanged = true;
+        changed = true;
+      }
+      line.unitPrice = hit.variant.price.amount;
       if (line.quantity > cap) {
         notices.push({
           code: 'QUANTITY_REDUCED',
@@ -398,6 +458,7 @@ export class CartStore {
     }
     const wire: Cart = {
       id: cart.id,
+      basketRevision: cart.basketRevision ?? 0,
       version: cart.version,
       items: kept,
       lineCount: kept.length,

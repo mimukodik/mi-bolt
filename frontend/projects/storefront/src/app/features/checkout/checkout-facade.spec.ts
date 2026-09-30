@@ -1065,7 +1065,7 @@ describe('payment intents', () => {
     expect(checkout.intentDropped()).toBe('stale');
   });
 
-  it('F-31d: a card order refused with 409 PRICE_CHANGED drops the stale intent, so the review can ask for a new payment', async () => {
+  it('F-31d: changing the basket requires a new payment and drops the old intent', async () => {
     const { checkout, id } = await setupPaidCardDraft();
     const cart = TestBed.inject(CartFacade);
     await cart.addItem(HONOR, 1);
@@ -1078,7 +1078,7 @@ describe('payment intents', () => {
     });
     expect(placed.ok).toBe(false);
     if (placed.ok) return;
-    expect(placed.error.code).toBe('PRICE_CHANGED');
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
     expect(checkout.paymentIntent()).toBeNull();
     expect(checkoutKeys.activeIntentId()).toBeNull();
   });
@@ -1585,7 +1585,7 @@ describe('orders', () => {
     });
     expect(checkout.priceChange()).not.toBeNull();
 
-    checkout.confirmPriceChange();
+    await checkout.confirmPriceChange();
     expect(checkout.priceChange()).toBeNull();
 
     captures.length = 0;

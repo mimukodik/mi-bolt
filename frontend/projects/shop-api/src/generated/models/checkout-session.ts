@@ -11,6 +11,7 @@ import { PaymentSelection } from '../models/payment-selection';
  * The persistent checkout draft. Sections are optional until the order is placed. The draft is cleared when the order succeeds.
  */
 export interface CheckoutSession {
+  basketRevision?: number;
   billing?: BillingDetails;
 
   /**
@@ -20,6 +21,7 @@ export interface CheckoutSession {
   contact?: Contact;
   delivery?: DeliverySelection;
   payment?: PaymentSelection;
+  priceChanged?: boolean;
   summary: CheckoutSummary;
 
   /**

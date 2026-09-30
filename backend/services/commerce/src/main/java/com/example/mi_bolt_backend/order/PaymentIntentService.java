@@ -1,6 +1,7 @@
 package com.example.mi_bolt_backend.order;
 
 import java.time.Clock;
+import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -38,6 +39,7 @@ public class PaymentIntentService {
 	private static final Set<String> ALLOWED_OUTCOMES = Set.of(SUCCEEDED, DECLINED, PENDING);
 
 	private final PaymentIntentRepository intents;
+	private final ObjectMapper objectMapper;
 	private final CartService cartService;
 	private final CheckoutService checkoutService;
 	private final Clock clock;
@@ -51,8 +53,9 @@ public class PaymentIntentService {
 			Clock clock,
 			@Value("${mibolt.payment.intent-lifetime}") Duration lifetime,
 			@Value("${mibolt.payment.redirect-url-prefix}") String redirectPrefix,
-			@Value("${mibolt.payment.return-url-prefix}") String returnPrefix) {
+			@Value("${mibolt.payment.return-url-prefix}") String returnPrefix, ObjectMapper objectMapper) {
 		this.intents = intents;
+		this.objectMapper = objectMapper;
 		this.cartService = cartService;
 		this.checkoutService = checkoutService;
 		this.clock = clock;
@@ -63,7 +66,7 @@ public class PaymentIntentService {
 
 	public OrderData.IntentView create(ShopSession current, String ifMatch) {
 		CartData.CartView cart = cartService.getCart(current);
-		if (!cart.notices().isEmpty()) {
+		if (!cart.notices().isEmpty() || cartService.priceChanged(current)) {
 			List<String> codes = cart.notices().stream().map(CartData.Notice::code).collect(Collectors.toList());
 			throw new DomainException(ErrorCode.PRICE_CHANGED,
 					"Cart prices were updated; the shopper must review the new total",
@@ -85,8 +88,17 @@ public class PaymentIntentService {
 		String id = UUID.randomUUID().toString();
 		PaymentIntent intent = new PaymentIntent(id, current, REQUIRES_ACTION, checkout.summary().total(),
 				redirectPrefix + id, returnPrefix + id, now, now.plus(lifetime));
+		intent.setSnapshotJson(objectMapper.writeValueAsString(new PaymentSnapshotData(cart, checkout,
+				cartService.basketRevision(current), checkoutService.draftUpdatedAt(current), checkoutService.draftRevision(current))));
+		intent.setBasketRevision(cart.basketRevision());
 		intents.save(intent);
 		return view(intent);
+	}
+
+	public PaymentSnapshotData snapshot(ShopSession current, String intentId) {
+		return intents.findByIdAndSessionId(intentId, current.getId())
+				.filter(intent -> intent.getSnapshotJson() != null)
+				.map(intent -> objectMapper.readValue(intent.getSnapshotJson(), PaymentSnapshotData.class)).orElse(null);
 	}
 
 	public OrderData.IntentView get(ShopSession current, String intentId) {
@@ -153,7 +165,7 @@ public class PaymentIntentService {
 
 	private OrderData.IntentView view(PaymentIntent intent) {
 		return new OrderData.IntentView(intent.getId(), intent.getStatus(), intent.getAmountHuf(),
-				intent.getRedirectUrl(), intent.getReturnUrl(), intent.getCreatedAt(), intent.getExpiresAt());
+				intent.getRedirectUrl(), intent.getReturnUrl(), intent.getCreatedAt(), intent.getExpiresAt(), intent.getBasketRevision());
 	}
 
 	private OffsetDateTime now() {

@@ -49,6 +49,11 @@
       />
 
       <app-async-content
+        [emptyTitle]="
+          facade.query().onPromotion === true
+            ? 'Jelenleg nincs elérhető akciós készülék'
+            : 'Nincs a szűrőknek megfelelő készülék.'
+        "
         [hasPrevious]="hasPrevious()"
         [problem]="problem()"
         [status]="asyncStatus()"
@@ -59,9 +64,9 @@
         }
         <app-button
           data-async-empty-action
-          label="Szűrők törlése"
           variant="primary"
-          (pressed)="onClearAll()"
+          [label]="facade.query().onPromotion === true ? 'Összes telefon' : 'Szűrők törlése'"
+          (pressed)="onEmptyAction()"
         />
       </app-async-content>
 

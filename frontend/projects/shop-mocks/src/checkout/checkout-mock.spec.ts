@@ -46,6 +46,252 @@ import { createHandlers } from '../create-handlers';
 
 useMswServer();
 
+describe('accepted payment commercial snapshot', () => {
+  it.each(['requires_action', 'pending'] as const)(
+    'an expired %s intent cannot become succeeded',
+    (status) => {
+      const cart = new CartStore(options, (id) => catalogStore.current?.getVariant(id));
+      const checkout = new CheckoutStore(options, () => cart);
+      const order = new OrderStore(options, checkout, new IdempotencyStore(clock), () => cart);
+      expect(cart.add(SESSION_1, '"1"', MOTO, 1).ok).toBe(true);
+      expect(
+        checkout.update(SESSION_1, '"2"', {
+          contact: VALID_CONTACT,
+          billing: VALID_BILLING,
+          delivery: { optionId: 'pickup_point' },
+          payment: { method: 'card' },
+        }).ok,
+      ).toBe(true);
+      const intent = order.createPaymentIntent(SESSION_1, 'expire-outcome', '"3"');
+      if (!intent.ok) throw new Error('intent failed');
+      if (status === 'pending')
+        expect(
+          order.resolvePaymentIntentOutcome(SESSION_1, intent.intent.id, { outcome: 'pending' }).ok,
+        ).toBe(true);
+      clock.advanceMs(PAYMENT_INTENT_TTL_MS);
+      const resolved = order.resolvePaymentIntentOutcome(SESSION_1, intent.intent.id, {
+        outcome: 'succeeded',
+      });
+      expect(resolved.ok).toBe(false);
+      if (resolved.ok) throw new Error('expired intent succeeded');
+      expect(resolved.problem.code).toBe('PAYMENT_ALREADY_RESOLVED');
+      const expired = order.getPaymentIntent(SESSION_1, intent.intent.id);
+      if (!expired.ok) throw new Error('intent missing');
+      expect(expired.intent.status).toBe('declined');
+    },
+  );
+  it.each(['declined', 'expired', 'edited', 'reverted', 'pending'])(
+    'read policy releases declined, expired and edited snapshots but retains pending: %s',
+    (state) => {
+      let repriced = false;
+      const lookup: VariantLookupFn = (id) => {
+        const hit = catalogStore.current?.getVariant(id);
+        return hit === undefined
+          ? undefined
+          : {
+              ...hit,
+              variant: {
+                ...hit.variant,
+                price: { amount: repriced ? 120000 : 89990, currency: 'HUF' },
+              },
+            };
+      };
+      const cart = new CartStore(options, lookup);
+      const checkout = new CheckoutStore(options, () => cart);
+      const order = new OrderStore(options, checkout, new IdempotencyStore(clock), () => cart);
+      expect(cart.add(SESSION_1, '"1"', MOTO, 1).ok).toBe(true);
+      expect(
+        checkout.update(SESSION_1, '"2"', {
+          contact: VALID_CONTACT,
+          billing: VALID_BILLING,
+          delivery: { optionId: 'pickup_point' },
+          payment: { method: 'card' },
+        }).ok,
+      ).toBe(true);
+      const intent = order.createPaymentIntent(SESSION_1, 'release-intent', '"3"');
+      if (!intent.ok) throw new Error('intent failed');
+      if (state !== 'edited' && state !== 'reverted') {
+        expect(
+          order.resolvePaymentIntentOutcome(SESSION_1, intent.intent.id, {
+            outcome: state === 'declined' ? 'declined' : 'pending',
+          }).ok,
+        ).toBe(true);
+      }
+      if (state === 'expired') clock.advanceMs(PAYMENT_INTENT_TTL_MS);
+      repriced = true;
+      if (state === 'edited' || state === 'reverted') {
+        expect(
+          checkout.update(SESSION_1, '"3"', {
+            contact: { ...VALID_CONTACT, fullName: 'Changed Contact' },
+          }).ok,
+        ).toBe(true);
+        if (state === 'reverted') {
+          const edited = checkout.get(SESSION_1);
+          if (!edited.ok) throw new Error('edited checkout failed');
+          expect(
+            checkout.update(SESSION_1, `"${String(edited.session.version)}"`, {
+              contact: VALID_CONTACT,
+            }).ok,
+          ).toBe(true);
+        }
+      }
+      const current = checkout.get(SESSION_1);
+      if (!current.ok) throw new Error('checkout read failed');
+      expect(current.session.summary.total.amount).toBe(state === 'pending' ? 89990 : 120000);
+      expect(current.session.priceChanged).toBe(state !== 'pending');
+    },
+  );
+
+  it('a rejected checkout patch cannot acknowledge changed prices', () => {
+    let repriced = false;
+    const lookup: VariantLookupFn = (id) => {
+      const hit = catalogStore.current?.getVariant(id);
+      return hit === undefined
+        ? undefined
+        : {
+            ...hit,
+            variant: {
+              ...hit.variant,
+              price: { amount: repriced ? 120000 : 89990, currency: 'HUF' },
+            },
+          };
+    };
+    const cart = new CartStore(options, lookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    expect(cart.add(SESSION_1, '"1"', MOTO, 1).ok).toBe(true);
+    repriced = true;
+    const changed = checkout.get(SESSION_1);
+    if (!changed.ok) throw new Error('refetch failed');
+    const rejected = checkout.update(SESSION_1, `"${String(changed.session.version)}"`, {
+      acceptedPriceVersion: changed.session.version,
+      contact: { email: 'invalid' },
+    });
+    expect(rejected.ok).toBe(false);
+    const reread = checkout.get(SESSION_1);
+    expect(reread.ok && reread.session.priceChanged).toBe(true);
+    const accepted = checkout.update(SESSION_1, `"${String(changed.session.version)}"`, {
+      acceptedPriceVersion: changed.session.version,
+    });
+    expect(accepted.ok && accepted.session.priceChanged).toBe(false);
+  });
+
+  it.each(['unchanged', 'basket', 'draft'])(
+    'cold redirect retains only an unchanged commercial snapshot: %s',
+    (mutation) => {
+      const mutateBasket = mutation === 'basket';
+      let repriced = false;
+      const lookup: VariantLookupFn = (id) => {
+        const hit = catalogStore.current?.getVariant(id);
+        return hit === undefined
+          ? undefined
+          : {
+              ...hit,
+              variant: {
+                ...hit.variant,
+                price: { amount: repriced ? 120000 : 89990, currency: 'HUF' },
+              },
+            };
+      };
+      const cart = new CartStore(options, lookup);
+      const checkout = new CheckoutStore(options, () => cart);
+      const order = new OrderStore(
+        options,
+        checkout,
+        new IdempotencyStore(options.clock),
+        () => cart,
+      );
+      const added = cart.add(SESSION_1, '"1"', MOTO, 1);
+      if (!added.ok) throw new Error('add failed');
+      const draft = checkout.update(SESSION_1, '"2"', {
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'pickup_point' },
+        payment: { method: 'card' },
+      });
+      if (!draft.ok) throw new Error('draft failed');
+      const intent = order.createPaymentIntent(SESSION_1, 'snapshot-intent', '"3"');
+      if (!intent.ok) throw new Error('intent failed');
+      if (mutation === 'draft') {
+        expect(
+          checkout.update(SESSION_1, '"3"', {
+            contact: { ...VALID_CONTACT, fullName: 'Changed Contact' },
+          }).ok,
+        ).toBe(true);
+        expect(checkout.update(SESSION_1, '"4"', { contact: VALID_CONTACT }).ok).toBe(true);
+      }
+      const state = order.toPersistedOrderState(SESSION_1);
+      const savedCart = cart.toPersistedCart(SESSION_1);
+      const savedDraft = checkout.toPersistedDraft(SESSION_1, true);
+      if (savedCart === undefined || savedDraft === undefined) throw new Error('snapshot failed');
+      expect(JSON.stringify({ state, savedDraft })).not.toContain(VALID_CONTACT.email);
+      expect(JSON.stringify({ state, savedDraft })).not.toContain(VALID_BILLING.address.line1);
+      repriced = true;
+      const restoredCart = new CartStore(options, lookup);
+      restoredCart.seedFromSnapshot(SESSION_1, savedCart);
+      const restoredCheckout = new CheckoutStore(options, () => restoredCart);
+      restoredCheckout.seedFromSnapshot(SESSION_1, savedDraft);
+      const restoredOrder = new OrderStore(
+        options,
+        restoredCheckout,
+        new IdempotencyStore(options.clock),
+        () => restoredCart,
+      );
+      restoredOrder.seedFromSnapshot(SESSION_1, state);
+      expect(
+        restoredOrder.resolvePaymentIntentOutcome(SESSION_1, intent.intent.id, {
+          outcome: 'succeeded',
+        }).ok,
+      ).toBe(true);
+      let current = restoredCheckout.get(SESSION_1);
+      if (!current.ok) throw new Error('refetch failed');
+      if (mutation === 'draft') {
+        expect(current.session.priceChanged).toBe(true);
+        expect(current.session.summary.total.amount).toBe(120000);
+        return;
+      }
+      expect(current.session.priceChanged).toBe(false);
+      expect(current.session.summary.total.amount).toBe(intent.intent.amount.amount);
+      const locked = restoredCart.get(SESSION_1);
+      expect(locked.ok && locked.cart.items[0]?.unitPrice.amount).toBe(89990);
+      expect(locked.ok && locked.cart.version).toBe(savedCart.version);
+      expect(restoredCart.toPersistedCart(SESSION_1)?.items[0]?.unitPrice).toBe(89990);
+      if (mutateBasket) {
+        const changed = restoredCart.setQuantity(
+          SESSION_1,
+          `"${String(current.session.version)}"`,
+          MOTO,
+          2,
+        );
+        expect(changed.ok).toBe(true);
+        current = restoredCheckout.get(SESSION_1);
+        if (!current.ok) throw new Error('mutated basket refetch failed');
+      }
+      const request = {
+        paymentMethod: 'card',
+        paymentIntentId: intent.intent.id,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      };
+      const placed = restoredOrder.createOrder(
+        SESSION_1,
+        'snapshot-order',
+        `"${String(current.session.version)}"`,
+        request,
+      );
+      if (mutateBasket) {
+        expect(placed.ok).toBe(false);
+        if (!placed.ok) expect(placed.problem.code).toBe('PAYMENT_REQUIRED');
+        return;
+      }
+      if (!placed.ok) throw new Error(placed.problem.code);
+      expect(placed.receipt.items[0]?.unitPrice.amount).toBe(89990);
+      expect(placed.receipt.total.amount).toBe(intent.intent.amount.amount);
+      const replay = restoredOrder.createOrder(SESSION_1, 'snapshot-order', '"1"', request);
+      expect(replay.ok && replay.replayed).toBe(true);
+    },
+  );
+});
+
 const SESSION_1 = 'spec-session-0001';
 const SESSION_2 = 'spec-session-0002';
 const MOTO = 'motorola-edge-50-fusion--zold--256';
@@ -1554,7 +1800,7 @@ describe('POST /orders', () => {
     expect(body['code']).toBe('PAYMENT_DECLINED');
   });
 
-  it('O-15: a price change after the intent was created returns 409 PRICE_CHANGED', async () => {
+  it('O-15: basket mutation after the intent was created requires a new payment', async () => {
     await seedCompleteDraft();
     const created = await createCardIntent('"3"', 'idem-int-0015');
     expectRecord(created.body);
@@ -1579,13 +1825,9 @@ describe('POST /orders', () => {
       '"4"',
       'idem-ord-0015',
     );
-    expect(status).toBe(409);
+    expect(status).toBe(422);
     expectRecord(body);
-    expect(body['code']).toBe('PRICE_CHANGED');
-    const params = body['params'];
-    expectRecord(params);
-    expect(params['intentAmount']).toBe(89_990);
-    expect(params['total']).toBe(159_980);
+    expect(body['code']).toBe('PAYMENT_REQUIRED');
   });
 
   it('O-16: a paymentIntentId that does not exist returns 404 NOT_FOUND', async () => {

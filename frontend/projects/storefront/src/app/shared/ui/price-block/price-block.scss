@@ -68,6 +68,34 @@
 .row {
   display: inline-flex;
   align-items: baseline;
+  white-space: nowrap;
+}
+
+.root[data-promotion] {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: white;
+}
+.root[data-promotion] .amount {
+  color: #6b21a8;
+  font-size: 26px;
+  line-height: 32px;
+}
+.root[data-promotion] .currency,
+.root[data-promotion] .sale-label {
+  color: #6b21a8;
+}
+.root[data-promotion] .label,
+.original {
+  color: #59616b;
+}
+.original {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.sale-label {
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .skeleton {

@@ -835,7 +835,14 @@ describe('CartStore seed / persist round-trip (MIM-212 Unit 1)', () => {
     const persisted = store.toPersistedCart('sess-rt');
     expect(persisted).toBeDefined();
     if (persisted === undefined) return;
-    expect(persisted.items).toEqual([{ variantId: 'demo-one-5g-graphite-256', quantity: 2 }]);
+    expect(persisted.items).toEqual([
+      {
+        variantId: 'demo-one-5g-graphite-256',
+        quantity: 2,
+        unitPrice: LOOKUP_VARIANT.price.amount,
+      },
+    ]);
+    expect(persisted.basketRevision).toBe(1);
 
     // Second store, seeded from the first store's persisted snapshot.
     const store2 = new CartStore(options, lookup);
@@ -1150,7 +1157,19 @@ describe('CheckoutStore.seedFromSnapshot / toPersistedDraft (MIM-212 Unit 1)', (
     } satisfies PersistedCheckoutDraft;
     checkout.seedFromSnapshot('sess-with', seeded);
 
-    expect(checkout.toPersistedDraft('sess-with')).toEqual(seeded);
+    expect(checkout.toPersistedDraft('sess-with')).toEqual({
+      ...seeded,
+      contact: { fullName: 'redacted', email: 'redacted@example.invalid', phone: '+36000000000' },
+      billing: {
+        name: 'redacted',
+        address: { countryCode: 'HU', postalCode: '0000', city: 'redacted', line1: 'redacted' },
+      },
+    });
+    const current = checkout.get('sess-with');
+    expect(current.ok).toBe(true);
+    if (!current.ok) return;
+    expect(current.session.contact).toEqual(seeded.contact);
+    expect(current.session.billing).toEqual(seeded.billing);
   });
 });
 
@@ -1944,12 +1963,6 @@ describe('checkout draft storage: card path only (E016)', () => {
 
   const SESSION_1 = 'spec-session-e016';
   const MOTO = 'motorola-edge-50-fusion--zold--256';
-
-  const VALID_CONTACT = {
-    fullName: 'Teszt Elek',
-    email: 'teszt.elek@pelda.hu',
-    phone: '+36301234567',
-  };
   const VALID_BILLING = {
     name: 'Teszt Elek',
     address: {
@@ -2106,7 +2119,11 @@ describe('checkout draft storage: card path only (E016)', () => {
 
     expect(state.captured).not.toBeNull();
     expect(state.captured?.checkoutDraft).toBeDefined();
-    expect(state.captured?.checkoutDraft?.contact).toEqual(VALID_CONTACT);
+    expect(state.captured?.checkoutDraft?.contact).toEqual({
+      fullName: 'redacted',
+      email: 'redacted@example.invalid',
+      phone: '+36000000000',
+    });
   });
 
   it('D-03 the draft rides through the payment page', async () => {
@@ -2126,7 +2143,11 @@ describe('checkout draft storage: card path only (E016)', () => {
 
     expect(d03.captured).not.toBeNull();
     expect(d03.captured?.checkoutDraft).toBeDefined();
-    expect(d03.captured?.checkoutDraft?.contact).toEqual(VALID_CONTACT);
+    expect(d03.captured?.checkoutDraft?.contact).toEqual({
+      fullName: 'redacted',
+      email: 'redacted@example.invalid',
+      phone: '+36000000000',
+    });
   });
 
   it('D-04 the first checkout read after the return drops the stored draft and keeps it on the page', async () => {
@@ -2159,7 +2180,7 @@ describe('checkout draft storage: card path only (E016)', () => {
     expectRecord(get1Body['contact']);
     const contact = get1Body['contact'];
     expectRecord(contact);
-    expect(contact['email']).toBe(VALID_CONTACT.email);
+    expect(contact['email']).toBe('redacted@example.invalid');
     expect(c04.n).toBe(1);
     expect(d04.captured).not.toBeNull();
     expect(d04.captured?.checkoutDraft).toBeUndefined();

@@ -14,6 +14,8 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 import { CartCountFacade } from './cart-count-facade';
 import { MobileDrawer } from './mobile-drawer';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { PromotionState } from '../promotion';
+import { HalloweenDecoration } from '../../shared/ui/halloween-decoration';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /**
@@ -38,11 +40,12 @@ const STANDARD_LINKS: readonly NavLink[] = [{ label: 'Mobiltelefonok', routerLin
 
 @Component({
   selector: 'app-header-nav',
-  imports: [RouterLink, RouterLinkActive, MobileDrawer, StatusMessage],
+  imports: [RouterLink, RouterLinkActive, MobileDrawer, StatusMessage, HalloweenDecoration],
   templateUrl: './header-nav.html',
   styleUrl: './header-nav.scss',
 })
 export class HeaderNav {
+  readonly promotion = inject(PromotionState);
   /** Variant decides which chrome the header exposes. */
   readonly variant = input<HeaderVariant>('marketing');
 

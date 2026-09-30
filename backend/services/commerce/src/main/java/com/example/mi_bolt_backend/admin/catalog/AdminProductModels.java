@@ -95,7 +95,7 @@ final class AdminProductModels {
 					v.getColor().getCode(),
 					StorageGb.fromValue(v.getStorageGb()),
 					money((int) v.getPriceHuf()),
-					v.getStock()));
+					v.getStock()).salePrice(v.getSalePriceHuf() == null ? null : money(Math.toIntExact(v.getSalePriceHuf()))));
 		}
 
 		List<AdminSpecGroup> specGroups = new ArrayList<>();

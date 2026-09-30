@@ -21,6 +21,7 @@ export interface VariantModel {
   colorKey: string | null;
   storageGb: StorageGb | null;
   price: number | null;
+  salePrice: number | null;
   stock: number | null;
 }
 
@@ -66,7 +67,15 @@ export function emptyColor(): ColorModel {
 }
 
 export function emptyVariant(colorKey: string | null): VariantModel {
-  return { key: newKey(), id: null, colorKey, storageGb: null, price: null, stock: 0 };
+  return {
+    key: newKey(),
+    id: null,
+    colorKey,
+    storageGb: null,
+    price: null,
+    salePrice: null,
+    stock: 0,
+  };
 }
 
 export function emptySpecRow(): SpecRowModel {

@@ -32,10 +32,17 @@
             />
           </div>
           <mat-form-field class="w-40" subscriptSizing="dynamic">
-            <mat-label>Ár</mat-label>
+            <mat-label>Alapár</mat-label>
             <input matInput type="number" [formField]="variant.price" />
             <span matTextSuffix>Ft</span>
             <mat-error>{{ variant.price().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <mat-form-field class="w-28" subscriptSizing="dynamic">
+            <mat-label>Akciós ár</mat-label>
+            <input matInput type="number" [formField]="variant.salePrice" />
+            <span matTextSuffix>Ft</span>
+            <mat-hint>Üresen nincs akció.</mat-hint>
+            <mat-error>{{ variant.salePrice().errors()[0]?.message }}</mat-error>
           </mat-form-field>
           <mat-form-field class="w-28" subscriptSizing="dynamic">
             <mat-label>Készlet</mat-label>

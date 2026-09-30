@@ -28,6 +28,7 @@ import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
 import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
 import type { Address } from '@mi-bolt/api/models/address';
 import type { OrderLine } from '@mi-bolt/api/models/order-line';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
 
 import { isRecord } from './is-record';
 import type { ScenarioName } from './scenarios';
@@ -46,7 +47,7 @@ const SNAPSHOT_KEY_PREFIX = 'mi-bolt.snapshot.';
  * `usedPaymentIntentIds`: the card intents that already back an
  * order, so a reload cannot let one back a second order.
  */
-export const SNAPSHOT_SCHEMA_VERSION = 4;
+export const SNAPSHOT_SCHEMA_VERSION = 5;
 
 /** Snapshots older than this are considered stale and discarded. */
 export const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -55,10 +56,13 @@ export const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export interface PersistedCartLine {
   variantId: string;
   quantity: number;
+  unitPrice?: number;
 }
 
 /** Cart snapshot — id, version, timestamps, line items. */
 export interface PersistedCart {
+  basketRevision?: number;
+  priceChanged?: boolean;
   id: string;
   version: number;
   createdAt: string;
@@ -68,10 +72,20 @@ export interface PersistedCart {
 
 /** The four draft sections the checkout store keeps per session. */
 export interface PersistedCheckoutDraft {
+  revision?: number;
   contact?: Contact;
   billing?: BillingDetails;
   delivery?: DeliverySelection;
   payment?: PaymentSelection;
+}
+
+/** Accepted commercial values only; no shopper details are kept here. */
+export interface PersistedPaymentIntent extends PaymentIntent {
+  draftRevision?: number;
+  approvedCartId?: string;
+  approvedItems?: OrderLine[];
+  approvedSummary?: CheckoutSummary;
+  draftFingerprint?: string;
 }
 
 /** Root snapshot written under `${SNAPSHOT_KEY_PREFIX}${scenarioName}`. */
@@ -83,7 +97,7 @@ export interface MockSnapshot {
   expiresAt: string;
   cart?: PersistedCart;
   checkoutDraft?: PersistedCheckoutDraft;
-  paymentIntents: readonly PaymentIntent[];
+  paymentIntents: readonly PersistedPaymentIntent[];
   receipts: readonly OrderReceipt[];
   usedPaymentIntentIds: readonly string[];
   idempotency: readonly PersistedIdempotencyRecord[];
@@ -424,7 +438,23 @@ function isValidCart(value: unknown): value is PersistedCart {
     return false;
   if (Date.parse(c['expiresAt']) <= Date.parse(c['createdAt'])) return false;
   if (!Array.isArray(c['items'])) return false;
-  const allowed = new Set(['id', 'version', 'createdAt', 'expiresAt', 'items']);
+  if (
+    c['basketRevision'] !== undefined &&
+    (!Number.isSafeInteger(c['basketRevision']) ||
+      typeof c['basketRevision'] !== 'number' ||
+      c['basketRevision'] < 0)
+  )
+    return false;
+  if (c['priceChanged'] !== undefined && typeof c['priceChanged'] !== 'boolean') return false;
+  const allowed = new Set([
+    'id',
+    'version',
+    'createdAt',
+    'expiresAt',
+    'items',
+    'basketRevision',
+    'priceChanged',
+  ]);
   for (const key of Object.keys(c)) {
     if (!allowed.has(key)) return false;
   }
@@ -439,7 +469,14 @@ function isValidCartLine(value: unknown): value is PersistedCartLine {
   const i = value;
   if (typeof i['variantId'] !== 'string') return false;
   if (!isPositiveInteger(i['quantity'])) return false;
-  const allowed = new Set(['variantId', 'quantity']);
+  if (
+    i['unitPrice'] !== undefined &&
+    (typeof i['unitPrice'] !== 'number' ||
+      !Number.isSafeInteger(i['unitPrice']) ||
+      i['unitPrice'] < 0)
+  )
+    return false;
+  const allowed = new Set(['variantId', 'quantity', 'unitPrice']);
   for (const key of Object.keys(i)) {
     if (!allowed.has(key)) return false;
   }
@@ -466,7 +503,7 @@ function isValidIdempotencyRecord(value: unknown): value is PersistedIdempotency
   return true;
 }
 
-function isValidPaymentIntent(value: unknown): value is PaymentIntent {
+function isValidPaymentIntent(value: unknown): value is PersistedPaymentIntent {
   if (!isRecord(value)) return false;
   const v = value;
   if (typeof v['id'] !== 'string') return false;
@@ -484,6 +521,43 @@ function isValidPaymentIntent(value: unknown): value is PaymentIntent {
     return false;
   }
   if (!isValidMoney(v['amount'])) return false;
+  if (
+    v['basketRevision'] !== undefined &&
+    (typeof v['basketRevision'] !== 'number' ||
+      !Number.isSafeInteger(v['basketRevision']) ||
+      v['basketRevision'] < 0)
+  )
+    return false;
+  if (v['approvedCartId'] !== undefined) {
+    if (typeof v['approvedCartId'] !== 'string' || typeof v['draftFingerprint'] !== 'string')
+      return false;
+    if (
+      typeof v['draftRevision'] !== 'number' ||
+      !Number.isSafeInteger(v['draftRevision']) ||
+      v['draftRevision'] < 0
+    )
+      return false;
+    if (!Array.isArray(v['approvedItems']) || !v['approvedItems'].every(isValidOrderLine))
+      return false;
+    const summary = v['approvedSummary'];
+    if (
+      !isRecord(summary) ||
+      !['subtotal', 'shippingFee', 'paymentFee', 'total'].every((key) => isValidMoney(summary[key]))
+    )
+      return false;
+    if (
+      Object.keys(summary).some(
+        (key) => !['subtotal', 'shippingFee', 'paymentFee', 'total'].includes(key),
+      )
+    )
+      return false;
+  } else if (
+    v['approvedItems'] !== undefined ||
+    v['approvedSummary'] !== undefined ||
+    v['draftRevision'] !== undefined ||
+    v['draftFingerprint'] !== undefined
+  )
+    return false;
   const allowed = new Set([
     'id',
     'createdAt',
@@ -492,6 +566,12 @@ function isValidPaymentIntent(value: unknown): value is PaymentIntent {
     'returnUrl',
     'status',
     'amount',
+    'basketRevision',
+    'approvedCartId',
+    'approvedItems',
+    'approvedSummary',
+    'draftFingerprint',
+    'draftRevision',
   ]);
   for (const key of Object.keys(v)) if (!allowed.has(key)) return false;
   return true;
@@ -627,11 +707,16 @@ function isValidPaymentSelection(value: unknown): value is PaymentSelection {
 function isValidCheckoutDraft(value: unknown): value is PersistedCheckoutDraft {
   if (!isRecord(value)) return false;
   const v = value;
+  if (
+    v['revision'] !== undefined &&
+    (typeof v['revision'] !== 'number' || !Number.isSafeInteger(v['revision']) || v['revision'] < 0)
+  )
+    return false;
   if (v['contact'] !== undefined && !isValidContact(v['contact'])) return false;
   if (v['billing'] !== undefined && !isValidBillingDetails(v['billing'])) return false;
   if (v['delivery'] !== undefined && !isValidDeliverySelection(v['delivery'])) return false;
   if (v['payment'] !== undefined && !isValidPaymentSelection(v['payment'])) return false;
-  const allowed = new Set(['contact', 'billing', 'delivery', 'payment']);
+  const allowed = new Set(['contact', 'billing', 'delivery', 'payment', 'revision']);
   for (const key of Object.keys(v)) if (!allowed.has(key)) return false;
   return true;
 }

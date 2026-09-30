@@ -99,7 +99,22 @@ public class OrderService {
 			String paymentIntentId, String requestedTermsVersion, boolean acceptedTerms) {
 
 		// Rule 47: cart and price/stock changes first.
-		CartData.CartView cart = cartService.getCart(current);
+		PaymentSnapshotData snapshot = CARD.equals(paymentMethod) ? intentService.snapshot(current, paymentIntentId) : null;
+		CartData.CartView cart;
+		if (snapshot == null) {
+			cart = cartService.getCart(current);
+		}
+		else {
+			CartData.CartView currentCart = cartService.getUnreconciledCart(current);
+			if (currentCart.items().stream().anyMatch(line -> !line.inStock() || line.quantity() > line.maxQuantity())) {
+				throw new DomainException(ErrorCode.OUT_OF_STOCK, "An accepted payment item is no longer orderable");
+			}
+			if (currentCart.id() != snapshot.cart().id() || cartService.basketRevision(current) != snapshot.basketRevision()
+					|| !sameBasket(currentCart, snapshot.cart())) {
+				throw new DomainException(ErrorCode.PAYMENT_REQUIRED, "The payment belongs to a different basket");
+			}
+			cart = snapshot.cart();
+		}
 		List<String> noticeCodes = new ArrayList<>();
 		boolean priceChanged = false;
 		for (CartData.Notice n : cart.notices()) {
@@ -108,7 +123,7 @@ public class OrderService {
 				priceChanged = true;
 			}
 		}
-		if (priceChanged) {
+		if (priceChanged || (snapshot == null && cartService.priceChanged(current))) {
 			throw new DomainException(ErrorCode.PRICE_CHANGED,
 					"Cart prices were updated; the shopper must review the new total",
 					Map.of("notices", noticeCodes));
@@ -135,7 +150,13 @@ public class OrderService {
 		}
 
 		// Rule 38's precondition and the contract's checkoutIncomplete example.
-		CheckoutData.Session checkout = checkoutService.getCheckout(current);
+		CheckoutData.Session checkout = snapshot == null ? checkoutService.getCheckout(current) : snapshot.checkout();
+		if (snapshot != null) {
+			CheckoutData.Session currentCheckout = checkoutService.getCheckoutUsingCart(current, cart);
+			if (snapshot.draftRevision() != checkoutService.draftRevision(current) || !sameCheckout(checkout, currentCheckout)) {
+				throw new DomainException(ErrorCode.PAYMENT_REQUIRED, "The checkout changed after payment began");
+			}
+		}
 		if (!checkout.complete()) {
 			throw new DomainException(ErrorCode.CHECKOUT_INCOMPLETE,
 					"A required checkout section is missing", null,
@@ -256,6 +277,16 @@ public class OrderService {
 				.orElseThrow(() -> new DomainException(ErrorCode.NOT_FOUND, "order not found",
 						Map.of("orderId", orderId)));
 		return toReceipt(order);
+	}
+
+	private static boolean sameBasket(CartData.CartView current, CartData.CartView accepted) {
+		return current.items().size() == accepted.items().size() && accepted.items().stream().allMatch(line ->
+				current.items().stream().anyMatch(item -> item.variantId().equals(line.variantId()) && item.quantity() == line.quantity()));
+	}
+
+	private static boolean sameCheckout(CheckoutData.Session accepted, CheckoutData.Session current) {
+		return accepted.contact().equals(current.contact()) && accepted.billing().equals(current.billing())
+				&& accepted.delivery().equals(current.delivery()) && accepted.payment().equals(current.payment());
 	}
 
 	private String uniqueOrderNumber() {

@@ -41,6 +41,21 @@ export interface Money {
 })
 export class PriceBlock {
   readonly money = input<Money | null>(null);
+  readonly originalMoney = input<Money | null>(null);
+  readonly originalText = computed(() => {
+    const original = this.originalMoney();
+    const current = this.money();
+    const currency: unknown = original?.currency;
+    return original !== null &&
+      current !== null &&
+      currency === 'HUF' &&
+      Number.isSafeInteger(original.amount) &&
+      original.amount > current.amount &&
+      current.amount > 0 &&
+      this.amountText() !== null
+      ? PriceBlock.formatHuf(original.amount)
+      : null;
+  });
   readonly label = input.required<string>();
   readonly status = input<AsyncStatus>('idle');
   /** Amount size: `lg` is the product page's 28 px, `md` the 20 px list-card amount. */

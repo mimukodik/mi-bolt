@@ -22,6 +22,46 @@ spec is extended first.
 
 ## 1. Basics
 
+### Shared Halloween campaign and accepted payment prices (BOLT-5)
+
+`GET /promotion` returns the one shared campaign, its server time and active
+state. `GET/PUT /admin/promotion` reads/replaces that singleton with an
+independent ETag; a stale save returns `PRODUCT_VERSION_CONFLICT`. `{}` clears
+the campaign. Otherwise text, startsAt and endsAt must all be supplied; blank
+text or start >= end returns 422 `VALIDATION_FAILED` with field errors.
+Offset instants are displayed in Europe/Budapest. The active interval is
+`startsAt <= serverNow < endsAt`.
+
+Admin variant `salePrice` is optional: omission clears it. Its whole-HUF amount
+must be positive and strictly below the current normal variant price. Invalid
+saves are atomic. Shop `price` is the effective price; `originalPrice` and
+`promotion` appear only for an active, in-stock, unarchived sale variant.
+`onPromotion=true` participates in the same variant-level AND filters as
+colour, storage and effective price. Sorting and facets use effective prices.
+
+Before a payment attempt begins, reconciliation raises the session version
+once when prices change. `CheckoutSession.priceChanged` persists across reads,
+refresh and navigation. New payment attempts and orders without an accepted
+snapshot fail with `PRICE_CHANGED` until the shopper separately accepts the
+displayed prices with `PATCH /checkout {acceptedPriceVersion: <version>}`.
+This acceptance must match the current session version; terms acceptance does
+not substitute for it. A later price change requires another acceptance,
+including changes that leave the total unchanged.
+
+A server-accepted payment attempt stores its cart identity, item prices,
+quantities, checkout data, fees and total. An order using that attempt keeps
+these prices after campaign expiry. While that attempt is unresolved and
+unexpired, or succeeded and unused, GET cart and checkout retain its accepted
+line prices, fees and total with `priceChanged: false` for the unchanged basket
+and draft. Decline, pending expiry, intent use, basket or draft changes, and
+stock removal or quantity reduction release this read snapshot; removed lines
+cannot be restored by an older attempt. `basketRevision`, exposed on cart, checkout and intent, changes
+only when the shopper changes the basket, never on price reconciliation.
+The attempt cannot be transferred to a changed basket or checkout. The server
+still checks payment status and available stock. The intent's existing expiry,
+pending/declined handling and one-order-per-intent rule remain in effect;
+campaign expiry alone does not expire it. Idempotency replay runs first.
+
 - Every endpoint lives under the `/api/v1` prefix, on the same origin. The
   runtime root respects the application's base href.
 - Successful response: `application/json`. Error response:

@@ -1,6 +1,7 @@
 package com.example.mi_bolt_backend.catalog;
 
 import java.time.LocalDate;
+import com.example.mi_bolt_backend.api.model.Promotion;
 import java.util.List;
 
 /**
@@ -29,7 +30,7 @@ public interface CatalogData {
 			boolean inStock,
 			int maxQuantity,
 			ImageData image,
-			List<ColorOptionData> colors) {
+			List<ColorOptionData> colors, Integer originalPriceAmount, Promotion promotion) {
 	}
 
 	public record ColorOptionData(
@@ -39,7 +40,7 @@ public interface CatalogData {
 			String variantId,
 			String variantSlug,
 			int priceAmount,
-			boolean inStock) {
+			boolean inStock, Integer originalPriceAmount, Promotion promotion, ImageData image) {
 	}
 
 	public record ImageData(
@@ -73,7 +74,7 @@ public interface CatalogData {
 			int priceAmount,
 			boolean inStock,
 			int maxQuantity,
-			ImageData image) {
+			ImageData image, Integer originalPriceAmount, Promotion promotion) {
 	}
 
 	public record SpecGroupData(

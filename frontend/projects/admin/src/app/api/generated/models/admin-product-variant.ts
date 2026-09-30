@@ -7,6 +7,7 @@ export interface AdminProductVariant {
   colorCode: string;
   id: string;
   price: Money;
+  salePrice?: (Money | null);
   slug: string;
   stock: number;
   storageGb: StorageGb;

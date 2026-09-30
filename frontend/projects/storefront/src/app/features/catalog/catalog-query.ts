@@ -80,6 +80,7 @@ export interface CatalogQuery {
   readonly inStock?: boolean;
   readonly is5g?: boolean;
   readonly featured?: boolean;
+  readonly onPromotion?: boolean;
   readonly sort?: Sort;
   readonly page: number;
   readonly pageSize: 12 | 24;
@@ -100,6 +101,7 @@ export interface CatalogFilters {
   readonly maxPrice?: number;
   readonly inStock: boolean;
   readonly is5g: boolean;
+  readonly onPromotion?: boolean;
 }
 
 /** A `CatalogQuery` with no filters applied — the documented defaults. */
@@ -159,6 +161,7 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     inStock?: boolean;
     is5g?: boolean;
     featured?: boolean;
+    onPromotion?: boolean;
     sort?: Sort;
     page: number;
     pageSize: 12 | 24;
@@ -221,6 +224,11 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   }
 
   const featuredRaw = params.get('featured');
+  const promotionRaw = params.get('onPromotion');
+  if (promotionRaw !== null) {
+    const parsed = parseBoolean(promotionRaw);
+    if (parsed !== null) query.onPromotion = parsed;
+  }
   if (featuredRaw !== null) {
     const parsed = parseBoolean(featuredRaw);
     if (parsed !== null) query.featured = parsed;
@@ -260,6 +268,7 @@ export const CATALOG_QUERY_KEYS = [
   'inStock',
   'is5g',
   'featured',
+  'onPromotion',
   'sort',
   'page',
   'pageSize',
@@ -307,6 +316,7 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
   if (query.inStock !== undefined) params.set('inStock', String(query.inStock));
   if (query.is5g !== undefined) params.set('is5g', String(query.is5g));
   if (query.featured !== undefined) params.set('featured', String(query.featured));
+  if (query.onPromotion !== undefined) params.set('onPromotion', String(query.onPromotion));
 
   if (query.sort !== undefined) params.set('sort', query.sort);
 
@@ -340,6 +350,8 @@ export interface AppliedChip {
  */
 export function buildChips(q: CatalogQuery): readonly AppliedChip[] {
   const chips: AppliedChip[] = [];
+  if (q.onPromotion === true)
+    chips.push({ id: 'onPromotion', name: 'onPromotion', label: 'Halloween-akció' });
   if (q.q !== undefined && q.q.length > 0) {
     chips.push({ id: 'q', name: 'q', label: `Keresés: „${q.q}”` });
   }

@@ -54,6 +54,20 @@ For the container, `deploy/compose.sh logs commerce` shows it. Set
 start to choose the password instead (`backend/README.md`). After signing
 in, change it under the account menu's `Jelszó módosítása`.
 
+## Shared Halloween campaign
+
+The product editor's Promotion section edits one shared campaign text and
+interval, independently of the product save. Every variant keeps its regular
+price and may have a nullable sale price in whole HUF, strictly below the
+regular price. Blank sale prices remove the variant discount.
+
+Campaign dates are entered in Europe/Budapest local time and saved as UTC
+instants. Ambiguous or nonexistent daylight-saving times are rejected, not
+guessed. The campaign has its own version precondition; a conflict keeps the
+edits and asks the administrator to reload. No production dates or campaign
+prices are seeded in code. Configure an active test campaign through the
+preview admin when demonstrating the storefront.
+
 ## Fonts
 
 Roboto and Material Symbols are self-hosted from npm

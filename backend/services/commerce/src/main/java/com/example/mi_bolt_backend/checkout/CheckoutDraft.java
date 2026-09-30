@@ -69,6 +69,9 @@ public class CheckoutDraft {
 	@Column(name = "updated_at", nullable = false)
 	private OffsetDateTime updatedAt;
 
+	@Column(name = "revision", nullable = false)
+	private long revision;
+
 	protected CheckoutDraft() {
 		// JPA requires a no-arg constructor.
 	}
@@ -159,7 +162,12 @@ public class CheckoutDraft {
 		return updatedAt;
 	}
 
+	public long getRevision() {
+		return revision;
+	}
+
 	public void setContact(String fullName, String email, String phone, OffsetDateTime now) {
+		this.revision++;
 		this.contactFullName = fullName;
 		this.contactEmail = email;
 		this.contactPhone = phone;
@@ -168,6 +176,7 @@ public class CheckoutDraft {
 
 	public void setBilling(String name, String countryCode, String postalCode, String city,
 			String line1, String line2, OffsetDateTime now) {
+		this.revision++;
 		this.billingName = name;
 		this.billingCountryCode = countryCode;
 		this.billingPostalCode = postalCode;
@@ -180,6 +189,7 @@ public class CheckoutDraft {
 	/** Pickup: pass null for every address argument (rule 27). */
 	public void setDelivery(String option, String countryCode, String postalCode, String city,
 			String line1, String line2, OffsetDateTime now) {
+		this.revision++;
 		this.deliveryOption = option;
 		this.deliveryCountryCode = countryCode;
 		this.deliveryPostalCode = postalCode;
@@ -190,6 +200,7 @@ public class CheckoutDraft {
 	}
 
 	public void setPayment(String method, OffsetDateTime now) {
+		this.revision++;
 		this.paymentMethod = method;
 		this.updatedAt = now;
 	}

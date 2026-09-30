@@ -628,7 +628,7 @@ describe('OrderSubmission', () => {
   // OS-12 — price change → price-changed, exactly one POST /orders
   // -------------------------------------------------------------------------
 
-  it('OS-12: a price change after the intent was created yields price-changed and issues exactly one order request', async () => {
+  it('OS-12: a changed basket needs a new payment and issues exactly one order request', async () => {
     await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
     const cart = TestBed.inject(CartFacade);
@@ -644,11 +644,9 @@ describe('OrderSubmission', () => {
     captureRequests(log);
     const outcome = await service.submitOrder();
 
-    expect(outcome.kind).toBe('price-changed');
+    expect(outcome.kind).toBe('payment-required');
     expect(postsTo(log, '/orders')).toBe(1);
-    const priceChange = checkout.priceChange();
-    expect(priceChange).not.toBeNull();
-    expect(priceChange?.currentTotal.amount).toBe(159_980);
+    expect(checkout.paymentIntent()).toBeNull();
   });
 
   // -------------------------------------------------------------------------

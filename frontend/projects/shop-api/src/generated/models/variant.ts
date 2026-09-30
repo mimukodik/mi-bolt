@@ -4,6 +4,7 @@
 import { Availability } from '../models/availability';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
+import { Promotion } from '../models/promotion';
 import { StorageGb } from '../models/storage-gb';
 export interface Variant {
   availability: Availability;
@@ -16,7 +17,9 @@ export interface Variant {
    * Effective per-line cap for this variant. Zero means it cannot be ordered, which is consistent with availability out_of_stock.
    */
   maxQuantity: number;
+  originalPrice?: Money;
   price: Money;
+  promotion?: Promotion;
 
   /**
    * Unique inside one product, used as the route segment after the product slug.

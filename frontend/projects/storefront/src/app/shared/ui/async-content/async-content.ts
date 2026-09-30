@@ -51,6 +51,7 @@ import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
   styleUrl: './async-content.scss',
 })
 export class AsyncContent {
+  readonly emptyTitle = input('Nincs a szűrőknek megfelelő készülék.');
   readonly status = input.required<AsyncStatus>();
   readonly problem = input<UiProblem | null>(null);
   readonly hasPrevious = input<boolean>(false);

@@ -46,6 +46,17 @@ public class PaymentIntent {
 	@Column(name = "expires_at", nullable = false)
 	private OffsetDateTime expiresAt;
 
+	@Column(name = "snapshot_json", length = 20000)
+	private String snapshotJson;
+
+	@Column(name = "basket_revision")
+	private Long basketRevision;
+	public Long getBasketRevision() { return basketRevision; }
+	public void setBasketRevision(long revision) { basketRevision = revision; }
+
+	public String getSnapshotJson() { return snapshotJson; }
+	public void setSnapshotJson(String snapshotJson) { this.snapshotJson = snapshotJson; }
+
 	protected PaymentIntent() {
 		// JPA requires a no-arg constructor.
 	}

@@ -21,6 +21,7 @@ import type { Product } from '@mi-bolt/api/models/product';
 import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 
 import type { CatalogEntry } from '../catalog/catalog-store';
+import { promotionVariant } from '../catalog/promotion';
 
 /**
  * Module-local handle the catalogue, cart and order handlers read
@@ -100,7 +101,7 @@ export class StockLedger {
   applyToProduct(product: Product): Product {
     return {
       ...product,
-      variants: product.variants.map((variant) => this.applyToVariant(variant)),
+      variants: product.variants.map((variant) => promotionVariant(this.applyToVariant(variant))),
     };
   }
 
@@ -113,12 +114,21 @@ export class StockLedger {
    */
   applyToEntry(entry: CatalogEntry): CatalogEntry {
     const product = this.applyToProduct(entry.product);
-    const variant = this.applyToVariant(entry.variant);
+    const variant = promotionVariant(this.applyToVariant(entry.variant));
     const variantsById = new Map(product.variants.map((v) => [v.id, v] as const));
     const colors = entry.colors.map((option) => {
       const v = variantsById.get(option.variantId);
       const availability: Availability = v !== undefined ? v.availability : option.availability;
-      return { ...option, availability };
+      const { originalPrice: _original, promotion: _promotion, ...regular } = option;
+      return v === undefined
+        ? { ...option, availability }
+        : {
+            ...regular,
+            availability,
+            price: v.price,
+            ...(v.originalPrice === undefined ? {} : { originalPrice: v.originalPrice }),
+            ...(v.promotion === undefined ? {} : { promotion: v.promotion }),
+          };
     });
     return { ...entry, product, variant, colors };
   }

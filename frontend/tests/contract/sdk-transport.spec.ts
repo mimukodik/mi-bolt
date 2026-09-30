@@ -120,6 +120,10 @@ function capture(request: Request, bodyText: string): void {
  * implementation detail of the test bed.
  */
 const handlers = [
+  http.get(`${BASE_URL}/promotion`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json({ active: false, serverNow: '2026-09-15T10:00:00Z' });
+  }),
   http.get(`${BASE_URL}/products`, ({ request }) => {
     capture(request, '');
     return HttpResponse.json(EMPTY_PRODUCT_PAGE);
@@ -363,11 +367,12 @@ function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfig } {
 // ---------------------------------------------------------------------------
 
 describe('T04-AC04 every generated operation reaches MSW', () => {
-  it('exercises all 19 operations end-to-end through the real HttpClient', async () => {
+  it('exercises all 20 operations end-to-end through the real HttpClient', async () => {
     const { api } = makeSdk();
     expect(TestBed.inject(ApiConfig).rootUrl).toBe(BASE_URL);
 
     // catalog (public; no If-Match) — contracts/commerce/openapi.yaml:54-244
+    await callOperation(api, 'getPromotion');
     await callOperation(api, 'listProducts');
     await callOperation(api, 'getProduct', { slug: 'demo-one-5g' });
     await callOperation(api, 'listRelatedProducts', { slug: 'demo-one-5g' });

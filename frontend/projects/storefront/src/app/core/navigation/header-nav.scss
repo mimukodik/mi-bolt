@@ -114,3 +114,33 @@
     line-height: var(--leading-nav);
   }
 }
+.halloween-spider {
+  width: 40px;
+  height: 60px;
+}
+.halloween-pumpkin {
+  width: 34px;
+  height: 34px;
+}
+.cart__badge {
+  min-width: 16px;
+  width: auto;
+  padding: 0 3px;
+}
+@media (max-width: 767px) {
+  .halloween-spider {
+    width: 28px;
+    height: 46px;
+  }
+  .halloween-pumpkin {
+    width: 28px;
+    height: 28px;
+  }
+  .header--promotion .header__inner {
+    gap: 8px;
+  }
+  .header--promotion .cart {
+    gap: 4px;
+    padding-inline: 4px;
+  }
+}

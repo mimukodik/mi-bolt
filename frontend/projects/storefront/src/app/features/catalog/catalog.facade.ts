@@ -110,6 +110,7 @@ function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
   if (a.inStock !== b.inStock) return false;
   if (a.is5g !== b.is5g) return false;
   if (a.featured !== b.featured) return false;
+  if (a.onPromotion !== b.onPromotion) return false;
   if (a.sort !== b.sort) return false;
   if (a.page !== b.page) return false;
   if (a.pageSize !== b.pageSize) return false;
@@ -144,6 +145,7 @@ function toSdkParams(q: CatalogQuery): Parameters<typeof listProducts>[2] {
   if (q.inStock !== undefined) params.inStock = q.inStock;
   if (q.is5g !== undefined) params.is5g = q.is5g;
   if (q.featured !== undefined) params.featured = q.featured;
+  if (q.onPromotion !== undefined) params.onPromotion = q.onPromotion;
   if (q.sort !== undefined) params.sort = q.sort;
   params.page = q.page;
   params.pageSize = q.pageSize;
@@ -442,6 +444,10 @@ export class CatalogFacade {
    */
   retry(): void {
     if (this.errorSignal() === null) return;
+    this.retry$.next();
+  }
+
+  refreshPromotion(): void {
     this.retry$.next();
   }
 

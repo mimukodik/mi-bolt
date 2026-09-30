@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.mi_bolt_backend.catalog.CatalogImage;
+import com.example.mi_bolt_backend.catalog.PromotionPricing;
+import com.example.mi_bolt_backend.order.PaymentSnapshotService;
 import com.example.mi_bolt_backend.catalog.Product;
 import com.example.mi_bolt_backend.catalog.ProductColor;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
@@ -80,7 +82,8 @@ class CartServiceTest {
 			return cart;
 		});
 
-		service = new CartService(carts, variants, sessions, sessionService, clock);
+		service = new CartService(carts, variants, sessions, sessionService, clock, new PromotionPricing(null),
+				mock(PaymentSnapshotService.class));
 	}
 
 	@Test

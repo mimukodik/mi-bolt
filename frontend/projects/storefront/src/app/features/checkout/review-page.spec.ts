@@ -797,7 +797,7 @@ describe('ReviewPage drives the recovery controls', () => {
     const confirmSpy = vi.spyOn(checkout, 'confirmPriceChange');
 
     await h.fixture.whenStable();
-    h.fixture.componentInstance.onPriceChangeConfirmed();
+    await h.fixture.componentInstance.onPriceChangeConfirmed();
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
   });

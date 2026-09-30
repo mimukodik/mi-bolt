@@ -301,6 +301,7 @@ export class CheckoutFacade {
   private async refreshSession(): Promise<CheckoutResult<CheckoutSession>> {
     try {
       const session = await firstValueFrom(this.api.invoke(getCheckout, {}));
+      this.adoptPriceNotice(session);
       this.sessionWritable.set(session);
       this.dropStaleIntent(session);
       this.cart.acceptServerVersion(session.version);
@@ -350,6 +351,7 @@ export class CheckoutFacade {
             this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
           );
           this.sessionWritable.set(session);
+          this.adoptPriceNotice(session);
           this.dropStaleIntent(session);
           this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
@@ -407,6 +409,8 @@ export class CheckoutFacade {
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateIntentKey();
           }
+          if (error.code === 'PRICE_CHANGED')
+            return { ok: false, error: await this.recordPriceChange(error) };
           return { ok: false, error };
         }
       },
@@ -573,8 +577,20 @@ export class CheckoutFacade {
    * stays dead until this runs (§8.2, the shopper's explicit
    * confirmation).
    */
-  confirmPriceChange(): void {
-    this.priceChangeWritable.set(null);
+  async confirmPriceChange(): Promise<void> {
+    const version = this.session()?.version;
+    if (version === undefined || this.priceChange() === null) return;
+    const result = await this.patch('contact', { acceptedPriceVersion: version });
+    if (result.ok && result.value.priceChanged !== true) this.priceChangeWritable.set(null);
+  }
+
+  private adoptPriceNotice(session: CheckoutSession): void {
+    if (session.priceChanged !== true) return;
+    this.priceChangeWritable.set({
+      shownTotal: this.summary()?.total ?? session.summary.total,
+      currentTotal: session.summary.total,
+      awaitingConfirmation: true,
+    });
   }
 
   /**
@@ -606,7 +622,9 @@ export class CheckoutFacade {
     if (intent === null) return;
     if (
       session.payment?.method === 'card' &&
-      intent.amount.amount === session.summary.total.amount
+      (intent.basketRevision !== undefined && session.basketRevision !== undefined
+        ? intent.basketRevision === session.basketRevision
+        : intent.amount.amount === session.summary.total.amount)
     ) {
       return;
     }
@@ -625,6 +643,7 @@ export class CheckoutFacade {
     this.paymentIntentWritable.set(null);
     this.intentDroppedWritable.set(null);
     this.clearFailureOverlay();
+    this.priceChangeWritable.set(null);
   }
 
   /**
@@ -647,6 +666,20 @@ export class CheckoutFacade {
   private serialize<T>(mutation: CheckoutMutation<T>): Promise<CheckoutResult<T>> {
     this.pendingWritable.update((n) => n + 1);
     const next = this.tail.then(async () => {
+      if (
+        (mutation.kind === 'order' || mutation.kind === 'paymentIntent') &&
+        this.priceChange() !== null
+      ) {
+        return {
+          ok: false,
+          error: {
+            code: 'PRICE_CHANGED',
+            status: 409,
+            detail: 'Explicit acceptance of the changed prices is required.',
+            fieldErrors: [],
+          },
+        } satisfies CheckoutResult<T>;
+      }
       const expectedVersion = this.version();
       if (expectedVersion === null) {
         const result = notLoadedResult<T>();
@@ -769,9 +802,11 @@ export class CheckoutFacade {
       return read.error;
     }
     const currentTotal = read.value.summary.total;
-    if (shownTotal !== undefined && shownTotal.amount !== currentTotal.amount) {
-      this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
-    }
+    this.priceChangeWritable.set({
+      shownTotal: shownTotal ?? currentTotal,
+      currentTotal,
+      awaitingConfirmation: true,
+    });
     this.errorWritable.set(error);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
@@ -782,7 +817,6 @@ export class CheckoutFacade {
     this.errorWritable.set(null);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
-    this.priceChangeWritable.set(null);
     this.lastFailedIntent = null;
   }
 }

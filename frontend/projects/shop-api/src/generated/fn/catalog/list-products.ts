@@ -49,6 +49,11 @@ export interface ListProducts$Params {
  * Curated selection for the home page. At most four entries, in curated order.
  */
   featured?: boolean;
+
+/**
+ * Restrict matching variants to active in-stock sale prices.
+ */
+  onPromotion?: boolean;
   sort?: ProductSort;
   page?: number;
   pageSize?: 12 | 24;
@@ -66,6 +71,7 @@ export function listProducts(http: HttpClient, rootUrl: string, params?: ListPro
     rb.query('inStock', params.inStock, {});
     rb.query('is5g', params.is5g, {});
     rb.query('featured', params.featured, {});
+    rb.query('onPromotion', params.onPromotion, {});
     rb.query('sort', params.sort, {});
     rb.query('page', params.page, {});
     rb.query('pageSize', params.pageSize, {});

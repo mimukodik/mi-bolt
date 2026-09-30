@@ -61,10 +61,12 @@ public class CatalogService {
 
 	private final ProductRepository productRepository;
 	private final SpecGroupRepository specGroupRepository;
+	private final PromotionPricing pricing;
 
-	public CatalogService(ProductRepository productRepository, SpecGroupRepository specGroupRepository) {
+	public CatalogService(ProductRepository productRepository, SpecGroupRepository specGroupRepository, PromotionPricing pricing) {
 		this.productRepository = productRepository;
 		this.specGroupRepository = specGroupRepository;
+		this.pricing = pricing;
 	}
 
 	/**
@@ -101,6 +103,7 @@ public class CatalogService {
 			Boolean inStock,
 			Boolean is5g,
 			Boolean featured,
+			Boolean onPromotion,
 			ProductSort sort,
 			int page,
 			int pageSize) {
@@ -135,7 +138,7 @@ public class CatalogService {
 				maxPrice,
 				inStock,
 				is5g,
-				featured);
+				featured, onPromotion);
 
 		List<Product> products = loadCatalogue();
 		products.sort(RECOMMENDED_PRODUCT_ORDER);
@@ -343,13 +346,14 @@ public class CatalogService {
 	}
 
 	private boolean variantMatches(ProductVariant v, Filters filters) {
+		if (filters.onPromotion != null && pricing.isActive(v) != filters.onPromotion.booleanValue()) { return false; }
 		if (!filters.color.isEmpty() && !filters.color.contains(v.getColor().getCode())) {
 			return false;
 		}
-		if (filters.minPrice != null && v.getPriceHuf() < filters.minPrice.longValue()) {
+		if (filters.minPrice != null && pricing.effectivePrice(v) < filters.minPrice.longValue()) {
 			return false;
 		}
-		if (filters.maxPrice != null && v.getPriceHuf() > filters.maxPrice.longValue()) {
+		if (filters.maxPrice != null && pricing.effectivePrice(v) > filters.maxPrice.longValue()) {
 			return false;
 		}
 		if (filters.inStock != null) {
@@ -386,11 +390,11 @@ public class CatalogService {
 					.thenComparing(RECOMMENDED_ENTRY_ORDER);
 		}
 		else if (effective == ProductSort.PRICE_ASC) {
-			cmp = Comparator.comparingLong((Entry e) -> e.displayed.variant.getPriceHuf())
+			cmp = Comparator.comparingLong((Entry e) -> pricing.effectivePrice(e.displayed.variant))
 					.thenComparing(RECOMMENDED_ENTRY_ORDER);
 		}
 		else if (effective == ProductSort.PRICE_DESC) {
-			cmp = Comparator.comparingLong((Entry e) -> -e.displayed.variant.getPriceHuf())
+			cmp = Comparator.comparingLong((Entry e) -> -pricing.effectivePrice(e.displayed.variant))
 					.thenComparing(RECOMMENDED_ENTRY_ORDER);
 		}
 		else if (effective == ProductSort.NAME_ASC) {
@@ -502,7 +506,7 @@ public class CatalogService {
 
 		int inStockCount = 0;
 		Filters withInStock = new Filters(filters.q, filters.brand, filters.storage, filters.color,
-				filters.minPrice, filters.maxPrice, Boolean.TRUE, filters.is5g, filters.featured);
+				filters.minPrice, filters.maxPrice, Boolean.TRUE, filters.is5g, filters.featured, filters.onPromotion);
 		for (Entry e : all) {
 			if (matchesProductLevel(e, withInStock) && hasMatchingVariant(e, withInStock)) {
 				inStockCount++;
@@ -512,7 +516,7 @@ public class CatalogService {
 		long minPrice = Long.MAX_VALUE;
 		long maxPrice = Long.MIN_VALUE;
 		for (Entry e : capped) {
-			long price = e.displayed.variant.getPriceHuf();
+			long price = pricing.effectivePrice(e.displayed.variant);
 			if (price < minPrice) {
 				minPrice = price;
 			}
@@ -711,8 +715,8 @@ public class CatalogService {
 				color.getSwatchHex(),
 				v.getId(),
 				v.getSlug(),
-				(int) v.getPriceHuf(),
-				v.getStock() != null && v.getStock() > 0);
+				(int) pricing.effectivePrice(v),
+				v.getStock() != null && v.getStock() > 0, pricing.originalPrice(v), pricing.promotion(v), toImageData(color));
 	}
 
 	public static CatalogData.ImageData toImageData(ProductColor color) {
@@ -738,11 +742,11 @@ public class CatalogService {
 				e.storage,
 				e.displayed.variant.getId(),
 				e.displayed.variant.getSlug(),
-				(int) e.displayed.variant.getPriceHuf(),
+				(int) pricing.effectivePrice(e.displayed.variant),
 				e.displayed.variant.getStock() != null && e.displayed.variant.getStock() > 0,
 				maxQuantity(e.displayed.variant.getStock()),
 				toImageData(e.displayed.color),
-				new ArrayList<>(e.colors));
+				new ArrayList<>(e.colors), pricing.originalPrice(e.displayed.variant), pricing.promotion(e.displayed.variant));
 	}
 
 	private CatalogData.ProductData toProductData(Product entity) {
@@ -755,10 +759,10 @@ public class CatalogService {
 					v.getColor().getName(),
 					v.getColor().getSwatchHex(),
 					v.getStorageGb(),
-					(int) v.getPriceHuf(),
+					(int) pricing.effectivePrice(v),
 					v.getStock() != null && v.getStock() > 0,
 					maxQuantity(v.getStock()),
-					toImageData(v.getColor())));
+					toImageData(v.getColor()), pricing.originalPrice(v), pricing.promotion(v)));
 		}
 
 		List<CatalogData.SpecGroupData> groups = new ArrayList<>();
@@ -894,9 +898,10 @@ public class CatalogService {
 		final Boolean inStock;
 		final Boolean is5g;
 		final Boolean featured;
+		final Boolean onPromotion;
 
 		Filters(String q, List<String> brand, Set<Integer> storage, Set<String> color,
-				Integer minPrice, Integer maxPrice, Boolean inStock, Boolean is5g, Boolean featured) {
+				Integer minPrice, Integer maxPrice, Boolean inStock, Boolean is5g, Boolean featured, Boolean onPromotion) {
 			this.q = q;
 			this.brand = brand;
 			this.storage = storage;
@@ -906,19 +911,20 @@ public class CatalogService {
 			this.inStock = inStock;
 			this.is5g = is5g;
 			this.featured = featured;
+			this.onPromotion = onPromotion;
 		}
 
 		static Filters none() {
-			return new Filters(null, List.of(), Set.of(), Set.of(), null, null, null, null, null);
+			return new Filters(null, List.of(), Set.of(), Set.of(), null, null, null, null, null, null);
 		}
 
 		Filters without(String facetToIgnore) {
 			return switch (facetToIgnore) {
-				case "brand" -> new Filters(q, List.of(), storage, color, minPrice, maxPrice, inStock, is5g, featured);
-				case "storage" -> new Filters(q, brand, Set.of(), color, minPrice, maxPrice, inStock, is5g, featured);
-				case "color" -> new Filters(q, brand, storage, Set.of(), minPrice, maxPrice, inStock, is5g, featured);
-				case "is5g" -> new Filters(q, brand, storage, color, minPrice, maxPrice, inStock, null, featured);
-				case "inStock" -> new Filters(q, brand, storage, color, minPrice, maxPrice, null, is5g, featured);
+				case "brand" -> new Filters(q, List.of(), storage, color, minPrice, maxPrice, inStock, is5g, featured, onPromotion);
+				case "storage" -> new Filters(q, brand, Set.of(), color, minPrice, maxPrice, inStock, is5g, featured, onPromotion);
+				case "color" -> new Filters(q, brand, storage, Set.of(), minPrice, maxPrice, inStock, is5g, featured, onPromotion);
+				case "is5g" -> new Filters(q, brand, storage, color, minPrice, maxPrice, inStock, null, featured, onPromotion);
+				case "inStock" -> new Filters(q, brand, storage, color, minPrice, maxPrice, null, is5g, featured, onPromotion);
 				default -> this;
 			};
 		}

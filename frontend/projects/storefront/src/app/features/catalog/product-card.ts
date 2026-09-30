@@ -1,10 +1,11 @@
-import { Component, computed, input, linkedSignal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
 import type { ColorOption } from '@mi-bolt/api/models/color-option';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
+import { PromotionState, saleOriginal } from '../../core/promotion';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
 
 /**
@@ -40,6 +41,7 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
   styleUrl: './product-card.scss',
 })
 export class ProductCard {
+  private readonly promotionState = inject(PromotionState);
   readonly product = input.required<CatalogItem>();
 
   /** When true the card's photo loads eagerly. The catalogue grid passes
@@ -71,7 +73,15 @@ export class ProductCard {
 
   /** Money payload for the PriceBlock — prefers the selected colour's
    *  price, falls back to the item-level price for single-colour items. */
-  readonly price = computed(() => this.selectedColor()?.price ?? this.product().price);
+  readonly price = computed(() => {
+    const value = this.selectedColor() ?? this.product();
+    return this.promotionState.invalidated() && value.originalPrice !== undefined
+      ? null
+      : (this.selectedColor()?.price ?? this.product().price);
+  });
+  readonly originalPrice = computed(() =>
+    this.promotionState.invalidated() ? null : saleOriginal(this.selectedColor() ?? this.product()),
+  );
 
   /** The colour name currently shown on the card. */
   readonly colorName = computed<string>(() => this.selectedColor()?.colorName ?? '');
@@ -79,11 +89,12 @@ export class ProductCard {
   /** First image of the item's gallery. */
   readonly image = computed<ImageLike>(() => {
     const item = this.product();
+    const image = this.selectedColor()?.image ?? item.image;
     return {
-      src: item.image.src,
-      alt: item.image.alt !== '' ? item.image.alt : `${item.name} illusztráció`,
-      width: item.image.width,
-      height: item.image.height,
+      src: image.src,
+      alt: image.alt !== '' ? image.alt : `${item.name} illusztráció`,
+      width: image.width,
+      height: image.height,
     };
   });
 

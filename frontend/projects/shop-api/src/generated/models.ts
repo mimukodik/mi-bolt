@@ -46,6 +46,7 @@ export type { Product } from './models/product';
 export type { ProductBase } from './models/product-base';
 export type { ProductPage } from './models/product-page';
 export type { ProductSort } from './models/product-sort';
+export type { Promotion } from './models/promotion';
 export type { SetCartItemQuantityRequest } from './models/set-cart-item-quantity-request';
 export type { SpecGroup } from './models/spec-group';
 export type { SpecRow } from './models/spec-row';

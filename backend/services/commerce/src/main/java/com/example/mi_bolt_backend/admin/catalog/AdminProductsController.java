@@ -1,6 +1,9 @@
 package com.example.mi_bolt_backend.admin.catalog;
 
 import java.net.URI;
+import com.example.mi_bolt_backend.catalog.PromotionService;
+import com.example.mi_bolt_backend.api.model.AdminPromotion;
+import com.example.mi_bolt_backend.api.model.AdminPromotionInput;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -23,13 +26,26 @@ public class AdminProductsController implements AdminProductsApi {
 	private final AdminProductQueryService adminProductQueryService;
 	private final AdminProductCommandService adminProductCommandService;
 	private final HttpServletRequest request;
+	private final PromotionService promotions;
 
 	public AdminProductsController(AdminProductQueryService adminProductQueryService,
 			AdminProductCommandService adminProductCommandService,
-			HttpServletRequest request) {
+			HttpServletRequest request, PromotionService promotions) {
 		this.adminProductQueryService = adminProductQueryService;
 		this.adminProductCommandService = adminProductCommandService;
 		this.request = request;
+		this.promotions = promotions;
+	}
+
+	@Override
+	public ResponseEntity<AdminPromotion> getAdminPromotion() {
+		AdminPromotion result = promotions.admin();
+		return ResponseEntity.ok().eTag(AdminProductEtags.etag(result.getVersion())).body(result);
+	}
+	@Override
+	public ResponseEntity<AdminPromotion> replaceAdminPromotion(AdminPromotionInput input, String ifMatch) {
+		AdminPromotion result = promotions.replace(ifMatch, input);
+		return ResponseEntity.ok().eTag(AdminProductEtags.etag(result.getVersion())).body(result);
 	}
 
 	@Override

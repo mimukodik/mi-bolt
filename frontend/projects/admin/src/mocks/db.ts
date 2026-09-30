@@ -1,5 +1,6 @@
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
 import type { AdminUser } from '../app/api/generated/models/admin-user';
+import type { AdminPromotion } from '../app/api/generated/models/admin-promotion';
 import type { ScenarioName } from './scenario';
 import { SEED_ADMIN, SEED_ADMIN_PASSWORD, seedCatalog, type MockImage } from './seed';
 
@@ -13,6 +14,7 @@ export interface MockAdmin {
  * units read and write these fields and never change this shape.
  */
 export interface MockDb {
+  promotion: AdminPromotion;
   /** Keyed by admin id. */
   readonly admins: Map<string, MockAdmin>;
   /** The signed-in admin's id; the session cookie is HttpOnly, so the mock keeps it here. */
@@ -34,6 +36,7 @@ export function createDb(scenario: ScenarioName = 'default'): MockDb {
     for (const product of seed.products) products.set(product.id, product);
   }
   return {
+    promotion: { active: false, serverNow: new Date().toISOString(), version: 0 },
     admins: new Map([[SEED_ADMIN.id, { user: SEED_ADMIN, password: SEED_ADMIN_PASSWORD }]]),
     sessionAdminId: null,
     xsrfToken: null,

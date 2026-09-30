@@ -110,7 +110,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('T26-AC01 operation inventory parity', () => {
-  it('declares exactly 19 operationIds in the spec', () => {
+  it('declares exactly 20 operationIds in the spec', () => {
     expect(operationsById.size).toBe(REQUIRED_OPERATION_COUNT);
   });
 
@@ -676,7 +676,7 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
     expect(ok, 'Variant.maxQuantity=11 must fail the contract validator').toBe(false);
   });
 
-  it('the openapi.yaml document on disk resolves to 19 operations (spec drift check)', async () => {
+  it('the openapi.yaml document on disk resolves to 20 operations (spec drift check)', async () => {
     const text = await readFile(SPEC_PATH, 'utf8');
     expect(text).toContain('MiBolt Commerce API');
     expect(operationsById.size).toBe(REQUIRED_OPERATION_COUNT);
@@ -736,6 +736,8 @@ function routeKey(handler: unknown): string {
 function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unknown {
   const schemas = (spec.components?.schemas ?? {}) as Record<string, Record<string, unknown>>;
   switch (op.operationId) {
+    case 'getPromotion':
+      return { active: false, serverNow: '2026-09-15T10:00:00Z' };
     case 'listProducts': {
       // ProductPage (contracts/commerce/openapi.yaml:1419-1452) requires
       // items, total, page, pageSize, totalPages, facets; Facets

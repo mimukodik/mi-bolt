@@ -8,7 +8,11 @@ import com.example.mi_bolt_backend.checkout.CheckoutData;
 public interface OrderData {
 
 	record IntentView(String id, String status, long amount, String redirectUrl, String returnUrl,
-			OffsetDateTime createdAt, OffsetDateTime expiresAt) {
+			OffsetDateTime createdAt, OffsetDateTime expiresAt, Long basketRevision) {
+		public IntentView(String id, String status, long amount, String redirectUrl, String returnUrl,
+				OffsetDateTime createdAt, OffsetDateTime expiresAt) {
+			this(id, status, amount, redirectUrl, returnUrl, createdAt, expiresAt, null);
+		}
 	}
 
 	/** A stored response to replay: status, optional Location, JSON body. */

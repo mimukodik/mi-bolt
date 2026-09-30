@@ -33,6 +33,12 @@ public class ProductVariant {
 	@Column(name = "price_huf", nullable = false)
 	private long priceHuf;
 
+	@Column(name = "sale_price_huf")
+	private Long salePriceHuf;
+
+	public Long getSalePriceHuf() { return salePriceHuf; }
+	public void setSalePriceHuf(Long salePriceHuf) { this.salePriceHuf = salePriceHuf; }
+
 	@Column(nullable = false)
 	private Integer stock;
 

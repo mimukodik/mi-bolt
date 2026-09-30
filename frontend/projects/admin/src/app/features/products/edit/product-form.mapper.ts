@@ -10,6 +10,7 @@ const COLOR_IMAGE_ID_POINTER = /^\/colors\/(\d+)\/imageId$/;
 const VARIANT_COLOR_CODE_POINTER = /^\/variants\/(\d+)\/colorCode$/;
 const VARIANT_SLUG_POINTER = /^\/variants\/(\d+)\/slug$/;
 const VARIANT_PRICE_POINTER = /^\/variants\/(\d+)\/price(?:\/amount)?$/;
+const VARIANT_SALE_PRICE_POINTER = /^\/variants\/(\d+)\/salePrice(?:\/amount)?$/;
 const HIGHLIGHT_POINTER = /^\/highlights\/(\d+)$/;
 
 /** Local midnight for `date`, parsed without a time-zone shift (`new Date(y, m - 1, d)`). */
@@ -64,6 +65,7 @@ export function toFormModel(product: AdminProduct): ProductFormModel {
       colorKey: colorKeyByCode.get(variant.colorCode) ?? null,
       storageGb: variant.storageGb,
       price: variant.price.amount,
+      salePrice: variant.salePrice?.amount ?? null,
       stock: variant.stock,
     })),
     specGroups: product.specGroups.map((group) => ({
@@ -110,6 +112,9 @@ export function toProductInput(model: ProductFormModel): AdminProductInput {
       colorCode,
       storageGb,
       price: { amount: price, currency: 'HUF' },
+      ...(variant.salePrice === null
+        ? {}
+        : { salePrice: { amount: variant.salePrice, currency: 'HUF' } }),
       stock,
     };
   });
@@ -136,6 +141,8 @@ export function toProductInput(model: ProductFormModel): AdminProductInput {
 
 /** Maps a 422 pointer into the request body onto the edit form's model. */
 export function toModelPointer(pointer: string): string {
+  const salePrice = VARIANT_SALE_PRICE_POINTER.exec(pointer);
+  if (salePrice !== null) return `/variants/${salePrice[1]}/salePrice`;
   const colorImageId = COLOR_IMAGE_ID_POINTER.exec(pointer);
   if (colorImageId !== null) {
     return `/colors/${colorImageId[1]}/image`;

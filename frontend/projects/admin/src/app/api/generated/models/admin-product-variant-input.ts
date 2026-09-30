@@ -10,6 +10,7 @@ export interface AdminProductVariantInput {
    */
   colorCode: string;
   price: Money;
+  salePrice?: (Money | null);
   slug: string;
   stock: number;
   storageGb: StorageGb;

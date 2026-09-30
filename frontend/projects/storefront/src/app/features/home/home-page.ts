@@ -1,4 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { PromotionState } from '../../core/promotion';
 import { take } from 'rxjs';
 
 import { Api } from '@mi-bolt/api/api';
@@ -59,6 +61,11 @@ export class HomePage {
 
   constructor() {
     this.loadFeatured();
+    inject(PromotionState)
+      .refreshed.pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        this.loadFeatured();
+      });
   }
 
   /**

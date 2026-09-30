@@ -6,6 +6,8 @@ import { FooterNav } from '../../core/navigation/footer-nav';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';
 import { PERSISTENCE_MODE, SNAPSHOT_DISCARD } from '../../core/persistence-mode';
 import { DemoNotice } from './demo-notice';
+import { PromotionBanner } from './promotion-banner';
+import { PromotionState } from '../../core/promotion';
 
 /**
  * `AppShell` is the shared chrome (header + footer) rendered around
@@ -24,11 +26,14 @@ import { DemoNotice } from './demo-notice';
  */
 @Component({
   selector: 'app-app-shell',
-  imports: [HeaderNav, FooterNav, DemoNotice],
+  imports: [HeaderNav, FooterNav, DemoNotice, PromotionBanner],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
 })
 export class AppShell {
+  constructor() {
+    inject(PromotionState).start();
+  }
   /** Header variant — drives which chrome appears. */
   readonly variant = input.required<HeaderVariant>();
 

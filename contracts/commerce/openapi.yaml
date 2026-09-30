@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MiBolt Commerce API
-  version: 2.3.0
+  version: 2.4.0
   description: >-
     Contract-first commerce API for the MiBolt webshop. No real payment,
     fulfillment or email takes place; the shop is a demonstration and says so in
@@ -76,6 +76,86 @@ tags:
 - name: AdminMedia
   description: Catalogue image upload. Admin application only.
 paths:
+  /promotion:
+    get:
+      operationId: getPromotion
+      tags: [Catalog]
+      summary: Read the shared campaign and server time
+      security:
+      - demoAccess: []
+      responses:
+        '200':
+          description: Shared campaign; active uses startsAt <= serverNow < endsAt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/promotion:
+    get:
+      operationId: getAdminPromotion
+      tags: [AdminProducts]
+      summary: Read the single shared campaign
+      security:
+      - adminSession: []
+      responses:
+        '200':
+          description: Campaign configuration and version.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ProductETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPromotion'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: replaceAdminPromotion
+      tags: [AdminProducts]
+      summary: Replace or clear the shared campaign
+      description: All three fields must be supplied together. An empty object clears the campaign. Times are offset instants, displayed in Europe/Budapest. Concurrent changes return PRODUCT_VERSION_CONFLICT.
+      parameters:
+      - $ref: '#/components/parameters/ProductIfMatch'
+      security:
+      - adminSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminPromotionInput'
+      responses:
+        '200':
+          description: Saved campaign.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ProductETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPromotion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '412':
+          $ref: '#/components/responses/ProductPreconditionFailed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /products:
     get:
       operationId: listProducts
@@ -159,6 +239,11 @@ paths:
         in: query
         description: Curated selection for the home page. At most four entries, in
           curated order.
+        schema:
+          type: boolean
+      - name: onPromotion
+        in: query
+        description: Restrict matching variants to active in-stock sale prices.
         schema:
           type: boolean
       - name: sort
@@ -1933,6 +2018,58 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    AdminPromotionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          maxLength: 300
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    Promotion:
+      type: object
+      additionalProperties: false
+      required: [active, serverNow]
+      properties:
+        text:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        serverNow:
+          type: string
+          format: date-time
+    AdminPromotion:
+      type: object
+      additionalProperties: false
+      required: [active, serverNow, version]
+      properties:
+        text:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        serverNow:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
     Money:
       type: object
       additionalProperties: false
@@ -2027,6 +2164,12 @@ components:
           type: string
         variantSlug:
           type: string
+        originalPrice:
+          $ref: '#/components/schemas/Money'
+        promotion:
+          $ref: '#/components/schemas/Promotion'
+        image:
+          $ref: '#/components/schemas/Image'
         price:
           $ref: '#/components/schemas/Money'
         availability:
@@ -2062,6 +2205,10 @@ components:
           pattern: ^#[0-9A-Fa-f]{6}$
         storageGb:
           $ref: '#/components/schemas/StorageGb'
+        originalPrice:
+          $ref: '#/components/schemas/Money'
+        promotion:
+          $ref: '#/components/schemas/Promotion'
         price:
           $ref: '#/components/schemas/Money'
         availability:
@@ -2164,6 +2311,10 @@ components:
             type: string
           variantSlug:
             type: string
+          originalPrice:
+            $ref: '#/components/schemas/Money'
+          promotion:
+            $ref: '#/components/schemas/Promotion'
           price:
             $ref: '#/components/schemas/Money'
           availability:
@@ -2505,6 +2656,9 @@ components:
       - expiresAt
       - notices
       properties:
+        basketRevision:
+          type: integer
+          format: int64
         id:
           type: string
           description: Internal reference. It never appears in a path; the session
@@ -2781,6 +2935,11 @@ components:
       - summary
       - complete
       properties:
+        basketRevision:
+          type: integer
+          format: int64
+        priceChanged:
+          type: boolean
         version:
           type: integer
           minimum: 1
@@ -2805,6 +2964,10 @@ components:
       minProperties: 1
       description: Only the supplied sections are written; absent sections are retained.
       properties:
+        acceptedPriceVersion:
+          type: integer
+          format: int64
+          description: Explicitly accept the currently displayed price change; must equal the current session version.
         contact:
           $ref: '#/components/schemas/Contact'
         billing:
@@ -2832,6 +2995,9 @@ components:
       - createdAt
       - expiresAt
       properties:
+        basketRevision:
+          type: integer
+          format: int64
         id:
           type: string
         status:
@@ -3286,6 +3452,10 @@ components:
           type: string
         storageGb:
           $ref: '#/components/schemas/StorageGb'
+        salePrice:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
         price:
           $ref: '#/components/schemas/Money'
         stock:
@@ -3411,6 +3581,10 @@ components:
           description: The code of one of this product's colours.
         storageGb:
           $ref: '#/components/schemas/StorageGb'
+        salePrice:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
         price:
           $ref: '#/components/schemas/Money'
         stock:

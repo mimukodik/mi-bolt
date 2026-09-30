@@ -6,6 +6,7 @@ import { ColorOption } from '../models/color-option';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
 import { ProductBase } from '../models/product-base';
+import { Promotion } from '../models/promotion';
 import { StorageGb } from '../models/storage-gb';
 
 /**
@@ -15,6 +16,8 @@ export type CatalogItem = ProductBase & {
 'storageGb': StorageGb;
 'variantId': string;
 'variantSlug': string;
+'originalPrice'?: Money;
+'promotion'?: Promotion;
 'price': Money;
 'availability': Availability;
 'maxQuantity': number;

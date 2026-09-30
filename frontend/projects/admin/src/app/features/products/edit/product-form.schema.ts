@@ -195,6 +195,21 @@ export function productFormSchema(context: ProductFormSchemaContext): Schema<Pro
       });
       min(variant.price, 0, { message: MESSAGES.notNegative });
       max(variant.price, 100_000_000, { message: MESSAGES.priceMax });
+      validate(variant.salePrice, (ctx) => {
+        const sale = ctx.value();
+        const base = ctx.valueOf(variant.price);
+        return sale !== null &&
+          (!Number.isSafeInteger(sale) ||
+            sale <= 0 ||
+            sale > 100_000_000 ||
+            base === null ||
+            sale >= base)
+          ? {
+              kind: 'salePrice',
+              message: 'Az akciós ár egész, pozitív forintösszeg, és kisebb az alapárnál.',
+            }
+          : null;
+      });
 
       required(variant.stock, { message: MESSAGES.required });
       validate(variant.stock, ({ value }) => {

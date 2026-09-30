@@ -3,7 +3,7 @@
     <div class="state state--empty" data-testid="catalog-empty">
       <app-empty-state
         message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
-        title="Nincs a szűrőknek megfelelő készülék."
+        [title]="emptyTitle()"
       />
       <ng-content select="[data-async-empty-action]" />
     </div>

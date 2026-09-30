@@ -148,7 +148,11 @@ public class AdminProductCommandService {
 			dropVariants(product, dropped);
 			adminProductRepository.flush();
 			applyReplace(product, input, images);
-			product.setUpdatedAt(now);
+			// Child-only edits must also dirty the versioned aggregate, even when
+			// two saves share a clock instant (database timestamps have microsecond precision).
+			OffsetDateTime previousUpdate = product.getUpdatedAt();
+			product.setUpdatedAt(previousUpdate != null && !now.isAfter(previousUpdate)
+					? previousUpdate.plusNanos(1000) : now);
 			adminProductRepository.saveAndFlush(product);
 		}
 		catch (ObjectOptimisticLockingFailureException ex) {
@@ -238,6 +242,7 @@ public class AdminProductCommandService {
 				if (variant != null) {
 					variant.setSlug(v.getSlug());
 					variant.setPriceHuf(v.getPrice().getAmount());
+					variant.setSalePriceHuf(v.getSalePrice() == null ? null : v.getSalePrice().getAmount().longValue());
 					variant.setStock(v.getStock());
 				}
 				else {
@@ -248,6 +253,7 @@ public class AdminProductCommandService {
 					variant.setColor(colorByCode.get(colorCode));
 					variant.setStorageGb(storageGb);
 					variant.setPriceHuf(v.getPrice().getAmount());
+					variant.setSalePriceHuf(v.getSalePrice() == null ? null : v.getSalePrice().getAmount().longValue());
 					variant.setStock(v.getStock());
 					product.getVariants().add(variant);
 				}
@@ -366,6 +372,7 @@ public class AdminProductCommandService {
 				variant.setColor(colorByCode.get(v.getColorCode()));
 				variant.setStorageGb(v.getStorageGb().getValue());
 				variant.setPriceHuf(v.getPrice().getAmount());
+					variant.setSalePriceHuf(v.getSalePrice() == null ? null : v.getSalePrice().getAmount().longValue());
 				variant.setStock(v.getStock());
 				product.getVariants().add(variant);
 			}

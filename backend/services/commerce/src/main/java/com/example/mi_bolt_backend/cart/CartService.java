@@ -13,10 +13,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.mi_bolt_backend.catalog.CatalogService;
+import com.example.mi_bolt_backend.catalog.PromotionPricing;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
 import com.example.mi_bolt_backend.catalog.ProductVariantRepository;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
+import com.example.mi_bolt_backend.order.PaymentSnapshotData;
+import com.example.mi_bolt_backend.order.PaymentSnapshotService;
 import com.example.mi_bolt_backend.session.ShopSession;
 import com.example.mi_bolt_backend.session.ShopSessionRepository;
 import com.example.mi_bolt_backend.session.SessionService;
@@ -35,25 +38,59 @@ public class CartService {
 	private final ShopSessionRepository sessions;
 	private final SessionService sessionService;
 	private final Clock clock;
+	private final PromotionPricing pricing;
+	private final PaymentSnapshotService paymentSnapshots;
 
 	public CartService(CartRepository carts,
 			ProductVariantRepository variants,
 			ShopSessionRepository sessions,
 			SessionService sessionService,
-			Clock clock) {
+			Clock clock, PromotionPricing pricing, PaymentSnapshotService paymentSnapshots) {
 		this.carts = carts;
 		this.variants = variants;
 		this.sessions = sessions;
 		this.sessionService = sessionService;
 		this.clock = clock;
+		this.pricing = pricing;
+		this.paymentSnapshots = paymentSnapshots;
 	}
 
 	public CartData.CartView getCart(ShopSession current) {
 		ShopSession session = loadSession(current);
 		Cart cart = loadOrCreateCart(session);
 		expireIfPast(cart);
+		PaymentSnapshotData accepted = paymentSnapshots.accepted(session, cart);
+		if (accepted != null) {
+			CartData.CartView approved = accepted.cart();
+			return new CartData.CartView(cart.getId(), session.getStateVersion(), approved.items(),
+					approved.lineCount(), approved.totalQuantity(), approved.subtotal(), cart.getExpiresAt(),
+					List.of(), cart.getBasketRevision());
+		}
 		ReconciliationResult result = reconcile(cart);
 		return finalize(cart, session, result);
+	}
+
+	public long basketRevision(ShopSession current) {
+		return loadOrCreateCart(loadSession(current)).getBasketRevision();
+	}
+
+	public PaymentSnapshotData acceptedSnapshot(ShopSession current) {
+		ShopSession session = loadSession(current);
+		return paymentSnapshots.accepted(session, loadOrCreateCart(session));
+	}
+	public boolean priceChanged(ShopSession current) {
+		return acceptedSnapshot(current) == null && loadOrCreateCart(loadSession(current)).isPriceChanged();
+	}
+	public void acceptPrice(ShopSession current, long acceptedVersion) {
+		expectVersion(current, Long.toString(acceptedVersion));
+		loadOrCreateCart(loadSession(current)).setPriceChanged(false);
+	}
+
+	public CartData.CartView getUnreconciledCart(ShopSession current) {
+		ShopSession session = loadSession(current);
+		Cart cart = loadOrCreateCart(session);
+		expireIfPast(cart);
+		return finalize(cart, session, ReconciliationResult.empty());
 	}
 
 	public void expectVersion(ShopSession current, String ifMatch) {
@@ -106,13 +143,14 @@ public class CartService {
 		}
 		ReconciliationResult result = reconcile(cart);
 		if (line == null) {
-			line = new CartItem(cart, variant, merged, variant.getPriceHuf(), now());
+			line = new CartItem(cart, variant, merged, pricing.effectivePrice(variant), now());
 			cart.getItems().add(line);
 		}
 		else {
 			line.setQuantity(merged, now());
-			line.setUnitPriceHuf(variant.getPriceHuf(), now());
+			line.setUnitPriceHuf(pricing.effectivePrice(variant), now());
 		}
+		cart.markBasketChanged();
 		result.markMutated();
 		return finalize(cart, session, result);
 	}
@@ -142,6 +180,7 @@ public class CartService {
 		}
 		ReconciliationResult result = reconcile(cart);
 		line.setQuantity(quantity, now());
+		cart.markBasketChanged();
 		result.markMutated();
 		return finalize(cart, session, result);
 	}
@@ -158,6 +197,7 @@ public class CartService {
 		ReconciliationResult result = reconcile(cart);
 		if (line != null) {
 			cart.getItems().remove(line);
+			cart.markBasketChanged();
 			result.markMutated();
 		}
 		return finalize(cart, session, result);
@@ -170,6 +210,7 @@ public class CartService {
 		ReconciliationResult result = ReconciliationResult.empty();
 		if (!cart.getItems().isEmpty()) {
 			cart.getItems().clear();
+			cart.markBasketChanged();
 			result.markMutated();
 		}
 		return finalize(cart, session, result);
@@ -225,10 +266,11 @@ public class CartService {
 					result.add(new CartData.Notice(N_QUANTITY_REDUCED, variant.getId(), variant.getProduct().getName(),
 							new CartData.NoticeParams(null, oldQty, max)));
 				}
-				if (oldPrice != variant.getPriceHuf()) {
-					item.setUnitPriceHuf(variant.getPriceHuf(), now());
+				if (oldPrice != pricing.effectivePrice(variant)) {
+					cart.setPriceChanged(true);
+					item.setUnitPriceHuf(pricing.effectivePrice(variant), now());
 					result.add(new CartData.Notice(N_PRICE_CHANGED, variant.getId(), variant.getProduct().getName(),
-							new CartData.NoticeParams(null, Math.toIntExact(oldPrice), Math.toIntExact(variant.getPriceHuf()))));
+							new CartData.NoticeParams(null, Math.toIntExact(oldPrice), Math.toIntExact(pricing.effectivePrice(variant)))));
 				}
 			}
 		}
@@ -276,7 +318,7 @@ public class CartService {
 				totalQty,
 				subtotal,
 				cart.getExpiresAt(),
-				result.notices());
+				result.notices(), cart.getBasketRevision());
 	}
 
 	private OffsetDateTime now() {

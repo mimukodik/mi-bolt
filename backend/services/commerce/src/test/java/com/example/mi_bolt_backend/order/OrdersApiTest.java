@@ -405,6 +405,9 @@ class OrdersApiTest {
 			// uq_shop_order_payment_intent constraint can refuse the insert. A delegating proxy
 			// rather than a spy, for the reasons OrderNumberRetryApiTest's Javadoc gives.
 			AtomicInteger existsCalls = new AtomicInteger();
+			// Legacy intents have no basket snapshot, so this case isolates the unique constraint
+			// rather than stopping first at the new immutable-basket binding guard.
+			jdbcTemplate.update("UPDATE payment_intent SET snapshot_json = null WHERE id = ?", intentId);
 			ReflectionTestUtils.setField(orderService, "orders", existsByPaymentIntentIdAlwaysFalse(existsCalls));
 
 			mockMvc.perform(cardOrder(cookie, secondEtag, intentId))
