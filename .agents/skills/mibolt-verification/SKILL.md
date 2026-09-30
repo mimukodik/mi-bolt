@@ -305,6 +305,12 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
    serves all three apps. When the result comes from the backend, use
    `mise run dev` instead: the three apps on their `local-backend`
    configuration, against the backend on 8080 and PostgreSQL in its container.
+   That container needs a Docker daemon. Where `docker info` reaches none, as
+   in a Pixi sandbox, which has the Docker CLI but no daemon and no PostgreSQL
+   server, `mise run dev` cannot start: exercise the change on the mock
+   there, and make the backend-backed pass on the pull request's preview
+   (`deploy/candidate/README.md:108-118`; the `bolt-preview` label enables
+   it).
 2. Open the affected screen and drive the changed flow as a user would:
    click, type, submit. Looking at the page is not a pass.
 3. Capture the page structure and a screenshot, before and after the
@@ -325,6 +331,28 @@ screenshot of step 3 and the console reading of step 4 all stand behind it.
 
 **A change is exempt only when it cannot reach a browser at all**, such as a
 build script, a CI setting or a document with no rendered output.
+
+### One memory limit
+
+Where everything a session starts runs under one memory limit, as in a Pixi
+sandbox (`cat /sys/fs/cgroup/memory.max`), reaching it kills every process
+there, the agent included, and the turn in flight is lost. Four such kills
+at 8 GiB on 2026-09-30 (BER-739) had no leak behind them, only too much
+running at once. From the kernel's reports of them: one `ng serve` held 0.4
+to 1.3 GiB, `ng lint` 1.2 to 1.5 GiB, one `ng test` run 0.3 to 0.6 GiB itself
+and 1.2 to 1.5 GiB with the three worker processes beside it, a JVM up to
+0.9 GiB with three to six of them alive, and one browser about 0.5 GiB
+across its processes, with two open in three of the four. Under such a
+limit:
+
+- Serve only the apps the pass needs, and never start a second instance of a
+  server or a browser that is already up.
+- Stop every server and close the browser before a gate or
+  `mise run verify`.
+- Run the gates one after another, and `mise run verify` as
+  `MISE_JOBS=1 mise run verify`: mise otherwise runs up to eight of its
+  eleven checks at once (`references/commands.md`, "What a check writes or
+  starts").
 
 ### Tests and coverage
 

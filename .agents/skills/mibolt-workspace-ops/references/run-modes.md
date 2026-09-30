@@ -194,7 +194,7 @@ log files. `tools/dev-server/dev-server.test.ts` covers it.
 | mise refuses to parse a config file | the tree is not trusted yet | `mise trust --all`, `README.md:31-39` |
 | Compose stops on `POSTGRES_PASSWORD` | Compose ran without `deploy/compose.sh`, so no `.env` exists | `deploy/compose.yaml:15`, `deploy/compose.sh:19-22` |
 | `compose.sh: project … must set MIBOLT_POSTGRES_VOLUME` | a second project on the default volume | `deploy/compose.sh:10-17` |
-| `compose.sh: neither 'docker compose' nor 'docker-compose' is installed`, exit 127 | no Compose | `deploy/compose.sh:24-30` |
+| `compose.sh: neither 'docker compose' nor 'docker-compose' is installed`, exit 127 | no Compose. A Pixi sandbox has neither Compose nor a Docker daemon, so no container mode runs there (`mibolt-verification`, "Browser pass") | `deploy/compose.sh:24-30` |
 | `stack.sh: this is the main checkout…` or `HEAD is detached`, exit 2 | wrong checkout for `deploy/stack.sh` | `deploy/stack.sh:72-87` |
 | `stack.sh: no free slot among 20` | every slot claimed | `deploy/stack.sh slots`, then `deploy/stack.sh prune --yes` for worktrees that no longer exist |
 | `up --wait` fails on `commerce` | readiness answers only after the catalogue loader and the admin bootstrap have run (`backend/services/commerce/src/main/resources/application.properties:67-68`); the health check allows a 20-second start period and 30 retries 5 seconds apart | `deploy/compose.yaml:51-56`; read `deploy/compose.sh logs commerce` |

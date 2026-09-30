@@ -58,7 +58,7 @@ are described under "What a check writes or starts" below.
   generated clients and the Gradle output above, and binds port 4299; it runs
   neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:67-74`). It can
   also leave a tracked file outside the change modified, so read
-  `git status --short` after it. mise runs up to four tasks at once, and
+  `git status --short` after it. mise runs up to eight tasks at once, and
   `depends` sets no order among the tasks it lists
   (https://mise.jdx.dev/tasks/running-tasks.html), so its checks can overlap
   one another in the one checkout.
