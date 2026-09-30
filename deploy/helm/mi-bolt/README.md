@@ -1,5 +1,11 @@
 # MiBolt app chart
 
+The chart enables `MIBOLT_SMOKE_ENABLED` for repeatable checkout smoke. The
+backend bootstraps a dedicated synthetic canary even on a populated database;
+it is omitted from public catalogue lists and its stock is replenished inside
+the order transaction. Normal catalogue stock and existing orders are preserved.
+Old commerce images ignore this additive environment variable.
+
 This chart installs the web and commerce apps into a namespace prepared by the
 preview platform. It creates two Deployments, two ClusterIP Services, a public candidate receipt
 ConfigMap, and one Traefik Ingress. The Ingress sends every path, including `/api/v1`, to web;

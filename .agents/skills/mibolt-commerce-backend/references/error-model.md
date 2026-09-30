@@ -62,7 +62,7 @@ constructor that carries what the client needs:
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:102-106`).
 - The five-argument form when the refusal points at a request field or wraps
   a cause, as the terms check does
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:126-135`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:130-139`).
 
 The detail text is English; that rule belongs to
 `mibolt-backend-code-standards`.
@@ -137,7 +137,7 @@ In this service that becomes, with the advice's lines in
 - A wrong query or path parameter is always 400, never 422 (`:185-212`).
 - A business refusal the service decides is 422 with field errors, even for a
   well-formed boolean: `acceptedTerms: false` is 422 at `/acceptedTerms`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:126-129`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:130-133`).
 - The admin write API applies the same split in three stages, bean
   validation, then `AdminProductValidator`, then database rules
   (`backend/docs/decisions/0020-admin-catalogue-write-api.md:17-23`).

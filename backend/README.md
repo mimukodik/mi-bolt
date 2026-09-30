@@ -29,6 +29,7 @@ Environment variables the service reads, with their defaults:
 | `MIBOLT_PAYMENT_REDIRECT_URL_PREFIX` | `http://localhost:4210/demo-fizetes/`                                                                       |
 | `MIBOLT_PAYMENT_RETURN_URL_PREFIX`   | `http://localhost:4200/penztar?paymentIntentId=`                                                            |
 | `MIBOLT_CATALOG_PATH`                | `../../../data/catalog` (relative to `services/commerce/`; the Docker image sets it to `/app/data/catalog`) |
+| `MIBOLT_SMOKE_ENABLED`               | `false` (Compose and the demo/preview chart enable it explicitly)                                         |
 
 The service answers on port 8080, under the context path `/api/v1`.
 Every shop call except `GET` and `POST /demo/session`, product images

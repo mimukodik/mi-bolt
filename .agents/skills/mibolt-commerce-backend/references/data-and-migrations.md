@@ -24,9 +24,9 @@ how to reset it belong to `mibolt-workspace-ops`; the catalogue data under
   and returns the row count
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/ProductVariantRepository.java:19-21`);
   a 0 becomes `OUT_OF_STOCK` in
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:186-193`.
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:190-197`.
   Its `clearAutomatically` detaches every entity loaded before it, which is
-  why `place` loads the session, cart and draft only afterwards (`:182-185`).
+  why `place` loads the session, cart and draft only afterwards (`:186-189`).
 - `spring.jpa.open-in-view=false`
   (`backend/services/commerce/src/main/resources/application.properties:11`):
   load what a response needs inside the service's transaction, the way
@@ -92,10 +92,10 @@ passes all of them:
 - CI's `postgres-smoke` job, which boots the jar on an empty PostgreSQL
   (`.github/workflows/backend.yml:187`);
 - a pull request preview, which gets a fresh, empty database per head
-  (`deploy/candidate/README.md:137-139`).
+  (`deploy/candidate/README.md:143-145`).
 
 The stable deployment keeps its database and applies new migrations to it
-(`deploy/candidate/README.md:80-84`), so an edited changeset first fails there,
+(`deploy/candidate/README.md:80-90`), so an edited changeset first fails there,
 after the merge. `check-liquibase-changelog.py --base` is the check that
 catches it before then.
 
@@ -193,28 +193,29 @@ edit, so leave the file as it is and ask the user what becomes of it.
   against it, so an entity change without its changeset stops the start
   (`backend/docs/decisions/0002-liquibase-changelog-and-portable-constraints.md:45-47`,
   `backend/docs/04-adatbazis.md:82-85`). The tests run the same changelog on
-  H2, so the build catches that mismatch too (`backend/README.md:105-107`).
+  H2, so the build catches that mismatch too (`backend/README.md:106-108`).
 - H2 in PostgreSQL mode is not PostgreSQL
-  (`backend/docs/02-backend.md:315-324`). The case on record: a `clob` column
+  (`backend/docs/02-backend.md:318-327`). The case on record: a `clob` column
   matched `@Lob` on H2 and refused to start on PostgreSQL while every test
   stayed green; `0006-idempotency-response-body.yaml` repaired it
-  (`backend/docs/02-backend.md:305-313`). Write constraints portably so H2
+  (`backend/docs/02-backend.md:308-316`). Write constraints portably so H2
   enforces them too; where that is impossible, the test mocks the repository,
   the constraint is checked by hand on PostgreSQL, and the requirement doc
-  marks it (`backend/docs/02-backend.md:320-324`).
+  marks it (`backend/docs/02-backend.md:323-327`).
 
 ## Catalogue seeding and the startup runners
 
-Three `ApplicationRunner`s run in `@Order` order after Liquibase, and Spring
+Four `ApplicationRunner`s run in `@Order` order after Liquibase, and Spring
 Boot reports readiness only after every runner has returned
 (https://docs.spring.io/spring-boot/reference/features/spring-application.html;
-`backend/services/commerce/src/main/resources/application.properties:67-69`):
+`backend/services/commerce/src/main/resources/application.properties:67-70`):
 
 | Order | Runner | What it does |
 |---|---|---|
 | 0 | `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:36-37` | Loads `catalog.json` and `images/` from `mibolt.catalog.path` when the product table is empty (`:74-82`). A `CatalogValidator` violation stops the start; the rows are then persisted in one `TransactionTemplate` (`:101-110`), so nothing is half-written, and a unique-key collision there is read as another instance having loaded first and skipped. |
 | 1 | `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/user/AdminBootstrap.java:27-28` | Creates the first admin when `admin_user` is empty (`backend/docs/decisions/0016-admin-accounts-bootstrap-and-password-policy.md`). |
 | 2 | `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/demo/DemoAccessBootstrap.java:28-29` | Creates the demo user when `demo_user` is empty (`backend/docs/decisions/0022-demo-access-gate.md`). |
+| 3 | `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/SmokeCanaryBootstrap.java` | With `mibolt.smoke.enabled=true`, creates the hidden smoke fixture if absent, even with an already populated catalogue; preserves existing fixture rows and all normal stock (ADR 0023). |
 
 - `mibolt.catalog.path` defaults to the repository's `data/catalog` seen from
   `backend/services/commerce/`
@@ -223,11 +224,11 @@ Boot reports readiness only after every runner has returned
   at the three-product fixture `backend/services/commerce/src/test/resources/catalog`
   in tests (`backend/services/commerce/src/test/resources/application-test.properties:10`).
 - Images are stored in the database and served by `GET /media/{imageId}`
-  (`backend/README.md:65-69`), under an id derived from their content
-  (`backend/docs/02-backend.md:257-260`).
+  (`backend/README.md:66-70`), under an id derived from their content
+  (`backend/docs/02-backend.md:260-263`).
 - The loader runs once per empty database, so changed catalogue data shows only
   after the database is emptied and the service booted again
-  (`backend/README.md:81-88`).
+  (`backend/README.md:82-89`).
 - A new runner takes the next free `@Order`;
   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/ReadinessBeforeRunnersTest.java:78`
   checks that every production runner stays ordered before its readiness

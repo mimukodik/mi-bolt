@@ -66,7 +66,7 @@ own cookie of that name replaces it
   three-product fixture catalogue, and pinned payment prefixes, admin
   password and demo credentials.
 - The context, and with it one H2 database, is shared across the run
-  (`backend/README.md:98`), so a test creates its own session rather than
+  (`backend/README.md:99`), so a test creates its own session rather than
   assuming empty tables, as `CartApiTest`'s `newSession()` does. A test that
   needs a database of its own sets its own `spring.datasource.url`
   (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/ReadinessBeforeRunnersTest.java:39`).
@@ -129,7 +129,7 @@ consumed, so contract drift is caught independently of the generated code.
 
 ## What the requirement docs ask of the tests
 
-`backend/docs/02-backend.md:368-401`, in short:
+`backend/docs/02-backend.md:371-404`, in short:
 
 - Every numbered invariant has a test that names its number
   (`:370-371`), in a comment such as the one at

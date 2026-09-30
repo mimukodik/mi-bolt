@@ -62,7 +62,7 @@ validation, security and actuator starters, PostgreSQL at run time and H2 in
 tests, all from Maven Central (`:19-37`). Jackson is version 3, package `tools.jackson`
 (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:22-23`).
 One Gradle subproject, `services:commerce` (`backend/settings.gradle:3`). The
-API answers on port 8080 under `/api/v1` (`backend/README.md:33`).
+API answers on port 8080 under `/api/v1` (`backend/README.md:34`).
 
 **Packages**, under `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/`:
 
@@ -123,7 +123,7 @@ and [references/error-model.md](references/error-model.md).
   wrote, such as the expired cart `expireIfPast` deletes before answering
   `CART_EXPIRED` (`:192-197`). `OrderService` is plain `@Transactional`: any
   refusal inside `place` rolls back the whole order (rule 42;
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:30-38`).
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:31-39`).
   Spring rolls back on an unchecked exception unless a no-rollback rule
   matches it
   (https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html).
@@ -140,6 +140,11 @@ and [references/error-model.md](references/error-model.md).
 - **Stock is decremented atomically**, by a conditional update, never by
   read-then-write
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/ProductVariantRepository.java:19-21`).
+- **Hosted smoke is stock-neutral only for its reserved canary** (ADR 0023).
+  `mibolt.smoke.enabled` defaults to false; demo charts and Compose enable it.
+  Orders restore the exact canary variant's quantity within the same transaction,
+  checking its owning reserved product too. Normal catalogue stock still falls.
+  Bootstrap works in an already populated database and public listings hide it.
 - **Payment-intent expiry is lazy**: evaluated on every read and outcome
   call; there is no scheduler
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java:124-132`).
@@ -151,7 +156,7 @@ rejection (`:13-19`), the context path (`:23`), the admin session cookie
 (`:25-30`), the first-admin password (`:34`), session lifetime (`:37`), the
 demo gate (`:42-44`), checkout fees, free-shipping threshold, cash-on-delivery
 ceiling and terms version (`:46-54`), payment intents and idempotency
-retention (`:59-62`), and readiness probes (`:69`). `mibolt.catalog.path` has
+retention (`:59-62`), readiness probes (`:70`), and the demo smoke flag (`:73`). `mibolt.catalog.path` has
 no line there; its default is in the loader (see
 [references/data-and-migrations.md](references/data-and-migrations.md)).
 Name environment variables, never their values: several defaults are
@@ -335,16 +340,16 @@ Owned by this skill:
   `@Transactional` on order placement.
 - Follow the changeset pattern in section 4; the script warns on a departure.
 - **Record every decision** a later reader would ask "why this way?" about,
-  when it is made, not afterwards (`backend/docs/02-backend.md:405-429`):
-  - one numbered file under `backend/docs/decisions/`, the next being `0023`;
+  when it is made, not afterwards (`backend/docs/02-backend.md:408-432`):
+  - one numbered file under `backend/docs/decisions/`, the next being `0024`;
   - the five sections §8 names, in the English form the records use:
     Situation, Options, Decision, Consequences, Date and status, as in
     `backend/docs/decisions/0002-liquibase-changelog-and-portable-constraints.md`
     (several later records omit Options or Date and status);
   - a departure from a requirement document also corrects that document
-    (`backend/docs/02-backend.md:431-434`);
+    (`backend/docs/02-backend.md:434-437`);
   - a defect in the contract is not fixed from the implementation side on its
-    own initiative (`backend/docs/02-backend.md:436-438`): a contract change
+    own initiative (`backend/docs/02-backend.md:439-441`): a contract change
     reaches the frontends as well, so ask the user whether it changes, and the
     change itself goes to `mibolt-cross-package-changes`;
   - an earlier record is amended with a dated section, not rewritten, as in
@@ -355,7 +360,7 @@ Owned by `mibolt-backend-code-standards`, one line each:
 - No business rule and no database call in a controller
   (`backend/docs/02-backend.md:52-53`).
 - Error responses carry no user-facing Hungarian text
-  (`backend/docs/02-backend.md:447`); the Hungarian receipt notice and
+  (`backend/docs/02-backend.md:450`); the Hungarian receipt notice and
   checkout option labels are non-error responses the rule does not cover.
 - Read the time from an injected `Clock`, which a unit test fixes with
   `Clock.fixed` ([references/testing.md](references/testing.md));
@@ -365,7 +370,7 @@ Owned by `mibolt-backend-code-standards`, one line each:
   `NoFullyQualifiedNames`).
 - No `System.out` or `System.err` (PMD `SystemPrintln`).
 - No test starts, reaches or depends on the Docker database
-  (`backend/docs/02-backend.md:298-299`).
+  (`backend/docs/02-backend.md:301-302`).
 
 ## 6. What else a change touches
 
@@ -382,7 +387,7 @@ Owned by `mibolt-backend-code-standards`, one line each:
   `mibolt-workspace-ops`.
 - **Deployed databases.** The stable deployment keeps its database and
   applies new migrations to it, and a rollback must stay schema-compatible
-  (`deploy/candidate/README.md:80-88`); that is why forward-only binds.
+  (`deploy/candidate/README.md:80-94`); that is why forward-only binds.
 - **`smoke.sh`.** When a flow it walks changes, or the demo gate or the admin
   sign-in does, update
   `backend/services/commerce/scripts/smoke.sh` in the same change
@@ -466,7 +471,7 @@ Update this skill in the same change when any of these moves:
   blocks (`:19-37`), the generation block (`:39-139`) and the test tasks
   (`:141-162`, `:247-268`);
 - `backend/docs/02-backend.md` §4 or §8, or `backend/docs/04-adatbazis.md`;
-- a new record under `backend/docs/decisions/` (the next number, 0023, is
+- a new record under `backend/docs/decisions/` (the next number, 0024, is
   stated in section 5);
 - `backend/services/commerce/src/main/resources/application.properties`,
   `backend/services/commerce/src/test/resources/application-test.properties`

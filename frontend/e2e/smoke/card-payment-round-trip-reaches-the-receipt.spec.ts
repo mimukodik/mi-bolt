@@ -2,6 +2,7 @@
 // seed: e2e/seed.spec.ts
 
 import { test, expect } from '../fixtures/coverage';
+import { openSmokeCanary, expectSmokeCanaryReceipt } from '../fixtures/smoke-canary';
 
 // The playwright-test MCP server's runs do not apply the config's
 // `use.baseURL` (a relative `page.goto` fails there with
@@ -33,36 +34,8 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(page.getByTestId('cart-page')).toBeVisible();
     });
 
-    await test.step('Navigate to /telefonok. The phone listing page renders a header for the telefonok category and a grid of product cards, each marked with the test id product-card.', async () => {
-      await page.goto('/telefonok');
-      await expect(page.getByRole('heading', { level: 1, name: 'Mobiltelefonok' })).toBeVisible();
-      // An in-stock product card carries no out-of-stock label, so picking
-      // the first card whose product-card-stock is not "Elfogyott" selects
-      // a buyable phone without hard-coding any slug or product name.
-      const cards = page.getByTestId('product-card');
-      // The catalog renders a "Katalógus betöltése" status while the
-      // grid is empty; the cards do not exist in the DOM until the
-      // first page resolves. Wait for the first card to be visible
-      // before continuing.
-      await expect(cards.first()).toBeVisible();
-      const inStockCard = cards
-        .filter({
-          hasNot: page.locator('[data-testid="product-card-stock"]', { hasText: 'Elfogyott' }),
-        })
-        .first();
-      await expect(inStockCard).toBeVisible();
-    });
-
-    await test.step('Pick the first product-card whose product-card-stock label is not Elfogyott (out of stock). Open that card by clicking its product-card-cta.', async () => {
-      const inStockCard = page
-        .getByTestId('product-card')
-        .filter({
-          hasNot: page.locator('[data-testid="product-card-stock"]', { hasText: 'Elfogyott' }),
-        })
-        .first();
-      await inStockCard.getByTestId('product-card-cta').click();
-      await expect(page.getByTestId('product-page')).toBeVisible();
-      await expect(page.getByTestId('add-to-cart-button')).toBeVisible();
+    await test.step('Verify the catalogue, then open only the hidden smoke canary by its exact product and variant identity.', async () => {
+      await openSmokeCanary(page);
     });
 
     await test.step('If the product page asks for a variant, pick the first available variant before adding to cart.', async () => {
@@ -169,6 +142,7 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(orderNumber).toBeVisible();
       await expect(orderNumber).not.toBeEmpty();
       await expect(page.getByTestId('receipt-row-payment')).toContainText('Bankkártya');
+      await expectSmokeCanaryReceipt(page);
     });
   });
 });
