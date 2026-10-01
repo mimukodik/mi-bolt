@@ -305,10 +305,12 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
    serves all three apps. When the result comes from the backend, use
    `mise run dev` instead: the three apps on their `local-backend`
    configuration, against the backend on 8080 and PostgreSQL in its container.
-   That container needs a Docker daemon. Where `docker info` reaches none, as
-   in a Pixi sandbox, which has the Docker CLI but no daemon and no PostgreSQL
-   server, `mise run dev` cannot start: exercise the change on the mock
-   there, and make the backend-backed pass on the pull request's preview
+   That container needs Docker, so run `docker info` before choosing
+   `mise run dev`. `docker info` fails both where Docker is not installed and
+   where its CLI is installed but no daemon answers, and in either case
+   `mise run dev` cannot start: serve the app with one of the MSW mock
+   commands above instead, so the browser pass runs on the mock alone, and
+   make the backend-backed pass on the pull request's preview
    (`deploy/candidate/README.md:108-118`; the `bolt-preview` label enables
    it).
 2. Open the affected screen and drive the changed flow as a user would:
