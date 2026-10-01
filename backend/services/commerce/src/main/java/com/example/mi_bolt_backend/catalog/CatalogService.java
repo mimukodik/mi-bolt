@@ -75,7 +75,9 @@ public class CatalogService {
 	 * collection is initialised on the same managed entities afterwards.
 	 */
 	private List<Product> loadCatalogue() {
-		List<Product> products = productRepository.findAllWithColors();
+		List<Product> products = new ArrayList<>(productRepository.findAllWithColors().stream()
+				.filter(product -> !SmokeCanaryBootstrap.PRODUCT_SLUG.equals(product.getSlug()))
+				.toList());
 		productRepository.fetchHighlights(products);
 		productRepository.fetchVariants(products);
 		productRepository.fetchSpecGroups(products);
@@ -181,6 +183,10 @@ public class CatalogService {
 	}
 
 	public List<CatalogData.CatalogItemData> listRelatedProducts(String slug) {
+		if (SmokeCanaryBootstrap.PRODUCT_SLUG.equals(slug)) {
+			getProduct(slug);
+			return List.of();
+		}
 		List<Product> products = loadCatalogue();
 		Product subject = null;
 		for (Product p : products) {

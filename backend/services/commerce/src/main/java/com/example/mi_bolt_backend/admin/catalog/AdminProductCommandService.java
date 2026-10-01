@@ -30,6 +30,7 @@ import com.example.mi_bolt_backend.catalog.ProductHighlight;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
 import com.example.mi_bolt_backend.catalog.SpecGroup;
 import com.example.mi_bolt_backend.catalog.SpecRow;
+import com.example.mi_bolt_backend.catalog.SmokeCanaryBootstrap;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
 
@@ -43,6 +44,8 @@ public class AdminProductCommandService {
 
 	/** At most four active products are featured (contract: AdminProductInput.featured). */
 	static final int FEATURED_LIMIT = 4;
+	private static final String CANARY_REFUSAL =
+			"The smoke canary is reserved and cannot be changed through the admin API";
 
 	private final AdminProductRepository adminProductRepository;
 	private final CatalogImageRepository catalogImageRepository;
@@ -67,6 +70,10 @@ public class AdminProductCommandService {
 	 */
 	@Transactional
 	public long create(AdminProductInput input) {
+		if (SmokeCanaryBootstrap.PRODUCT_SLUG.equals(input.getSlug())) {
+			throw new DomainException(ErrorCode.VALIDATION_FAILED, CANARY_REFUSAL,
+					null, List.of(new FieldError("/slug", "SLUG_TAKEN")), null);
+		}
 		List<FieldError> invalid = adminProductValidator.validate(input);
 		if (!invalid.isEmpty()) {
 			throw bodyViolations(invalid);
@@ -299,10 +306,14 @@ public class AdminProductCommandService {
 	}
 
 	private Product find(long productId) {
-		return adminProductRepository.findById(productId)
+		Product product = adminProductRepository.findById(productId)
 				.orElseThrow(() -> new DomainException(ErrorCode.NOT_FOUND,
 						"Product not found",
 						Map.of("productId", productId)));
+		if (SmokeCanaryBootstrap.PRODUCT_SLUG.equals(product.getSlug())) {
+			throw new DomainException(ErrorCode.NOT_FOUND, CANARY_REFUSAL);
+		}
+		return product;
 	}
 
 	/**

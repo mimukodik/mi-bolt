@@ -18,6 +18,7 @@ import com.example.mi_bolt_backend.api.model.AdminProductStatusFilter;
 import com.example.mi_bolt_backend.api.model.SortDirection;
 import com.example.mi_bolt_backend.catalog.Product;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
+import com.example.mi_bolt_backend.catalog.SmokeCanaryBootstrap;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
 
@@ -74,6 +75,7 @@ public class AdminProductQueryService {
 
 	public AdminProduct detail(long productId) {
 		Product p = adminProductRepository.findById(productId)
+				.filter(product -> !SmokeCanaryBootstrap.PRODUCT_SLUG.equals(product.getSlug()))
 				.orElseThrow(() -> new DomainException(ErrorCode.NOT_FOUND,
 						"Product not found",
 						Map.of("productId", productId)));

@@ -62,4 +62,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 	List<Product> fetchSpecGroups(@Param("products") List<Product> products);
 
 	Optional<Product> findBySlugAndArchivedAtIsNull(String slug);
+
+	boolean existsBySlug(String slug);
 }

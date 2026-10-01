@@ -45,6 +45,9 @@ spec:
             - secretRef:
                 name: {{ .Values.commerce.existingSecret | quote }}
           env:
+            # This chart installs demo/preview environments verified by checkout smoke.
+            - name: MIBOLT_SMOKE_ENABLED
+              value: "true"
             - name: MIBOLT_PAYMENT_REDIRECT_URL_PREFIX
               value: {{ printf "%s/demo-fizetes/" .Values.publicOrigin | quote }}
             - name: MIBOLT_PAYMENT_RETURN_URL_PREFIX

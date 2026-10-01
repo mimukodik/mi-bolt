@@ -19,4 +19,9 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("update ProductVariant v set v.stock = v.stock - :quantity where v.id = :id and v.stock >= :quantity")
 	int decrementStock(@Param("id") String id, @Param("quantity") int quantity);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("update ProductVariant v set v.stock = v.stock + :quantity where v.id = :id"
+			+ " and v.product.slug = 'mi-bolt-smoke-canary'")
+	int incrementStock(@Param("id") String id, @Param("quantity") int quantity);
 }

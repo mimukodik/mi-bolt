@@ -89,6 +89,7 @@ require(commerce_container["envFrom"] == [{"secretRef": {"name": "mi-bolt-runtim
         "commerce must consume existing runtime Secret")
 commerce_env = {entry["name"]: entry["value"] for entry in commerce_container["env"]}
 require(commerce_env == {
+    "MIBOLT_SMOKE_ENABLED": "true",
     "MIBOLT_PAYMENT_REDIRECT_URL_PREFIX": "https://pr-123.example.test/demo-fizetes/",
     "MIBOLT_PAYMENT_RETURN_URL_PREFIX": "https://pr-123.example.test/penztar?paymentIntentId=",
 }, "payment URLs must use public origin")

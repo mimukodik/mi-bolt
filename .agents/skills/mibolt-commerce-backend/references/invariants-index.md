@@ -25,12 +25,12 @@ disagree, the spec file wins (`contracts/commerce/kommunikacio.md:11-19`).
 | 1 | Technológiai keret | `backend/docs/02-backend.md:8-22` | Spring Boot 4.1.1, Gradle 9.7.1 Groovy DSL, Java 21, `spring-boot-starter-webmvc`, JPA, PostgreSQL 16, root package. |
 | 2 | Kódgenerálás | `backend/docs/02-backend.md:26-44` | Interfaces and DTOs come from the contract; controllers implement them and declare no route, method or status of their own; single-value `enum` discriminators stay, never rewritten to `const`. |
 | 3 | Rétegzés | `backend/docs/02-backend.md:48-62` | Controller, service, repository split. The rule and its review-only enforcement belong to `mibolt-backend-code-standards`. |
-| 4 | Domain-invariánsok | `backend/docs/02-backend.md:66-184` | Rules 1-47, indexed below. |
-| 5 | Adatmodell elvárások | `backend/docs/02-backend.md:188-214` | What the data model must hold: shared version counter for cart and draft, idempotency record shape, atomic order placement. |
-| 6 | Kezdőadat és képek | `backend/docs/02-backend.md:218-286` | 6.1: catalogue collection is a separate task. 6.2: the backend stores and serves images, deliberately for now; content-derived ids, `GET /media/{imageId}`, immutable caching. |
-| 7 | Tesztelési elvárások | `backend/docs/02-backend.md:290-401` | 7.0 no Docker database in tests; 7.1 smoke scenarios F1-F7; 7.2 every numbered invariant tested and named by number, plus concurrency, idempotency and session isolation cases; 7.3 API tests per operation, error code and header; 7.4 machine contract validation. |
-| 8 | A fejlesztés alatti döntések dokumentálása | `backend/docs/02-backend.md:405-438` | The decision-record workflow; SKILL.md section 5 carries it. |
-| 9 | Amit nem szabad | `backend/docs/02-backend.md:442-454` | The forbidden list, which belongs to `mibolt-backend-code-standards`. This skill describes two things its lines lead to: the admin exception to the price-and-stock line (`:448`, decision 0020), and the §8 decision-record workflow behind the ban on an undocumented decision (`:454`). |
+| 4 | Domain-invariánsok | `backend/docs/02-backend.md:66-187` | Rules 1-47, indexed below. |
+| 5 | Adatmodell elvárások | `backend/docs/02-backend.md:191-217` | What the data model must hold: shared version counter for cart and draft, idempotency record shape, atomic order placement. |
+| 6 | Kezdőadat és képek | `backend/docs/02-backend.md:221-289` | 6.1: catalogue collection is a separate task. 6.2: the backend stores and serves images, deliberately for now; content-derived ids, `GET /media/{imageId}`, immutable caching. |
+| 7 | Tesztelési elvárások | `backend/docs/02-backend.md:293-404` | 7.0 no Docker database in tests; 7.1 smoke scenarios F1-F7; 7.2 every numbered invariant tested and named by number, plus concurrency, idempotency and session isolation cases; 7.3 API tests per operation, error code and header; 7.4 machine contract validation. |
+| 8 | A fejlesztés alatti döntések dokumentálása | `backend/docs/02-backend.md:408-441` | The decision-record workflow; SKILL.md section 5 carries it. |
+| 9 | Amit nem szabad | `backend/docs/02-backend.md:445-457` | The forbidden list, which belongs to `mibolt-backend-code-standards`. This skill describes two things its lines lead to: the admin exception to the price-and-stock line (`:451`, decision 0020), and the §8 decision-record workflow behind the ban on an undocumented decision (`:457`). |
 
 ## Section map of 04-adatbazis.md
 
@@ -138,7 +138,7 @@ unless another file is named:
 23. The draft is durable: it lives with the cart, survives a refresh or a tab
     switch, and is deleted only when the order is placed.
     `loadOrCreateDraft`, `:304-307`; the deletion is
-    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:233`.
+    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:243`.
 24. `PATCH /checkout` merges: only the sections sent are overwritten.
     `applyUpdate`, `:188-218`.
 25. Partial state is allowed until the order; `complete` is true when every
@@ -146,7 +146,7 @@ unless another file is named:
     `:287-290`.
 26. Billing data is required for every order, pickup included. `buildView`,
     `:287-290`, and the section check at order time,
-    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:270-313`.
+    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:280-323`.
 27. A delivery address exists only for home delivery; the contract's `oneOf`
     enforces it and the service checks it too. `validateUpdate`, `:145-150`.
 28. The summary is recomputed on every read; there is no quote step and no
@@ -194,7 +194,7 @@ Source: `backend/docs/02-backend.md:132-149`. Enforced in
 
 ## Order, rules 37-46
 
-Source: `backend/docs/02-backend.md:151-178`. Enforced in `OrderService`
+Source: `backend/docs/02-backend.md:151-181`. Enforced in `OrderService`
 unless another file is named:
 `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java`.
 
@@ -202,14 +202,14 @@ unless another file is named:
     expiry and `If-Match` included.
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:89-96`
     replays before `place` runs; the version check follows inside `place`, at
-    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:122-123`,
-    after the rule 47 check (`:101-120`). The same order holds for
+    `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:126-127`,
+    after the rule 47 check (`:105-124`). The same order holds for
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentsController.java:54-61`.
 38. A card order needs `paymentIntentId`, and its absence is a schema error,
     400. Each intent status has its answer: `succeeded` proceeds,
     `requires_action` is 422 `PAYMENT_REQUIRED`, `pending` 422
     `PAYMENT_PENDING`, `declined` 422 `PAYMENT_DECLINED`; an intent already
-    backing an order is 422 `PAYMENT_REQUIRED`. `place`, `:152-180`; the race
+    backing an order is 422 `PAYMENT_REQUIRED`. `place`, `:156-184`; the race
     backstop is `uq_shop_order_payment_intent`,
     `backend/services/commerce/src/main/resources/db/changelog/changes/0011-order-payment-intent-unique.yaml:13-16`,
     answered at
@@ -217,30 +217,31 @@ unless another file is named:
 39. A cash-on-delivery order carries no `paymentIntentId`.
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:100-109`.
 40. `acceptedTerms: false` is a 422 with a `fieldErrors` entry at
-    `/acceptedTerms`, not a schema error. `place`, `:126-129`.
+    `/acceptedTerms`, not a schema error. `place`, `:130-133`.
 41. The server checks `termsVersion` against the current version. `place`,
-    `:130-135`; the value is
+    `:134-139`; the value is
     `backend/services/commerce/src/main/resources/application.properties:54`.
 42. Placing an order is one transaction: stock decrement, receipt,
     idempotency record, cart close and draft deletion succeed or fail
-    together. `@Transactional` on the class, `:36-38`; the decrement,
-    `:182-193`; the controller's `TransactionTemplate` with three attempts on
+    together. `@Transactional` on the class, `:37-39`; the decrement and the
+    enabled canary-only compensation (ADR 0023), `:186-203`; the controller's
+    `TransactionTemplate` with three attempts on
     an order-number collision,
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:69-87`.
 43. After the order the session gets a fresh, empty cart at once. `place`,
-    `:237-240`.
+    `:247-250`.
 44. Price, delivery method and contact data come from the draft, never from
-    the order request. `place`, `:145-150` and `:204-223`.
+    the order request. `place`, `:149-154` and `:214-233`.
 45. `GET /orders/{orderId}` returns the order only to the session that created
-    it; anyone else gets 404, never 403. `get`, `:246-259`.
+    it; anyone else gets 404, never 403. `get`, `:256-269`.
 46. The order number is `DEMO-` plus six digits, deliberately visibly fake.
-    `ORDER_NUMBER_PREFIX` at `:43`, `uniqueOrderNumber` at `:261-268`, and
+    `ORDER_NUMBER_PREFIX` at `:44`, `uniqueOrderNumber` at `:271-278`, and
     `uq_shop_order_number`,
     `backend/services/commerce/src/main/resources/db/changelog/changes/0005-orders.yaml:210-213`.
 
 ## Price change, rule 47
 
-Source: `backend/docs/02-backend.md:180-184`. When a catalogue price changes,
+Source: `backend/docs/02-backend.md:183-187`. When a catalogue price changes,
 the server updates the cart prices atomically, raises the version, and answers
 a payment or order attempt with 409 `PRICE_CHANGED`; accepting the new amount
 silently is forbidden. The notice comes from
@@ -248,7 +249,7 @@ silently is forbidden. The notice comes from
 and the version rises in `finalize`, `:239-240`. The refusals are
 `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java:65-71`
 and
-`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:101-120`.
+`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:105-124`.
 
 ## Schema constraints and where each lives
 

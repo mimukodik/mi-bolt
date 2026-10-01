@@ -18,6 +18,7 @@ import com.example.mi_bolt_backend.cart.CartData;
 import com.example.mi_bolt_backend.cart.CartRepository;
 import com.example.mi_bolt_backend.cart.CartService;
 import com.example.mi_bolt_backend.catalog.ProductVariantRepository;
+import com.example.mi_bolt_backend.catalog.SmokeCanaryBootstrap;
 import com.example.mi_bolt_backend.checkout.CheckoutData;
 import com.example.mi_bolt_backend.checkout.CheckoutDraftRepository;
 import com.example.mi_bolt_backend.checkout.CheckoutService;
@@ -66,6 +67,7 @@ public class OrderService {
 	private final SessionService sessionService;
 	private final Clock clock;
 	private final String termsVersion;
+	private final boolean smokeEnabled;
 	// Order numbers are demo identifiers, not security tokens; java.util.Random is
 	// thread-safe, unlike a ThreadLocalRandom instance held across threads.
 	private final Random random = new Random();
@@ -80,7 +82,8 @@ public class OrderService {
 			ShopSessionRepository sessions,
 			SessionService sessionService,
 			Clock clock,
-			@Value("${mibolt.checkout.terms-version}") String termsVersion) {
+			@Value("${mibolt.checkout.terms-version}") String termsVersion,
+			@Value("${mibolt.smoke.enabled:false}") boolean smokeEnabled) {
 		this.orders = orders;
 		this.cartService = cartService;
 		this.carts = carts;
@@ -92,6 +95,7 @@ public class OrderService {
 		this.sessionService = sessionService;
 		this.clock = clock;
 		this.termsVersion = termsVersion;
+		this.smokeEnabled = smokeEnabled;
 	}
 
 	/** {@code paymentIntentId} is null for cash on delivery. */
@@ -189,6 +193,12 @@ public class OrderService {
 				throw new DomainException(ErrorCode.OUT_OF_STOCK,
 						"Stock ran out while the shopper was in checkout",
 						Map.of("variantId", line.variantId()));
+			}
+			// ADR 0023: balance only the synthetic fixture's decrement in this same transaction.
+			if (smokeEnabled && SmokeCanaryBootstrap.VARIANT_ID.equals(line.variantId())) {
+				if (variants.incrementStock(line.variantId(), line.quantity()) != 1) {
+					throw new IllegalStateException("Smoke canary stock compensation failed");
+				}
 			}
 		}
 

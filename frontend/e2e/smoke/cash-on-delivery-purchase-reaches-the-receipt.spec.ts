@@ -2,6 +2,7 @@
 // seed: e2e/seed.spec.ts
 
 import { test, expect } from '../fixtures/coverage';
+import { openSmokeCanary, expectSmokeCanaryReceipt } from '../fixtures/smoke-canary';
 
 // The playwright-test MCP server's runs do not apply the config's
 // `use.baseURL` (a relative `page.goto` fails there with
@@ -33,54 +34,8 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(page.getByTestId('cart-page')).toBeVisible();
     });
 
-    await test.step('Navigate to /telefonok. The phone listing page renders a header for the telefonok category and a grid of product cards, each marked with the test id product-card.', async () => {
-      await page.goto('/telefonok');
-      await expect(page.getByRole('heading', { level: 1, name: 'Mobiltelefonok' })).toBeVisible();
-    });
-
-    await test.step('Pick the first product-card that is in stock (no Elfogyott label) and whose card price is at most 300 000 Ft, the cash-on-delivery cart ceiling (mibolt.checkout.cash-on-delivery-max-cart-huf=300000). Read the price as digits from <app-price-block data-testid="price-amount"> inside the card\'s .price-row and compare as a number. Open that card by clicking its product-card-cta.', async () => {
-      // The backend's `codAvailable = !empty && subtotal <= codMaxCart`
-      // rule rejects cash on delivery once the cart subtotal exceeds the
-      // ceiling (the `codAvailable` rule in `CheckoutService`). The card's
-      // "from" price is the cheapest variant's price (the catalog's from-price),
-      // so filtering on the card price is a sufficient pre-condition to
-      // reach a state where Utánvét stays enabled after adding the
-      // selected variant to the cart. The product page may open on a
-      // higher-priced variant, so the delivery step still has to assert
-      // Utánvét is enabled before clicking it.
-      const maxCodCart = 300000;
-      const cards = page.getByTestId('product-card');
-      // The catalog renders a "Katalógus betöltése" status while the
-      // grid is empty; the cards do not exist in the DOM until the
-      // first page resolves. Wait for the first card to be visible so
-      // the loop below reads real prices instead of a zero count.
-      await expect(cards.first()).toBeVisible();
-      const cardCount = await cards.count();
-      let pickedIndex = -1;
-      let pickedName = '';
-      for (let i = 0; i < cardCount; i++) {
-        const card = cards.nth(i);
-        // An in-stock card has no product-card-stock element; an
-        // out-of-stock card carries the "Elfogyott" label there.
-        if ((await card.getByTestId('product-card-stock').count()) > 0) continue;
-        const priceText =
-          (await card.locator('app-price-block').getByTestId('price-amount').textContent()) ?? '';
-        // The price-block formats whole HUF with U+00A0 separators
-        // (PriceBlock.formatHuf); stripping every non-digit yields the
-        // integer value, e.g. "149990" -> 149990.
-        const priceNumber = Number(priceText.replace(/\D/g, ''));
-        if (Number.isFinite(priceNumber) && priceNumber <= maxCodCart) {
-          pickedIndex = i;
-          pickedName = ((await card.locator('.name-link').textContent()) ?? '').trim();
-          break;
-        }
-      }
-      expect(pickedIndex).toBeGreaterThanOrEqual(0);
-      expect(pickedName.length).toBeGreaterThan(0);
-      const pickedCard = cards.nth(pickedIndex);
-      await pickedCard.getByTestId('product-card-cta').click();
-      await expect(page.getByTestId('product-page')).toBeVisible();
-      await expect(page.getByTestId('add-to-cart-button')).toBeVisible();
+    await test.step('Verify the catalogue, then open only the hidden smoke canary by its exact product and variant identity.', async () => {
+      await openSmokeCanary(page);
     });
 
     await test.step('If the product page asks for a variant (e.g. storage capacity, colour), pick the first available variant before adding to cart. Skip this step when the product page shows no variant selector.', async () => {
@@ -184,6 +139,7 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(orderNumber).toBeVisible();
       await expect(orderNumber).not.toBeEmpty();
       await expect(page.getByTestId('receipt-row-payment')).toContainText('Utánvét');
+      await expectSmokeCanaryReceipt(page);
     });
   });
 });

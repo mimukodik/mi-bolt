@@ -169,6 +169,9 @@ Ez a dokumentum lényege. Minden pont **kötelező viselkedés**.
 41. A `termsVersion` értékét a szerver **ellenőrzi** az aktuálisan érvényes verzió ellen.
 42. A rendelés **egyetlen tranzakcióban**: készlet levonása, nyugta mentése, idempotencia-eredmény
     rögzítése, kosár lezárása, piszkozat törlése. Ezek együtt sikerülnek vagy együtt buknak.
+    A demó smoke-kivétel: bekapcsolt `mibolt.smoke.enabled` mellett kizárólag a
+    `mi-bolt-smoke-canary--fekete--128` szintetikus variáns levonását ugyanebben a
+    tranzakcióban visszaadjuk; normál termék készlete továbbra is csökken (ADR 0023).
 43. A rendelés után a munkamenet **azonnal friss, üres kosarat kap**.
 44. Ár, szállítási mód és kontaktadat **soha nem a rendelési kérésből** származik, hanem a
     piszkozatból.

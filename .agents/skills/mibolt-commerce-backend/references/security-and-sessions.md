@@ -92,7 +92,7 @@ row wins over the variables (`backend/docs/decisions/0022-demo-access-gate.md:21
 Two independent version schemes:
 
 - **Shop.** One counter on the session, `state_version`, shared by the cart
-  and the checkout draft (`backend/docs/02-backend.md:200-201`). Every shop
+  and the checkout draft (`backend/docs/02-backend.md:203-204`). Every shop
   write hands `If-Match` to `CartService.expectVersion`: the cart controller
   before each service call
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java:40-67`),
@@ -148,7 +148,7 @@ Two independent version schemes:
 ## Price and stock from a request body
 
 A shop request never sets a price, a stock level or an amount
-(`backend/docs/02-backend.md:448`): an order takes its prices, delivery method
+(`backend/docs/02-backend.md:451`): an order takes its prices, delivery method
 and contact data from the draft (rule 44), and a payment intent takes its
 amount from the checkout summary
 (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java:86-87`).

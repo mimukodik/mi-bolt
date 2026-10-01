@@ -37,6 +37,7 @@ import com.example.mi_bolt_backend.cart.CartRepository;
 import com.example.mi_bolt_backend.cart.CartService;
 import com.example.mi_bolt_backend.catalog.CatalogData;
 import com.example.mi_bolt_backend.catalog.ProductVariantRepository;
+import com.example.mi_bolt_backend.catalog.SmokeCanaryBootstrap;
 import com.example.mi_bolt_backend.checkout.CheckoutData;
 import com.example.mi_bolt_backend.checkout.CheckoutDraft;
 import com.example.mi_bolt_backend.checkout.CheckoutDraftRepository;
@@ -116,8 +117,26 @@ class OrderServiceTest {
 		when(orders.existsByOrderNumber(anyString())).thenReturn(false);
 
 		service = new OrderService(orders, cartService, carts, checkoutService, drafts,
-				intentService, variants, sessions, sessionService, clock, TERMS_VERSION);
+				intentService, variants, sessions, sessionService, clock, TERMS_VERSION, false);
 		ReflectionTestUtils.setField(service, "random", new Random(7));
+	}
+
+	@Test
+	void smokeCanaryCompensationRequiresEnabledFlagAndExactVariant() {
+		ReflectionTestUtils.setField(service, "smokeEnabled", true);
+		service.place(session, "\"4\"", "card", "pi-1", TERMS_VERSION, true);
+		verify(variants, never()).incrementStock(anyString(), anyInt());
+	}
+
+	@Test
+	void failedCanaryCompensationStopsOrderPersistence() {
+		ReflectionTestUtils.setField(service, "smokeEnabled", true);
+		when(cartService.getCart(session)).thenReturn(new CartData.CartView(
+				10L, 4L, List.of(cartLine(SmokeCanaryBootstrap.VARIANT_ID, 299990L, 299990L)),
+				1, 1, 299990L, now.plusDays(30), List.of()));
+		assertThatThrownBy(() -> service.place(session, "\"4\"", "card", "pi-1", TERMS_VERSION, true))
+				.isInstanceOf(IllegalStateException.class);
+		verify(orders, never()).save(any());
 	}
 
 	// -- rule 1: cart and price/stock changes -----------------------------------
