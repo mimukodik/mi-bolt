@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.mi_bolt_backend.catalog.Product;
+import com.example.mi_bolt_backend.catalog.SmokeCanaryBootstrap;
 
 /**
  * Read-side repository for the admin product API. Mirrors
@@ -20,6 +21,7 @@ public interface AdminProductRepository extends JpaRepository<Product, Long> {
 	@Query("select distinct p from Product p"
 			+ " left join fetch p.colors c"
 			+ " left join fetch c.image"
+			+ " where p.slug <> '" + SmokeCanaryBootstrap.PRODUCT_SLUG + "'"
 			+ " order by p.rank, p.id")
 	List<Product> findAllWithColors();
 
@@ -49,11 +51,13 @@ public interface AdminProductRepository extends JpaRepository<Product, Long> {
 			+ " order by p.rank, p.id")
 	List<Product> fetchSpecGroups(@Param("products") List<Product> products);
 
-	@Query("select distinct p.brand from Product p")
+	@Query("select distinct p.brand from Product p where p.slug <> '" + SmokeCanaryBootstrap.PRODUCT_SLUG + "'")
 	List<String> findDistinctBrands();
 
 	boolean existsBySlug(String productSlug);
 
+	@Query("select count(p) from Product p where p.featured = true and p.archivedAt is null"
+			+ " and p.slug <> '" + SmokeCanaryBootstrap.PRODUCT_SLUG + "'")
 	long countByFeaturedTrueAndArchivedAtIsNull();
 
 	/**

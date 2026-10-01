@@ -30,7 +30,7 @@ With the flag enabled, order placement performs the normal conditional decrement
 and immediately compensates exactly that variant belonging to the reserved product
 inside the same transaction. No ordinary variant is compensated. This is an explicit
 demo-only exception to rule 42's net stock decrement. The flag does not reset stock
-or rewrite a previously edited fixture; operators must preserve the reserved fixture.
+or rewrite a previously edited fixture.
 
 ## Consequences
 
@@ -45,3 +45,28 @@ No schema migration, new credentials, endpoint or response field is required.
 ## Date and status
 
 2026-09-30 — accepted for MIM-451.
+
+## Amendment — 2026-10-01: protect the fixture from admin changes
+
+Greg's review decision excludes the reserved product from admin product lists,
+search, pagination counts, brand filters and the featured-limit count, regardless
+of the smoke flag or archive state. Admin detail returns 404 NOT_FOUND.
+
+All existing product writes (replace, archive and restore) refuse a known canary
+ID before checking its version or changing any state, with 404 NOT_FOUND and the
+clear detail "The smoke canary is reserved and cannot be changed through the
+admin API". Replace is also the only path for feature, image, price and stock
+edits. Media uploads create immutable content-addressed images and cannot change
+the fixture's shared image; attaching a different image requires the refused
+replace. Creating the reserved slug through admin is refused with 422
+VALIDATION_FAILED with `/slug` SLUG_TAKEN even if the fixture is absent, so admin
+cannot preempt bootstrap.
+No new endpoint, status or error code is introduced.
+
+The bootstrap intentionally preserves an existing row by `existsBySlug`; it does
+not recreate an archived canary. Preventing admin archive and edits protects that
+assumption. Previously modified data is not reset. `OrderService` compensation is
+unchanged: enabled canary purchases leave stock at five in their own transaction.
+API regressions cover active/archived exclusion, exact refusal responses and
+unchanged product, variant and image-reference rows; normal admin behavior stays
+covered by the existing suite.
