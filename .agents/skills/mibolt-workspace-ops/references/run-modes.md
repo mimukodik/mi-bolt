@@ -16,23 +16,24 @@ this skill's own file.
 ## The modes
 
 `SKILL.md` ("Run modes") says which modes serve the apps on the in-page MSW
-mock, which start containers, on which ports, and that `mise run stop` keeps
-the volume; `README.md` ("Start the apps: which mode when") gives each mode
-with when to pick it and how to stop it. This table is the wiring behind them.
+mock, which start containers, and that `mise run stop` keeps the volume;
+`README.md` ("Start the apps: which mode when") gives each mode with when to
+pick it. This table is the wiring behind them, with each mode's ports and how
+to stop it.
 
-| Command | Defined at | Runs |
-|---|---|---|
-| `mise run storefront` | `mise.toml` ("[tasks.storefront]"), `frontend/mise.toml` ("start:storefront") | `ng serve storefront`, `development` configuration |
-| `mise run admin` | `mise.toml` ("[tasks.admin]"), `frontend/mise.toml` ("start:admin") | `ng serve admin`, `development` configuration |
-| `mise run payment` | `mise.toml` ("[tasks.payment]"), `frontend/mise.toml` ("start:payment") | `ng serve demo-payment`, `development` configuration; `frontend/projects/demo-payment/src/main.ts` starts its mock while `isDevMode()` is true |
-| `mise run frontend` | `mise.toml` ("[tasks.frontend]") | the three above together |
-| `mise run db` | `mise.toml` ("[tasks.db]") | `deploy/compose.sh up -d --wait postgres` |
-| `mise run backend` | `mise.toml` ("[tasks.backend]"), `backend/mise.toml` ("[tasks.run]") | `db`, then Gradle `bootRun` in the foreground |
-| `mise run backend:docker` | `mise.toml` ("The backend in its container (the mi-bolt-commerce image)") | `deploy/compose.sh up -d --build --wait postgres commerce` |
-| `mise run dev` | `mise.toml` ("[tasks.dev]") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` |
-| `mise run dev:docker` | `mise.toml` ("The three apps against the backend container") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` |
-| `mise run stack` | `mise.toml` ("[tasks.stack]") | every Compose service, built, with the payment redirect and return pointed at the web origin |
-| `mise run stop` | `mise.toml` ("[tasks.stop]") | `deploy/compose.sh down` |
+| Command | Defined at | Runs | Ports | Stop |
+|---|---|---|---|---|
+| `mise run storefront` | `mise.toml` ("[tasks.storefront]"), `frontend/mise.toml` ("start:storefront") | `ng serve storefront`, `development` configuration | 4200 | Ctrl+C |
+| `mise run admin` | `mise.toml` ("[tasks.admin]"), `frontend/mise.toml` ("start:admin") | `ng serve admin`, `development` configuration | 4220 | Ctrl+C |
+| `mise run payment` | `mise.toml` ("[tasks.payment]"), `frontend/mise.toml` ("start:payment") | `ng serve demo-payment`, `development` configuration; `frontend/projects/demo-payment/src/main.ts` starts its mock while `isDevMode()` is true | 4210 | Ctrl+C |
+| `mise run frontend` | `mise.toml` ("[tasks.frontend]") | the three above together | 4200, 4210, 4220 | Ctrl+C |
+| `mise run db` | `mise.toml` ("[tasks.db]") | `deploy/compose.sh up -d --wait postgres` | 55433 | `mise run stop` |
+| `mise run backend` | `mise.toml` ("[tasks.backend]"), `backend/mise.toml` ("[tasks.run]") | `db`, then Gradle `bootRun` in the foreground | 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run backend:docker` | `mise.toml` ("The backend in its container (the mi-bolt-commerce image)") | `deploy/compose.sh up -d --build --wait postgres commerce` | 8080, 55433 | `mise run stop` |
+| `mise run dev` | `mise.toml` ("[tasks.dev]") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run dev:docker` | `mise.toml` ("The three apps against the backend container") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run stack` | `mise.toml` ("[tasks.stack]") | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
+| `mise run stop` | `mise.toml` ("[tasks.stop]") | `deploy/compose.sh down` | — | — |
 
 **`depends` entries run in parallel.** mise runs whatever it can in parallel up
 to `--jobs` (setting `jobs`, variable `MISE_JOBS`), which is what lets
@@ -59,11 +60,10 @@ that Node flag; `frontend/README.md` ("the dev server aborted under e2e load") r
 through those scripts, never `npx ng serve`.
 
 **Ports and base paths come from `frontend/angular.json`.** `demo-payment`
-serves under `/demo-fizetes` (`frontend/angular.json`, "4210") and
-`admin` under `/admin` (`frontend/angular.json`, "4220"), each on the port
-`SKILL.md` ("Run modes") gives. The
+serves on 4210 under `/demo-fizetes` (`frontend/angular.json`, "4210") and
+`admin` on 4220 under `/admin` (`frontend/angular.json`, "4220"). The
 storefront's `serve` target sets no `port` (`frontend/angular.json`, "proxy.conf.json");
-its port is the one in the ports table at `README.md` ("Ports").
+the ports table at `README.md` ("Ports") lists it on 4200.
 
 **The `local-backend` configuration is what `dev` and `dev:docker` serve.** It
 swaps in `environment.local-backend.ts` for the storefront
