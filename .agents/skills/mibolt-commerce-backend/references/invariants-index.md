@@ -30,7 +30,7 @@ disagree, the spec file wins (`contracts/commerce/kommunikacio.md`, "Source of t
 | 6 | Kezdőadat és képek | `backend/docs/02-backend.md` ("6. Kezdőadat és képek") | 6.1: catalogue collection is a separate task. 6.2: the backend stores and serves images, deliberately for now; content-derived ids, `GET /media/{imageId}`, immutable caching. |
 | 7 | Tesztelési elvárások | `backend/docs/02-backend.md` ("7. Tesztelési elvárások") | 7.0 no Docker database in tests; 7.1 smoke scenarios F1-F7; 7.2 every numbered invariant tested and named by number, plus concurrency, idempotency and session isolation cases; 7.3 API tests per operation, error code and header; 7.4 machine contract validation. |
 | 8 | A fejlesztés alatti döntések dokumentálása | `backend/docs/02-backend.md` ("8. A fejlesztés alatti döntések dokumentálása") | The decision-record workflow; SKILL.md section 5 carries it. |
-| 9 | Amit nem szabad | `backend/docs/02-backend.md` ("9. Amit nem szabad") | The forbidden list, which belongs to `mibolt-backend-code-standards`. This skill describes two things its lines lead to: the admin exception to the price-and-stock line (`backend/docs/02-backend.md`, "Ár, készlet vagy összeg elfogadása a kérés törzséből", decision 0020), and the §8 decision-record workflow behind the ban on an undocumented decision (`backend/docs/02-backend.md`, "Dokumentálatlan döntés"). |
+| 9 | Amit nem szabad | `backend/docs/02-backend.md` ("9. Amit nem szabad") | The forbidden list, which belongs to `mibolt-backend-code-standards`. This skill describes two things its lines lead to: the admin exception to the price-and-stock line (`backend/docs/02-backend.md`, "Ár, készlet vagy összeg elfogadása a kérés törzséből", decision 0020), and the §8 decision-record workflow behind the ban on an undocumented decision (`backend/docs/02-backend.md`, "8. A fejlesztés alatti döntések dokumentálása"). |
 
 ## Section map of 04-adatbazis.md
 
@@ -100,7 +100,7 @@ another file is named:
     `backend/services/commerce/src/main/resources/db/changelog/changes/0003-cart.yaml` ("uq_cart_item_cart_variant").
 14. Quantity is always absolute, never a delta. `setQuantity`, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java` ("public CartData.CartView setQuantity").
 15. A merged quantity over the line maximum is a `QUANTITY_LIMIT` error, never
-    silent truncation. `addItem`, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java` ("ErrorCode.QUANTITY_LIMIT").
+    silent truncation. `addItem`, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java` ("int merged = existingQty + quantity;").
 16. `maxQuantity` is the smaller of stock and the global per-line limit, and
     `availability` never contradicts it.
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogService.java` ("public static int maxQuantity")

@@ -255,7 +255,7 @@ names the check:**
   `{}` placeholders. PMD never checks the declaration.
 - **Formatting, a conflict:** the Java sources, `build.gradle` and
   `ruleset.xml` are tab-indented, and no Java file has a space-indented code
-  line, while `./.editorconfig` ("[*]") sets two-space indentation for every file.
+  line, while `.editorconfig` ("[*]") sets two-space indentation for every file.
   No formatter is configured. Match the surrounding file. `else`, `catch` and
   `finally` start a new line after the closing brace, and no import uses a
   wildcard.

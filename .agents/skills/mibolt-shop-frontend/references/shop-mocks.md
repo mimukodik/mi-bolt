@@ -146,7 +146,7 @@ snapshot, kept in `sessionStorage` under `mi-bolt.snapshot.<scenario>`.
   `buildBrowserHandlers`, whose last element, the demo-access gate, is
   consulted first. The comments at
   `frontend/projects/shop-mocks/src/browser.ts`
-  ("installUnclaimedApiRouteNetworkError") carry the measured
+  ("Register this BEFORE the business handlers") carry the measured
   ordering.
 - The service-worker script is resolved against `document.baseURI`, so it
   works under the payment app's `/demo-fizetes/` base. The script itself is

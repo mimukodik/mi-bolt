@@ -258,7 +258,7 @@ because they are easy to break in this area.
   Narrow `unknown` with the storefront's own `isRecord`
   (`frontend/projects/storefront/src/app/shared/utils/is-record.ts`, "isRecord") or a
   new guard, as both `mapError` functions do.
-- **One app never imports another** (`frontend/eslint.config.mjs`, "CROSS_APP_IMPORT_MESSAGE"),
+- **One app never imports another** (`frontend/eslint.config.mjs`, "const CROSS_APP_IMPORT_MESSAGE ="),
   which is why the storefront and the payment app each keep their own
   `LOCATION_ASSIGN` token. Code both need goes into a library, which is
   `mibolt-cross-package-changes` work.
@@ -296,7 +296,7 @@ because they are easy to break in this area.
 - **Two helpers are security-relevant.** Every `<img src>` comes from
   `resolveAssetUrl`, and every post-sign-in return target passes
   `isSafeReturnUrl`
-  (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts`, "isSafeReturnUrl").
+  (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts`, "export function isSafeReturnUrl(").
   Do not route around either.
 - **Accessibility.** No work goes into AXE checks, WCAG minimums, keyboard
   handling or ARIA, and focus handling stays at what a native element gives,
@@ -319,7 +319,7 @@ because they are easy to break in this area.
 **Unit specs.** Specs sit beside their source as `*.spec.ts`.
 
 - A component with inputs is tested through a host component in `TestBed`, as
-  `frontend/projects/storefront/src/app/features/product/variant-selector.spec.ts` ("TestHostComponent")
+  `frontend/projects/storefront/src/app/features/product/variant-selector.spec.ts` ("class TestHostComponent {")
   does.
 - A spec reaches HTTP one of two ways. It drives real requests over MSW,
   calling `useMswServer()` from `frontend/tests/msw-server.ts` at module
@@ -344,7 +344,7 @@ radii, spacing, the component recipes with the yettel.hu selectors they came
 from, the list- and device-page feature inventories, and in §9 the
 storefront's token mapping. Take every colour, type, radius, spacing and
 recipe value from it and name its section beside the value in a comment, as
-`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss` ("docs/design/yettel.md §5")
+`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss` ("(docs/design/yettel.md §5")
 does; most component stylesheets do not.
 A value it lacks is measured on `frontend/docs/design/yettel/css/portal.css`,
 the captured yettel.hu stylesheet, and added to the document, with its
@@ -365,9 +365,9 @@ styling belongs to `mibolt-admin-frontend`.
 - **Mocks.** A storefront call that changes needs its handler under
   `frontend/projects/shop-mocks/src/` to change with it. A persisted shape
   that changes incompatibly needs `SNAPSHOT_SCHEMA_VERSION`
-  (`frontend/projects/shop-mocks/src/persistence.ts`, "SNAPSHOT_SCHEMA_VERSION") bumped. A new fault
+  (`frontend/projects/shop-mocks/src/persistence.ts`, "export const SNAPSHOT_SCHEMA_VERSION") bumped. A new fault
   operation joins `FAULT_OPERATIONS`
-  (`frontend/projects/shop-mocks/src/faults.ts`, "FAULT_OPERATIONS").
+  (`frontend/projects/shop-mocks/src/faults.ts`, "export const FAULT_OPERATIONS = [").
 - **The production build.** Both apps' production configurations replace
   `frontend/projects/shop-mocks/src/browser.ts` with
   `frontend/projects/shop-mocks/src/browser.production.ts`, which exports

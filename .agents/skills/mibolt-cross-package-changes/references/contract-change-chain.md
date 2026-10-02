@@ -75,7 +75,7 @@ no consumer, and an error code is searched with the `enum` kind.
 |---|---|---|
 | Contract, examples, samples | section 2 | `frontend/tests/contract/schema.spec.ts` ("every media-type example on responses and requestBodies validates against its own schema"); `mise run contracts:check` |
 | Regenerate | `mise run api:generate`; the model file changes in each client whose operations reference the schema | `api:drift` |
-| Contract-suite fixtures | the happy-path response fixtures in `buildHappyPathFixture` (`frontend/tests/contract/operation-matrix.spec.ts`, "buildHappyPathFixture") for a shop operation returning the schema | a new required field fails `frontend/tests/contract/operation-matrix.spec.ts` ("every documented success response validates against its schema") |
+| Contract-suite fixtures | the happy-path response fixtures in `buildHappyPathFixture` (`frontend/tests/contract/operation-matrix.spec.ts`, "function buildHappyPathFixture(") for a shop operation returning the schema | a new required field fails `frontend/tests/contract/operation-matrix.spec.ts` ("every documented success response validates against its schema") |
 | shop-mocks | the stores and builders that construct the model, such as `frontend/projects/shop-mocks/src/catalog/catalog-store.ts`: `mibolt-shop-frontend` | a new required field stops that code type-checking; `mibolt-verification` names the commands that compile it |
 | storefront, demo-payment | callers and readers, and the spec builders and fixtures typed as the model, such as `DEMO_PRODUCT` (`frontend/projects/storefront/src/app/features/product/demo-product.fixture.ts`, "DEMO_PRODUCT"): `mibolt-shop-frontend` | a new required field stops type-checking in every caller that builds a request body of that type and in every spec builder or fixture typed as the model; an optional field fails nothing |
 | admin app and admin mocks | form model, mapper, schema, mocks and seed, for `Admin*` schemas: `mibolt-admin-frontend` | the same type-checking failures; no contract test covers the admin mocks |
@@ -88,7 +88,7 @@ no consumer, and an error code is searched with the `enum` kind.
 1. **Contract.** A shop tag (`Catalog`, `Cart`, `Checkout`, `Payment`,
    `Orders`, `Media`, `DemoAccess`), an `operationId`, and the shared
    `BadRequest` response, which every shop operation must declare
-   (`frontend/tests/contract/shop-bad-request.spec.ts`, "every shop operation declares 400"). A mutation of
+   (`frontend/tests/contract/shop-bad-request.spec.ts`, "it('every shop operation declares 400'"). A mutation of
    the session's cart or checkout state takes the `IfMatch` parameter; see
    section 8.
 2. **Regenerate.** A new function file under
@@ -101,15 +101,15 @@ no consumer, and an error code is searched with the `enum` kind.
    - `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts`, "REQUIRED_OPERATION_COUNT"),
      read by `frontend/tests/contract/operation-matrix.spec.ts` ("declares exactly 19 operationIds in the spec"),
      `frontend/tests/contract/operation-matrix.spec.ts` ("spec drift check") and
-     `frontend/tests/contract/shop-bad-request.spec.ts` ("every shop operation declares 400");
-   - `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "EXPECTED_OPERATION_IDS");
-   - the "19 others" count in `frontend/tests/contract/sdk-split.spec.ts` ("declares exactly 15 admin operations and 19 others");
+     `frontend/tests/contract/shop-bad-request.spec.ts` ("it('every shop operation declares 400'");
+   - `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "const EXPECTED_OPERATION_IDS = [");
+   - the "19 others" count in `frontend/tests/contract/sdk-split.spec.ts` ("it('declares exactly 15 admin operations and 19 others'");
    - the round trip in `frontend/tests/contract/sdk-transport.spec.ts` ("exercises all 19 operations end-to-end through the real HttpClient"),
      which needs a handler in that file's own list (`frontend/tests/contract/sdk-transport.spec.ts`, "const handlers = [") and a
      `callOperation` call, or it reports the operation "not exercised by the
      SDK";
    - a happy-path fixture case in `buildHappyPathFixture`
-     (`frontend/tests/contract/operation-matrix.spec.ts`, "buildHappyPathFixture") when the
+     (`frontend/tests/contract/operation-matrix.spec.ts`, "function buildHappyPathFixture(") when the
      success response has a JSON body;
    - for a mutation carrying `If-Match` or `Idempotency-Key`, the expected
      sets at `frontend/tests/contract/schema.spec.ts` ("cart-version-monotonic: every mutating cart operation requires If-Match") and
@@ -139,7 +139,7 @@ no consumer, and an error code is searched with the `enum` kind.
    functions module missing it, besides what `SKILL.md`, "What fails when a step
    is skipped", lists.
 3. **Counts.** 15 admin operations are pinned at
-   `frontend/tests/contract/sdk-split.spec.ts` ("declares exactly 15 admin operations and 19 others") and
+   `frontend/tests/contract/sdk-split.spec.ts` ("it('declares exactly 15 admin operations and 19 others'") and
    `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"), and stated in
    `frontend/tests/contract/admin-tags.ts` ("plus 15 admin operations").
 4. **Admin mocks handler and the admin caller**: `mibolt-admin-frontend`.
@@ -162,7 +162,7 @@ spec.
 - **TypeScript consumers** that must cover every member, such as a `Record`
   keyed by the union, stop type-checking until the new member is handled:
   `OUTCOME_LABELS` over the payment outcome is one
-  (`frontend/projects/demo-payment/src/app/payment-page.ts`, "OUTCOME_LABELS"). A `switch`
+  (`frontend/projects/demo-payment/src/app/payment-page.ts`, "const OUTCOME_LABELS:"). A `switch`
   with a `default` branch still compiles and routes the new value there.
   Owners: `mibolt-shop-frontend`, `mibolt-admin-frontend`.
 - **Backend** code that spells wire values as string constants, such as
@@ -199,17 +199,17 @@ spec.
    and the count of `ErrorCode` constants that `ErrorCodeTest` pins raised to
    match: `mibolt-commerce-backend`. `ProblemAdvice` maps it to the wire with
    `ProblemCode.valueOf(code.name())`
-   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "codeToWireCode").
+   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "private static ProblemCode codeToWireCode(").
    Skipped: see `SKILL.md`, "What fails when a step is skipped".
 4. **Storefront and demo-payment** handling and its Hungarian text:
    `mibolt-shop-frontend`. An unhandled code compiles; in
-   `frontend/projects/storefront/src/app/features/checkout/order-submission.ts` ("mapFailure")
+   `frontend/projects/storefront/src/app/features/checkout/order-submission.ts` ("private mapFailure(")
    it falls to the `default` branch as `unknown`.
 5. **Admin** handling, around `frontend/projects/admin/src/app/core/api/problem.ts`:
    `mibolt-admin-frontend`.
 6. **shop-mocks** returning the code where the mock backend should:
    `mibolt-shop-frontend`. The contract suite builds its code-to-operation
-   matrix from the spec (`frontend/tests/contract/operation-matrix.spec.ts`, "buildProblemCodeMatrix"),
+   matrix from the spec (`frontend/tests/contract/operation-matrix.spec.ts`, "problemMatrix = buildProblemCodeMatrix("),
    so no hand-kept list there needs the new code.
 
 ## 8. An If-Match or other header change

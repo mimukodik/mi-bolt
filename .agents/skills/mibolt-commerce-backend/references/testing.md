@@ -151,7 +151,7 @@ consumed, so contract drift is caught independently of the generated code.
 running backend, `BASE` defaulting to the local `/api/v1` (`backend/services/commerce/scripts/smoke.sh`, "BASE=${BASE:-"). It walks:
 
 - the demo gate refusing before sign-in, then signing in (`backend/services/commerce/scripts/smoke.sh`, "Demo gate (MIM-423): nothing of the shop answers before the demo sign-in.");
-- the catalogue, a product, an image, related products and a 404 (`backend/services/commerce/scripts/smoke.sh`, "The cheapest product may be out of stock");
+- the catalogue, a product, an image, related products and a 404 (`backend/services/commerce/scripts/smoke.sh`, "the catalogue is not loaded yet");
 - a cart add with `If-Match`, a stale `If-Match` (412) and an unknown body
   member (400);
 - a cash-on-delivery order and its replay under the same `Idempotency-Key`,

@@ -120,7 +120,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   port; `frontend/scripts/serve-static.mjs` serves a production build.
 - **`api:drift` checks the frontend clients only** (`mise.toml`, "Fail when the committed frontend API clients differ from the contract"). The
   backend stubs are generated into the Gradle build directory on every build
-  (`backend/services/commerce/build.gradle`, "openApiGenerate") and no file of them is tracked.
+  (`backend/services/commerce/build.gradle`, "openApiGenerate {") and no file of them is tracked.
 - **`tools/` is an npm workspace root** with `catalog-import` as its member
   (`tools/package.json`, "workspaces"); its `lint` task is the typecheck and its `build`
   task only prints a line (`tools/mise.toml`, "[tasks.lint]"; `tools/mise.toml`, "[tasks.build]").
@@ -193,7 +193,7 @@ the row, and the checks `mibolt-verification` names for the change pass.
    list the same eight build steps).
 2. For a path filter, edit `.github/components.yml`. A change to the `frontend`
    or `backend` list fails `Candidate Build` unless
-   `deploy/candidate/inputs.py` ("EXPECTED_FILTERS") and
+   `deploy/candidate/inputs.py` ("EXPECTED_FILTERS = {") and
    `deploy/tests/test-candidate.py` ("def setUp") change with it. Even then the
    `Publish Candidate` workflow fails for that pull request until the change is
    on `main`, because it hashes with the default branch's `inputs.py`
@@ -222,18 +222,17 @@ workflow, or a trigger that does not fire: read
   its own project, volume and ports, and `deploy/stack.sh ports` prints them.
   To stop that stack and keep its data, `deploy/stack.sh stop` stops its
   containers and `deploy/stack.sh down` removes them with their network; both
-  keep the volume and the slot (`deploy/stack.sh`, "cmd_stop", `deploy/stack.sh`, "cmd_down").
+  keep the volume and the slot (`deploy/stack.sh`, "cmd_stop() {", `deploy/stack.sh`, "cmd_down() {").
   `deploy/stack.sh reset --yes` deletes that worktree's volume and frees the
-  slot (`deploy/stack.sh`, "cmd_reset"); run it before the worktree is removed.
-- **From the main checkout**, where `deploy/stack.sh` refuses to run: export
+  slot (`deploy/stack.sh`, "cmd_reset() {"); run it before the worktree is removed.
+- **From the main checkout:** export
   `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME` and the three port
   variables (`deploy/.env.example`, "A second stack beside the developer's one"), on ports that neither the table at
   `README.md` ("Ports") nor the slot ranges at `deploy/stack.sh` ("Slot ledger") use, plus
   `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN` set to
   `http://localhost:<web-port>`, then run
   `deploy/compose.sh up -d --build --wait`, the arguments `mise run stack`
-  passes (`mise.toml`, "[tasks.stack]"). The wrapper refuses a second project on the
-  default volume. Stop it with `deploy/compose.sh down` in that same
+  passes (`mise.toml`, "[tasks.stack]"). Stop it with `deploy/compose.sh down` in that same
   environment, adding `-v` to delete its volume; `mise run stop` without those
   variables stops the default `mi-bolt-local` project instead
   (`deploy/compose.yaml`, "name: mi-bolt-local").
@@ -326,8 +325,8 @@ file.
 Keep every committed file free of paths that exist on one machine only: no
 home directory, no `~`, no temp directory, no `file:` URL pointing at a local
 checkout. Derive a location at run time or write it repository-relative:
-`deploy/compose.sh` ("BASH_SOURCE") and `deploy/stack.sh` ("REPO_ROOT") find their own directory
-through `BASH_SOURCE`, `frontend/scripts/serve-static.mjs` ("repoRoot") finds the
+`deploy/compose.sh` ("BASH_SOURCE") and `deploy/stack.sh` ("REPO_ROOT=") find their own directory
+through `BASH_SOURCE`, `frontend/scripts/serve-static.mjs` ("const repoRoot =") finds the
 repository root from `import.meta.url`, and `deploy/stack.sh` ("SLOTS_DIR=") keeps its
 slot ledger under `XDG_STATE_HOME`, falling back to `HOME`. Prose names such a
 location generically, as "the user's state directory". A path written for one
@@ -344,7 +343,7 @@ machine fails on every other, CI included.
 - **Leave the default volume alone unless the user asks for a reset.** `stop`
   keeps it (`mise.toml`, "[tasks.stop]"), `.github/workflows/smoke.yml` runs `down -v`
   only on a project of its own, and `deploy/stack.sh` refuses the
-  `mi-bolt-local` project (`deploy/stack.sh`, "guard_not_default_project"); removing it removes the
+  `mi-bolt-local` project (`deploy/stack.sh`, "guard_not_default_project() {"); removing it removes the
   developer's data. The reset is `deploy/compose.sh down -v`, with no project
   or volume variable exported, and then a fresh start
   (`backend/README.md`, "To reload after a content change"). `mibolt-commerce-backend` sends it here for a
@@ -353,15 +352,14 @@ machine fails on every other, CI included.
   cases calls for it and the user has not asked for a reset, ask the user
   first, because it deletes every local row (`backend/README.md`, "with it every local row").
   Under `mise run backend` and `mise run dev` a changed `MIBOLT_DEMO_*` value
-  also has to be exported in the shell the task is run from, because the
-  `.env` `deploy/compose.sh` creates reaches the containers only
+  also has to be exported in the shell the task is run from
   ([references/run-modes.md](references/run-modes.md), "Environment
-  variables").
+  variables", says why).
 - **Pin images by digest,** as every base image in both Dockerfiles and the
   PostgreSQL image in `deploy/compose.yaml` ("image: postgres") are. An image's published tag is
   a hash of tracked files (`deploy/candidate/README.md`, "Image tags use"), so only a
   digest written into a tracked file makes a new base image produce a new tag.
-- **Keep YAML on LF:** `.gitattributes` ("*.yaml text eol=lf"), because the builds compare bytes.
+- **Keep YAML on LF:** `.gitattributes` ("*.yaml text eol=lf"; `.gitattributes`, "*.yml text eol=lf"), because the builds compare bytes.
 
 ## What a change here can reach
 
@@ -369,12 +367,12 @@ machine fails on every other, CI included.
 |---|---|
 | a root task added, renamed or removed | `README.md` ("Command reference"), `docs/monorepo.md` ("Root commands"); `verify` when it is a gate; the workflow step when CI should run it |
 | an area task | the root task that names it as `//area:task`; the CI step that runs the same command |
-| a `start*` script | `frontend/mise.toml` ("start:storefront"); Playwright's own `ng serve` command at `frontend/playwright.config.ts` ("ngServeCommand"), which is end-to-end configuration outside this skill |
+| a `start*` script | `frontend/mise.toml` ("start:storefront"); Playwright's own `ng serve` command at `frontend/playwright.config.ts` ("const ngServeCommand"), which is end-to-end configuration outside this skill |
 | a dev-server port or proxy | `frontend/angular.json`, `frontend/proxy*.json`, the ports table at `README.md` ("Ports"), the payment URL defaults at `backend/README.md` ("MIBOLT_PAYMENT_REDIRECT_URL_PREFIX") |
-| a Compose port, service or variable | `deploy/.env.example`, `README.md` ("reads three environment variables to move the"), `backend/README.md` ("Environment variables the service reads"), the slot state `deploy/stack.sh` ("write_state") writes, `.github/workflows/smoke.yml` ("COMPOSE_PROJECT_NAME: mi-bolt-smoke-ci"), `.github/workflows/backend.yml` ("MIBOLT_ADMIN_INITIAL_PASSWORD: ci-smoke-admin-password") and `.github/workflows/backend.yml` ("MIBOLT_DB_URL: jdbc:postgresql"), the chart |
-| a Compose `build:` block | `deploy/candidate/publish.py` ("expected_builds") on `main` first, `.github/workflows/candidate.yml` ("Build both images from the Compose definition"), `deploy/tests/test-candidate.py` |
+| a Compose port, service or variable | `deploy/.env.example`, `README.md` ("reads three environment variables to move the"), `backend/README.md` ("Environment variables the service reads"), the slot state `deploy/stack.sh` ("write_state() {") writes, `.github/workflows/smoke.yml` ("COMPOSE_PROJECT_NAME: mi-bolt-smoke-ci"), `.github/workflows/backend.yml` ("MIBOLT_ADMIN_INITIAL_PASSWORD: ci-smoke-admin-password") and `.github/workflows/backend.yml` ("MIBOLT_DB_URL: jdbc:postgresql"), the chart |
+| a Compose `build:` block | `deploy/candidate/publish.py` ("expected_builds = {") on `main` first, `.github/workflows/candidate.yml` ("Build both images from the Compose definition"), `deploy/tests/test-candidate.py` |
 | a Dockerfile or NGINX file | `frontend/tests/web-image/` for an NGINX or `robots.txt` rule; expect a new image tag, because the input hash changes |
-| the `frontend` or `backend` list in `.github/components.yml` | `deploy/candidate/inputs.py` ("EXPECTED_FILTERS") and `deploy/tests/test-candidate.py` ("def setUp") in the same change, `docs/monorepo.md` ("Which CI branch runs for which change"), and `frontend/README.md` ("finds a changed path under") for the `frontend` list |
+| the `frontend` or `backend` list in `.github/components.yml` | `deploy/candidate/inputs.py` ("EXPECTED_FILTERS = {") and `deploy/tests/test-candidate.py` ("def setUp") in the same change, `docs/monorepo.md` ("Which CI branch runs for which change"), and `frontend/README.md` ("finds a changed path under") for the `frontend` list |
 | any other list in `.github/components.yml` | `docs/monorepo.md` ("Which CI branch runs for which change") |
 | a `workflow_run`, `schedule` or `pull_request_target` workflow, or a script in `deploy/candidate/` | the `deploy/tests/*.py` check that imports the script, where there is one. Those workflows run the default branch's copy of themselves and of the scripts they call, `deploy/candidate/publish.py` and the `deploy/candidate/inputs.py` it imports included (`deploy/candidate/publish.py`, "from inputs import"), so a change there takes effect only once it is on `main`; `.github/workflows/candidate.yml` runs the pull request's own `deploy/candidate/inputs.py` and `deploy/candidate/build_metadata.py` (`.github/workflows/candidate.yml`, "Compute tracked build inputs", `.github/workflows/candidate.yml`, "Record build inputs and archive checksums") |
 | the chart | `deploy/helm/mi-bolt/values.schema.json`, `deploy/tests/check-chart.py`, the Secret key list at `deploy/helm/mi-bolt/README.md` ("That Secret must contain") |
@@ -443,7 +441,7 @@ This skill goes stale when any of these change: the five `mise.toml` files; the
 `frontend/.dockerignore`, `frontend/nginx/`, `frontend/tests/web-image/` and
 `frontend/tests/scripts/`; `tools/dev-server/`,
 `frontend/scripts/serve-static.mjs`, `frontend/scripts/proxy-timeout.mjs` and
-`frontend/playwright.config.ts` ("ngServeCommand"); `.gitattributes` and `.gitignore`; the
+`frontend/playwright.config.ts` ("const ngServeCommand"); `.gitattributes` and `.gitignore`; the
 ports and command tables in `README.md` and `docs/monorepo.md`, the variable
 table at `backend/README.md` ("Environment variables the service reads"), the CI prose at
 `frontend/README.md` ("🧪 CI") and `backend/docs/06-uzembe-helyezes.md`. When you

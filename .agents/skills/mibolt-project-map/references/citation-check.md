@@ -21,6 +21,8 @@ skills from its own location: every directory whose name starts with
   ends with `unknown skill: <name>`. A MiBolt skill's directory, given as a
   path from the working directory, is also accepted, and a path that is not
   one ends with `not a skill directory: <arg>`.
+- `--show-anchors` also prints the current text of every line an anchor
+  points at, up to ten lines per range, and never changes the exit code.
 - `--no-mise` skips mise and reports every `mise run` command it reads and
   every bare task name UNVERIFIED.
 
@@ -38,9 +40,7 @@ temp-directory path or a file URL begins. A Gradle task, written in the form
 `backend/gradlew -p backend :services:commerce:build`, is found only when
 `backend/services/commerce/build.gradle` registers it, `backend/mise.toml`
 runs it or `.github/workflows/backend.yml` calls it, and is reported
-UNVERIFIED otherwise; UNVERIFIED is not a pass. With `--show-anchors` it also prints the current
-text of every line an anchor points at, up to ten lines per range, and never
-changes the exit code.
+UNVERIFIED otherwise; UNVERIFIED is not a pass.
 
 **Where a backticked path resolves.** A token holding whitespace is not a
 path. Any other token goes to the first of these rules that fits it:

@@ -95,7 +95,7 @@ a template rule and its spec in the same change.
 The candidate pipeline treats the build definition as a contract. A change to a
 `build:` block in `deploy/compose.yaml` touches all of these:
 
-- `deploy/candidate/publish.py` ("expected_builds") refuses a web or commerce build whose
+- `deploy/candidate/publish.py` ("expected_builds = {") refuses a web or commerce build whose
   `context`, `dockerfile` or `additional_contexts` differ from the expected
   set. `Publish Candidate` runs the default branch's copy of that file, so a
   pull request that changes a build context is not published until the matching
@@ -108,7 +108,7 @@ The candidate pipeline treats the build definition as a contract. A change to a
 - `deploy/candidate/inputs.py` ("def hashes") hashes every tracked file the `frontend`
   and `backend` path filters match, plus `deploy/compose.yaml`, into each
   image's input hash, so any change there produces a new image tag; the two
-  filter lists are themselves pinned at `deploy/candidate/inputs.py` ("EXPECTED_FILTERS").
+  filter lists are themselves pinned at `deploy/candidate/inputs.py` ("EXPECTED_FILTERS = {").
 
 ## The Helm chart
 
@@ -182,7 +182,7 @@ A new backend variable, or a changed one, has a local half and a deployed half.
   so it joins the key list at `deploy/helm/mi-bolt/README.md` ("That Secret must contain"); a value
   the chart derives goes under `env` in
   `deploy/helm/mi-bolt/templates/deployments.yaml` ("MIBOLT_PAYMENT_REDIRECT_URL_PREFIX"), and then
-  `deploy/tests/check-chart.py` ("commerce_env") has to expect it, since it asserts the
+  `deploy/tests/check-chart.py` ("require(commerce_env == {") has to expect it, since it asserts the
   exact `envFrom` and `env` sets.
 - **CI:** `.github/workflows/backend.yml` ("MIBOLT_ADMIN_INITIAL_PASSWORD: ci-smoke-admin-password") and
   `.github/workflows/backend.yml` ("Start the application on PostgreSQL") set the variables the

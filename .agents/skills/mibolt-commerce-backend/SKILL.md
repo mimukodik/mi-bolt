@@ -63,8 +63,8 @@ to read a row"). Outside, and where each case goes:
 **Stack.** Spring Boot 4.1.1, a Java 21 toolchain and OpenAPI Generator 7.25.0
 (`backend/services/commerce/build.gradle`, "plugins {"); the webmvc, JPA, Liquibase,
 validation, security and actuator starters, PostgreSQL at run time and H2 in
-tests, all from Maven Central (`backend/services/commerce/build.gradle`, "dependencies {"). Jackson is version 3, package `tools.jackson`
-(`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java`, "import tools.jackson").
+tests, all from Maven Central (`backend/services/commerce/build.gradle`, "mavenCentral()"). Jackson is version 3, package `tools.jackson`
+(`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java`, "import tools.jackson.databind.ObjectMapper").
 One Gradle subproject, `services:commerce` (`backend/settings.gradle`, "include 'services:commerce'"). The
 API answers on port 8080 under `/api/v1` (`backend/README.md`, "The service answers on port 8080").
 
@@ -112,7 +112,7 @@ and [references/error-model.md](references/error-model.md).
 - `backend/docs/04-adatbazis.md` (Hungarian): schema constraints (§4) and
   migrations (§5).
 - `contracts/commerce/kommunikacio.md` (English): session, versioning,
-  idempotency and the error contract. `backend/docs/02-backend.md` ("ennek a dokumentumnak a része") makes it
+  idempotency and the error contract. `backend/docs/02-backend.md` ("az ott leírt szabályok itt is kötelezőek") makes it
   part of the backend requirements; `mibolt-cross-package-changes` edits it.
 - `backend/docs/decisions/` (English): 22 records, `0001` to `0022`, the why
   behind each non-obvious choice.
@@ -151,7 +151,7 @@ and [references/error-model.md](references/error-model.md).
   Bootstrap works in an already populated database and public listings hide it.
 - **Payment-intent expiry is lazy**: evaluated on every read and outcome
   call; there is no scheduler
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java`, "applyLazyExpiry").
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java`, "private void applyLazyExpiry(").
 
 **Configuration** lives in
 `backend/services/commerce/src/main/resources/application.properties`: schema

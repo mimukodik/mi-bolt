@@ -185,7 +185,7 @@ workflows live. `mise tasks --all` lists every root and area task except hidden 
 canonical examples are the gate list under "Gates before a commit" below,
 `frontend/mise.toml` ("[tasks.test]"; `frontend/mise.toml`, "[tasks.build]":
 exactly what `//frontend:test` and `//frontend:build` run), and
-`backend/services/commerce/build.gradle` ("tasks.named('test')" through
+`backend/services/commerce/build.gradle` ("tasks.named('test') { inputs.file" through
 `backend/services/commerce/build.gradle`, "tasks.named('pmdMain')": every
 backend gate).
 
@@ -464,7 +464,7 @@ in one checkout, and when a report or `git status` looks like another run's.
   local mirror, says how closely it mirrors it, and names what CI keeps when
   the job fails.
 - In the repository: `frontend/README.md` ("npm scripts"),
-  `frontend/README.md` ("Tests") and `frontend/README.md` ("CI");
+  `frontend/README.md` ("Tests") and `frontend/README.md` ("🧪 CI");
   `backend/README.md` ("Tests and quality gates"); and the decisions behind
   the backend gates:
   `backend/docs/decisions/0003-h2-postgresql-mode-for-tests.md`,
@@ -498,7 +498,7 @@ distinctive phrase, and never gives a line number. So after an edit to any
 file this skill or its references cite, whether or not the list above names
 it, run the checker below and reread each section cited in that file against
 the claim beside it, since check (e) confirms only that a quoted name still
-occurs somewhere in its target, and fails only a name that is gone
+occurs somewhere in its target, and fails only a name or a target that is gone
 (`mibolt-project-map/references/citation-check.md`). Whether a file you edited
 is cited is one search, run from this skill's directory:
 

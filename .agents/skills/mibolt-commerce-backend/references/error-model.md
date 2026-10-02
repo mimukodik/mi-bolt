@@ -148,7 +148,7 @@ Each field error is a JSON pointer into the request body plus a code
 - The code is the constraint's simple name in upper case (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "private static String constraintCode"), with
   `NotNull` reported as `REQUIRED`, and a `@Pattern` on `phone` or
   `postalCode` reported as `PHONE_FORMAT` or `POSTAL_CODE_FORMAT`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "PATTERN_CODES"; `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "private static String fieldCode").
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "Map<String, String> PATTERN_CODES = Map.of("; `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "private static String fieldCode").
 - A service builds its own with `new FieldError(pointer, code)` from the
   generated model, as `CheckoutService.validateUpdate` does
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java`, "private void validateUpdate").
@@ -166,7 +166,7 @@ The code is a contract value first, so the change starts in
    title, keeping the contract's order, which the enum follows today.
 4. Raise the pinned count in `ErrorCodeTest`
    (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "errorCodeValuesLengthIs26"),
-   and give the new code a row in its parameterised status test (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "newCodeStatus").
+   and give the new code a row in its parameterised status test (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "static Stream<Arguments> newCodeStatus()").
 5. Throw it from the owning service with the `params` the contract documents.
 6. Add an API test that asserts the status, `$.code`, the `params` and
    `validAgainstContract()`, the assertion the testing reference describes.

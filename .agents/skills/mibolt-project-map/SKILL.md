@@ -61,12 +61,12 @@ Spring Boot's dependency management.
 | Java | `temurin-21.0.12+101.0.LTS` (`mise.toml`, "[tools]"); toolchain 21 (`backend/services/commerce/build.gradle`, "languageVersion") | — |
 | Angular core | `^22.1.0` (`frontend/package.json`, "@angular/core") | 22.1.6 |
 | Angular CLI and build | `^22.1.8` (`frontend/package.json`, "@angular/build"; `frontend/package.json`, "@angular/cli") | 22.1.8 |
-| TypeScript | `~6.0.2` (`frontend/package.json`, "typescript") | 6.0.3 |
-| Vitest | `^4.0.8` (`frontend/package.json`, "vitest") | 4.1.11 |
+| TypeScript | `~6.0.2` (`frontend/package.json`, "~6.0.2") | 6.0.3 |
+| Vitest | `^4.0.8` (`frontend/package.json`, "^4.0.8") | 4.1.11 |
 | MSW | `^2.15.0` (`frontend/package.json`, "msw") | 2.15.0 |
 | Playwright | `1.63.0` (`frontend/package.json`, "@playwright/test") | 1.63.0 |
-| ESLint | `^10.9.1` (`frontend/package.json`, "eslint") | 10.10.0 |
-| ng-openapi-gen | `^1.0.5` (`frontend/package.json`, "ng-openapi-gen") | 1.0.5 |
+| ESLint | `^10.9.1` (`frontend/package.json`, "^10.9.1") | 10.10.0 |
+| ng-openapi-gen | `^1.0.5` (`frontend/package.json`, "^1.0.5") | 1.0.5 |
 | Spring Boot | 4.1.1 (`backend/services/commerce/build.gradle`, "id 'org.springframework.boot'") | — |
 | OpenAPI Generator (backend) | 7.25.0 (`backend/services/commerce/build.gradle`, "id 'org.openapi.generator'") | — |
 | PMD | 7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion") | — |
@@ -82,7 +82,7 @@ Spring Boot's dependency management.
   admin client into `frontend/projects/admin/src/app/api/generated/`
   (`frontend/ng-openapi-gen.admin.json`, which includes only those tags), and
   the backend's Spring interfaces into the service's gitignored `build/`
-  directory (`backend/services/commerce/build.gradle`, "openApiGenerate").
+  directory (`backend/services/commerce/build.gradle`, "openApiGenerate {").
   `mise run api:generate` regenerates all three.
 - **Three path aliases** (`frontend/tsconfig.json`, "paths"): `@mi-bolt/api/*` is
   the shop SDK, `@mi-bolt/core-api/*` is `frontend/projects/core-api/src/`,
@@ -95,9 +95,9 @@ Spring Boot's dependency management.
   (`frontend/tests/contract/operation-matrix.spec.ts`, "Side-effect imports"). The admin app
   uses its own client and mocks instead, the client in
   `frontend/projects/admin/src/app/api/generated/`
-  (`frontend/projects/admin/src/app/app.config.ts`, "provideApiConfiguration") and the mocks in
+  (`frontend/projects/admin/src/app/app.config.ts`, "provideApiConfiguration(resolveApiRoot())") and the mocks in
   `frontend/projects/admin/src/mocks/`, which it starts in the browser
-  (`frontend/projects/admin/src/main.ts`, "startAdminMocks"); the lint rule that keeps it off
+  (`frontend/projects/admin/src/main.ts`, "await startAdminMocks()"); the lint rule that keeps it off
   the shop SDK and mocks is `mibolt-frontend-code-standards`'s.
 - **The catalogue feeds these places:** the backend's startup seeding, which
   loads only into an empty product table
@@ -105,16 +105,16 @@ Spring Boot's dependency management.
   so a changed catalogue needs the database emptied first;
   `frontend/scripts/build-catalog-fixture.mjs`, which writes
   `frontend/docs/api/fixtures/catalog.json` for the shop mocks
-  (`frontend/projects/shop-mocks/src/browser.ts`, "catalogFixture"); the contract suite,
+  (`frontend/projects/shop-mocks/src/browser.ts`, "import catalogFixture from"); the contract suite,
   which checks that fixture's product count against it
-  (`frontend/tests/contract/schema.spec.ts`, "CATALOG_SOURCE_PATH"); the admin mock seed
-  (`frontend/projects/admin/src/mocks/seed.ts`, "catalogSource"); both image builds
+  (`frontend/tests/contract/schema.spec.ts`, "const CATALOG_SOURCE_PATH ="); the admin mock seed
+  (`frontend/projects/admin/src/mocks/seed.ts`, "import catalogSource from"); both image builds
   (`deploy/compose.yaml`, "catalog: ../data/catalog"); the candidate
-  template fingerprint (`deploy/candidate/README.md`, "templateFingerprint"); and
+  template fingerprint (`deploy/candidate/README.md`, "is SHA-256 over sorted tracked relative paths"); and
   `frontend/projects/storefront/public/media/`, a byte-identical tracked copy
   of `data/catalog/images/` that nothing in the repository regenerates, which
   the shop mocks fetch
-  (`frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts`, "defaultMediaLoader") and the
+  (`frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts`, "async function defaultMediaLoader(") and the
   admin development build also serves (`frontend/angular.json`, "media/**").
 - **Ports** (`README.md`, "Ports"): 4200 storefront, 4210 demo payment, 4220
   admin, 8080 backend under `/api/v1`, 55433 PostgreSQL, 4400 and 4410 the
@@ -175,15 +175,15 @@ backend configuration, `mibolt.checkout.free-shipping-threshold-huf` at
 ("mibolt.checkout.free-shipping-threshold-huf"),
 applied at
 `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java`
-("buildOptions")
+("private CheckoutData.Options buildOptions(")
 to the delivery fees `GET /checkout/options` returns
 (`contracts/commerce/openapi.yaml`, "getCheckoutOptions"): that is `mibolt-commerce-backend`'s.
 The response carries each option's resulting fee, never the threshold itself
-(`contracts/commerce/openapi.yaml`, "DeliveryOption"). The storefront shows whatever
+(`contracts/commerce/openapi.yaml`, "DeliveryOption:"). The storefront shows whatever
 options come back and never invents a free-shipping default
 (`frontend/projects/storefront/src/app/features/checkout/delivery-step.ts`, "T21-AC05"),
 while the shop mocks keep their own copy of the value
-(`frontend/projects/shop-mocks/src/checkout/checkout-store.ts`, "FREE_SHIPPING_THRESHOLD_HUF"): both are
+(`frontend/projects/shop-mocks/src/checkout/checkout-store.ts`, "export const FREE_SHIPPING_THRESHOLD_HUF"): both are
 `mibolt-shop-frontend`'s. Changing the value is `mibolt-commerce-backend`'s
 ("A fee, threshold or other configuration value"), which names the copies
 outside the backend, the shop mocks' among them, and gives the `git grep`

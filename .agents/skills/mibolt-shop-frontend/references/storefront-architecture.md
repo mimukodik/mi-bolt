@@ -77,7 +77,7 @@ wanted URL in `vissza`. A new gated route carries it.
 
 ## 3. Checkout routes and guards
 
-`frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts` ("checkoutRoutes")
+`frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts` ("export const checkoutRoutes: Routes")
 mounts each step under its own `CheckoutLayout`, with the step name in route
 `data`, which the layout reads as its required `step` input.
 

@@ -214,7 +214,7 @@ const BUILD_MESSAGE_HEADER = /^\s*[✘▲]\s+\[(ERROR|WARNING)\]\s+(.*)$/;
 const BUILD_MESSAGE_LOCATION = /^\s+(\S.*?):(\d+):(\d+):\s*$/;
 const DIAGNOSTIC_CODE = /^((?:TS|NG)\d+):\s*(.*)$/;
 // The patterns `npm --prefix frontend run build:check` fails on
-// (frontend/scripts/build-check.mjs:41), applied to lines outside a message block.
+// (frontend/scripts/build-check.mjs, "WARNING_PATTERNS"), applied to lines outside a message block.
 const BUILD_WARNING_PATTERNS = [/\bWARNING\b/, /▲ \[WARNING\]/, /\bNG[0-9]{4}\b/];
 
 export function parseBuildMessages(lines, { label, repoRoot }) {

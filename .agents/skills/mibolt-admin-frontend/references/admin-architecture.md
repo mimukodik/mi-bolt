@@ -238,7 +238,7 @@ initial bundle. Keep them out:
 2. Add it as a `loadChildren` child of the shell route in
    `frontend/projects/admin/src/app/app.routes.ts` ("children: ["), so `adminAuthGuard` covers it.
 3. Add its link to the side navigation in
-   `frontend/projects/admin/src/app/layout/shell.component.html` ("mat-nav-list").
+   `frontend/projects/admin/src/app/layout/shell.component.html` ("<mat-nav-list>").
 4. Put its state in an `@Injectable()` store listed in the page's `providers`, with methods that
    never reject.
 5. Add mock handlers for any endpoint the admin mocks do not answer yet, and specs for the page,

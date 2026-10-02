@@ -334,7 +334,7 @@ before a commit"); the admin adds its own build checks, below.
   mock at http://localhost:4220/admin/, and `mise run dev` serves it at the same address against
   the real backend, for a change whose result comes from the backend. On the mock, sign in as the
   seeded admin (`SEED_ADMIN` and `SEED_ADMIN_PASSWORD` in
-  `frontend/projects/admin/src/mocks/seed.ts`, "export const SEED_ADMIN"; the mock also prints them
+  `frontend/projects/admin/src/mocks/seed.ts`, "export const SEED_ADMIN:"; the mock also prints them
   to the console), and reach the negative states with `?mi-scenario=empty-catalog`, `list-error`,
   `save-conflict` or `upload-error`. On the real backend, the first start on a database with no
   admin creates one and prints its password once in the backend log, unless

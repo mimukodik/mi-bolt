@@ -46,7 +46,7 @@ In scope:
   `frontend/ng-openapi-gen.admin.json`, their outputs
   `frontend/projects/shop-api/src/generated/` and
   `frontend/projects/admin/src/app/api/generated/`, and the backend generation
-  block, `backend/services/commerce/build.gradle` ("openApiGenerate").
+  block, `backend/services/commerce/build.gradle` ("openApiGenerate {").
 - `frontend/projects/core-api/`, the library all three apps share.
 - The contract suite: `frontend/tests/contract/`, run through
   `frontend/vitest.contract.config.ts`.
@@ -102,7 +102,7 @@ skill.
   (`contracts/commerce/openapi.yaml`, "ProblemCode:"). The backend's `ErrorCode` must
   match it name for name, because `ProblemAdvice` converts with
   `ProblemCode.valueOf`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "codeToWireCode").
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "private static ProblemCode codeToWireCode(").
 - **core-api** (`frontend/projects/core-api/src/`) holds `resolveApiRoot`,
   `demoSessionInterceptor` with `withIfMatch`, and `dismissSplash`. The
   storefront and demo-payment use all three; the admin uses `resolveApiRoot`
@@ -242,10 +242,7 @@ Read it this way:
   hand when a bucket you expect to hold a consumer is empty.
 - **Hits are candidates.** `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartItem.java` ("public Cart getCart()") above is an entity getter that
   shares the name, not the operation, and `contracts/commerce/kommunikacio.md` ("2. Session") is prose.
-- **For an error code use `--kind enum`.** `--kind enum PRICE_CHANGED` ran on
-  the same day with exit 0 and hits in the contract (11), both generated
-  clients (5 and 2), the storefront (25), shop mocks (4), the contract tests
-  (1), e2e (1), backend main (7) and test (8), and docs (7).
+- **For an error code use `--kind enum`**, as in `--kind enum PRICE_CHANGED`.
   `--kind schema ProblemCode` searches the schema name rather than its values
   and finds no storefront hit at all.
 
@@ -345,7 +342,7 @@ One line each; the source named owns the rule.
 | regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json`, "npm run api:generate && git diff --exit-code") | the `api-drift` CI job (`.github/workflows/frontend.yml`, "API client drift"), `mise run api:drift`, `mise run verify` (`mise.toml`, "[tasks.verify]") |
 | leaving a generated file as hand-edited | the same `api:drift`, since regeneration overwrites the edit | as above |
 | updating a spec example or a sample the change invalidated | examples on a shop operation: `frontend/tests/contract/schema.spec.ts` ("every media-type example on responses and requestBodies validates against its own schema"); samples: `contracts/check-samples.sh` | `npm --prefix frontend run test:contract`; `mise run contracts:check` and the Contracts CI workflow (`.github/workflows/contracts.yml`, "OpenAPI lint, samples, sequences") |
-| moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts` ("declares exactly 15 admin operations and 19 others"), and for an admin operation `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"); for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts`, "REQUIRED_OPERATION_COUNT") and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "EXPECTED_OPERATION_IDS") | `npm --prefix frontend run test:contract` |
+| moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts` ("it('declares exactly 15 admin operations and 19 others'"), and for an admin operation `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"); for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts`, "REQUIRED_OPERATION_COUNT") and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "const EXPECTED_OPERATION_IDS = [") | `npm --prefix frontend run test:contract` |
 | a shop-mocks handler for a new shop operation | `operation-matrix` parity, "MSW handlers missing for" (`frontend/tests/contract/operation-matrix.spec.ts`, "registers a business handler for every operationId") | `npm --prefix frontend run test:contract` |
 | updating the replacement for an edited discriminator block | `prepareOpenApiSpec`'s exactly-once guard (`backend/services/commerce/build.gradle`, "expected the ${r.name} block to appear exactly") | every backend compile |
 | matching the `ErrorCode` and `ProblemCode` names | `ErrorCodeTest`, which pins the two enums to the same names in both directions and pins the number of `ErrorCode` constants, so a new code also means raising that count (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "class ErrorCodeTest"); nothing fails at compile time, and at run time an `ErrorCode` with no `ProblemCode` would throw `IllegalArgumentException` in the strict `valueOf` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "ProblemCode.valueOf(code.name())", https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Enum.html) | the backend unit tests, `backend/gradlew -p backend :services:commerce:test`, and every backend build |
@@ -413,7 +410,7 @@ Update this skill and its references in the same change as any of these:
 - the `api:*` and `fixtures:catalog*` scripts in `frontend/package.json` ("scripts"),
   or the root tasks behind `mise run api:generate`, `mise run api:drift` and
   `mise run contracts:check` (`mise.toml`, "Regenerate the frontend API clients"; `mise.toml`, "Fail when the committed frontend API clients differ"; `mise.toml`, "Lint the contract, validate the samples");
-- the openapi block of `backend/services/commerce/build.gradle` ("openApiGenerate");
+- the openapi block of `backend/services/commerce/build.gradle` ("openApiGenerate {");
 - `frontend/projects/core-api/src/public-api.ts`;
 - `data/catalog/catalog.schema.json` or
   `frontend/scripts/build-catalog-fixture.mjs`;

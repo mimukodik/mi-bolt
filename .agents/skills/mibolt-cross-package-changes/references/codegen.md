@@ -44,9 +44,7 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
   `HttpContext` (the contract-change-chain reference, section 8).
 - `ignoreUnusedModels: true`: "ignore model files that are not referenced by
   any operation". A schema reachable only from admin operations is not
-  generated into the shop SDK, and the reverse: the shop SDK has
-  no `admin-*` model and the admin client no cart, checkout, order or
-  catalogue model (`Product`, `CatalogItem`).
+  generated into the shop SDK, and the reverse.
 - `enumStyle: "alias"` and `enumArray: true`: an enum becomes a union type,
   plus "a sibling `.ts` file which exports an array" of its values. A new enum
   value therefore changes two files per client, for example
@@ -56,7 +54,7 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
   classes and no NgModule; operations are standalone functions returning
   Observables, called through the one service, as
   `this.api.invoke(getCart, {})` does at
-  `frontend/projects/storefront/src/app/features/cart/cart.facade.ts` ("dispatchRefetch").
+  `frontend/projects/storefront/src/app/features/cart/cart.facade.ts` ("this.api.invoke(getCart, {})").
 
 ## 2. What the frontend generator writes
 
@@ -68,7 +66,7 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
   `frontend/projects/shop-api/src/generated/fn/cart/get-cart.ts`.
 - An operation with several response media types is generated once per type:
   `getMedia` is `getMedia$Jpeg`, `getMedia$Png` and `getMedia$Webp`
-  (`frontend/projects/shop-api/src/generated/functions.ts`, "getMedia$Jpeg"). The contract
+  (`frontend/projects/shop-api/src/generated/functions.ts`, "export { getMedia$Jpeg as getMedia$Jpeg }"). The contract
   tests match an operation id by that `$` prefix
   (`frontend/tests/contract/operation-matrix.spec.ts`, "exposes every operationId in the generated SDK functions module").
 - `models/` holds one file per schema, named in kebab case
@@ -126,7 +124,7 @@ plugin, version 7.25.0 (`backend/services/commerce/build.gradle`, "org.openapi.g
   single-value enum discriminator properties to plain strings:
   `HomeDeliverySelection.optionId`, `PickupPointSelection.optionId`,
   `CardOrderRequest.paymentMethod` and `CashOnDeliveryOrderRequest.paymentMethod`
-  (`backend/services/commerce/build.gradle`, "discriminatorReplacements"). The reason is an upstream generator bug, recorded with its issue
+  (`backend/services/commerce/build.gradle`, "def discriminatorReplacements = ["). The reason is an upstream generator bug, recorded with its issue
   link in `backend/docs/decisions/0001-openapi-generator-and-discriminator-workaround.md`.
 - **The guard.** Each replacement matches a whole text block, including the
   line after the enum value, and must match exactly once (`backend/services/commerce/build.gradle`, "expected the ${r.name} block to appear exactly"); otherwise
@@ -158,8 +156,8 @@ plugin, version 7.25.0 (`backend/services/commerce/build.gradle`, "org.openapi.g
   schema leaves no stale class; it is added to the main source set
   (`backend/services/commerce/build.gradle`, "generated/openapi/src/main/java"), and every Java compile depends on generation (`backend/services/commerce/build.gradle`, "tasks.withType(JavaCompile)").
   The `test` and `integrationTest` tasks declare the contract as an input
-  (`backend/services/commerce/build.gradle`, "tasks.named('test')", `backend/services/commerce/build.gradle`, "tasks.register('integrationTest', Test)"), so a contract change reruns them.
-- The generated packages are excluded from JaCoCo (`backend/services/commerce/build.gradle`, "coverageExclusions") and from
+  (`backend/services/commerce/build.gradle`, "tasks.named('test') { inputs.file", `backend/services/commerce/build.gradle`, "tasks.register('integrationTest', Test)"), so a contract change reruns them.
+- The generated packages are excluded from JaCoCo (`backend/services/commerce/build.gradle`, "def coverageExclusions = [") and from
   `pmdMain` (`backend/services/commerce/build.gradle`, "tasks.named('pmdMain')").
 - The backend image build copies the contract in through the `contracts`
   build context (`deploy/compose.yaml`, "contracts: ../contracts",
@@ -188,7 +186,7 @@ plugin, version 7.25.0 (`backend/services/commerce/build.gradle`, "org.openapi.g
   operations using it carry.
 - **The backend build fails in `prepareOpenApiSpec`.** The message names the
   block and says what to do: update that entry's `from` and `to` text in
-  `backend/services/commerce/build.gradle` ("discriminatorReplacements") to the new block, so each
+  `backend/services/commerce/build.gradle` ("def discriminatorReplacements = [") to the new block, so each
   block still matches exactly once. A second enum value under a discriminator,
   or a fifth discriminated subtype, is not a text update: read decision 0001
   first (section 4).

@@ -49,7 +49,7 @@ The admin's own mock backend in `frontend/projects/admin/src/mocks/` and the uni
   source order, archives the last `ARCHIVED_SEED_COUNT` (two), starts every `version` at 0,
   registers every colour image as a seed file, and throws on a shape it does not expect.
 - The one seeded admin is `SEED_ADMIN`, signed in with `SEED_ADMIN_PASSWORD`
-  (`frontend/projects/admin/src/mocks/seed.ts`, "export const SEED_ADMIN").
+  (`frontend/projects/admin/src/mocks/seed.ts`, "export const SEED_ADMIN:").
 - The scenarios (`frontend/projects/admin/src/mocks/scenario.ts`, "export const SCENARIOS") are
   chosen with `?mi-scenario=<name>`; any other value is `default`:
   - `empty-catalog`: no products (`frontend/projects/admin/src/mocks/db.ts`, "scenario !==

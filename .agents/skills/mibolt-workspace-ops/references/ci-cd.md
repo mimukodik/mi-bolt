@@ -75,7 +75,7 @@ and the caller names it as `uses: ./.github/workflows/<file>`
   origins on the web port (`.github/workflows/smoke.yml`, "MIBOLT_PAYMENT_ORIGIN"), checks backend
   readiness through the web container, runs `npm run e2e:smoke` against it,
   prints the stack logs on failure and ends with `deploy/compose.sh down -v` on
-  its own project (`.github/workflows/smoke.yml`, "Smoke on the real stack").
+  its own project (`.github/workflows/smoke.yml`, "name: Smoke on the real stack").
 
 **CI does not call the root mise tasks.** Apart from
 `.github/workflows/contracts.yml`, every job runs its tools directly, npm and
@@ -116,7 +116,7 @@ These workflows also check out `ref: ${{ github.sha }}` for the code they run
 
 **A path added to or removed from the `frontend` or `backend` list fails the
 candidate build unless the hash contract changes with it.**
-`deploy/candidate/inputs.py` ("EXPECTED_FILTERS") pins those two lists exactly and raises
+`deploy/candidate/inputs.py` ("EXPECTED_FILTERS = {") pins those two lists exactly and raises
 `path filter diverged from candidate hash contract` on any difference
 (`deploy/candidate/inputs.py`, "path filter diverged from candidate hash contract"), and
 `deploy/tests/test-candidate.py` ("setUp") writes the same lists into its fixture.
@@ -127,7 +127,7 @@ fails for such a pull request until the change is on `main`. Edit, in one
 change:
 
 1. `.github/components.yml`;
-2. `deploy/candidate/inputs.py` ("EXPECTED_FILTERS") and
+2. `deploy/candidate/inputs.py` ("EXPECTED_FILTERS = {") and
    `deploy/tests/test-candidate.py` ("setUp") when the `frontend` or `backend` list
    changed;
 3. the component table at `docs/monorepo.md` ("Workflow it runs");
@@ -147,7 +147,7 @@ workflow (`.github/workflows/ci.yml`, "if: needs.changes.outputs" shows the shap
   `.github/workflows/` uses.
 - `actions/checkout@v7` with
   `ref: ${{ github.event.pull_request.head.sha || github.sha }}` and
-  `persist-credentials: false`, as in `.github/workflows/frontend.yml` ("ref: ${{ github.event.pull_request.head.sha || github.sha }}").
+  `persist-credentials: false`, as in `.github/workflows/frontend.yml` ("persist-credentials: false").
 - `defaults.run.working-directory` set to the workspace in
   `.github/workflows/frontend.yml`, `.github/workflows/backend.yml` and
   `.github/workflows/tools.yml`, so commands read as that area's own npm or

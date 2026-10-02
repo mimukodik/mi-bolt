@@ -58,7 +58,7 @@ how to reset it belong to `mibolt-workspace-ops`; the catalogue data under
   (`backend/services/commerce/src/main/resources/db/changelog/changes/0003-cart.yaml`, "One active cart per session and one line per variant").
 - Observed pattern: constraints and indexes are named with `uq_`, `ck_`,
   `fk_` and `ix_` prefixes, and code recognises a violation by that name:
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentReuse.java` ("CONSTRAINT_NAME")
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentReuse.java` ("private static final String CONSTRAINT_NAME")
   matches `uq_shop_order_payment_intent`, case-insensitively because H2
   upper-cases the name.
 - Column types and change types are the portable ones both PostgreSQL and H2
@@ -230,6 +230,6 @@ Boot reports readiness only after every runner has returned
   after the database is emptied and the service booted again
   (`backend/README.md`, "To reload after a content change, empty the database").
 - A new runner takes the next free `@Order`;
-  `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/ReadinessBeforeRunnersTest.java` ("everyProductionRunnerIsOrderedBeforeTheAfterProbe")
+  `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/ReadinessBeforeRunnersTest.java` ("void everyProductionRunnerIsOrderedBeforeTheAfterProbe()")
   checks that every production runner stays ordered before its readiness
   probe.

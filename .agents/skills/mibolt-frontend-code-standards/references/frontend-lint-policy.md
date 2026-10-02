@@ -31,12 +31,12 @@ output the severity is 0 off, 1 warn, 2 error, and only 2 changes the exit code
 | `frontend/eslint.config.mjs` ("files: ['tests/**/*.ts']") | `tests/**/*.ts` | `recommended` presets only: `tests/` belongs to no tsconfig, so no type-aware rule runs there |
 | `frontend/eslint.config.mjs` ("files: ['projects/**/*.ts', 'tests/**/*.ts']") | `projects/**/*.ts`, `tests/**/*.ts` | the shared rules of section 3 |
 | `frontend/eslint.config.mjs` ("files: ['e2e/**/*.ts', 'playwright.config.ts']") | `e2e/**/*.ts`, `playwright.config.ts` | the Playwright rules of section 5; `e2e/seed.spec.ts` is taken out of that block, so ESLint parses it with its default JavaScript parser and runs only the `security/*` warnings and the coverage-pragma ban on it |
-| `frontend/eslint.config.mjs` ("CROSS_APP_IMPORT_MESSAGE") | each app | the import boundaries of section 4, and the admin assertion ban |
+| `frontend/eslint.config.mjs` ("const CROSS_APP_IMPORT_MESSAGE =") | each app | the import boundaries of section 4, and the admin assertion ban |
 | `frontend/eslint.config.mjs` ("files: ['tests/contract/admin-tags.ts', 'tests/contract/sdk-split.spec.ts']") | `tests/contract/admin-tags.ts`, `tests/contract/sdk-split.spec.ts` | the assertion ban |
 | `frontend/eslint.config.mjs` ("Test policy: a focused") | `projects/**/*.spec.ts`, `tests/**/*.ts` | the test policy |
 | `frontend/eslint.config.mjs` ("no-warning-comments") | `projects/**/*.ts`, `tests/**/*.ts`, `e2e/**/*.ts` | the coverage-pragma ban |
 | `frontend/eslint.config.mjs` ("files: ['projects/**/*.html']") | `projects/**/*.html` | the template rules of section 6 |
-| `frontend/eslint.config.mjs` ("eslintConfigPrettier") | all | `eslint-config-prettier`, applied last, which switches formatting rules off |
+| `frontend/eslint.config.mjs` ("eslintConfigPrettier,") | all | `eslint-config-prettier`, applied last, which switches formatting rules off |
 
 The config says which rules apply to a file; `frontend/angular.json` says which
 files `ng lint` visits, per project `lintFilePatterns`:
@@ -51,7 +51,7 @@ files `ng lint` visits, per project `lintFilePatterns`:
 - **From `tsRecommended`**: `@angular-eslint/prefer-inject` (constructor-parameter injection reported), `prefer-standalone` (reports `standalone: false` and leaves `standalone: true` alone), `prefer-on-push-component-change-detection` with `allowExplicitOnPush: true` (reports only an opt-out of the default `OnPush`), `no-input-rename`, `no-output-native`, `no-output-on-prefix`, `no-output-rename`, and the lifecycle rules. Those behaviours are read from the installed rule sources.
 - **Selectors** (`frontend/eslint.config.mjs`, "prefix: ['app', 'pay', 'adm']"): components are kebab-case elements and directives camelCase attributes, with prefix `app`, `pay` or `adm`; the rule accepts any of the three in any project, while `frontend/angular.json` ("prefix") gives storefront, demo-payment and admin one each.
 - **`@angular-eslint/prefer-signals`** (`frontend/eslint.config.mjs`, "@angular-eslint/prefer-signals"): `input()` rather than `@Input()`, the signal query functions rather than `@ViewChild()` and the other query decorators, and every signal property `readonly`. The installed rule has no check for `@Output()`, although the comment above it (`frontend/eslint.config.mjs`, "Forbid legacy") says it forbids one.
-- **Unused names** (`frontend/eslint.config.mjs`, "@typescript-eslint/no-unused-vars"): a parameter, variable or caught error named with a leading `_` is exempt; unused imports are errors.
+- **Unused names** (`frontend/eslint.config.mjs`, "'@typescript-eslint/no-unused-vars': ["): a parameter, variable or caught error named with a leading `_` is exempt; unused imports are errors.
 - **`no-extraneous-class`** (`frontend/eslint.config.mjs`, "@typescript-eslint/no-extraneous-class"): a decorated class with no members is allowed, for a component that is only a template.
 - **`no-unnecessary-condition`** and **`prefer-readonly`** (`frontend/eslint.config.mjs`, "@typescript-eslint/no-unnecessary-condition").
 - **`strict-boolean-expressions`** (`frontend/eslint.config.mjs`, "@typescript-eslint/strict-boolean-expressions"): `allowString`, `allowNumber`, `allowNullableObject`, `allowNullableBoolean`, `allowNullableString`, `allowNullableNumber` and `allowAny` are all set false; `allowNullableEnum` is not set and defaults to false. The defaults for `allowString`, `allowNumber` and `allowNullableObject` are true, so this is stricter than the preset: only `boolean` (and `never`) passes as a condition (https://typescript-eslint.io/rules/strict-boolean-expressions/).
@@ -71,7 +71,7 @@ files `ng lint` visits, per project `lintFilePatterns`:
 | `require-await`, `array-callback-return` | `frontend/eslint.config.mjs` ("require-await") | no `async` function without an `await`; a callback such as `map`'s returns a value, never a bare `return;`, and a `forEach` callback returns none (https://eslint.org/docs/latest/rules/array-callback-return) |
 | `no-else-return` | `frontend/eslint.config.mjs` ("no-else-return") | no `else` after a `return`; `else if` allowed |
 | smaller rules | `frontend/eslint.config.mjs` ("@typescript-eslint/prefer-for-of"), `frontend/eslint.config.mjs` ("no-constructor-return") | `prefer-for-of`, `arrow-body-style` as needed, `object-shorthand`, `class-literal-property-style` fields, `prefer-arrow-callback`, `operator-assignment`, and the `no-*` hygiene rules listed there |
-| `curly` | `frontend/eslint.config.mjs` ("curly: ['error']") | set to error here and switched off by `frontend/eslint.config.mjs` ("eslintConfigPrettier"); `--print-config` reports `[0,"all"]` |
+| `curly` | `frontend/eslint.config.mjs` ("curly: ['error']") | set to error here and switched off by `frontend/eslint.config.mjs` ("eslintConfigPrettier,"); `--print-config` reports `[0,"all"]` |
 
 The rules switched off in this block (`frontend/eslint.config.mjs`, "no-magic-numbers",
 `frontend/eslint.config.mjs`, "id-length") are the relax pass of section 8.
@@ -79,7 +79,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs`, "no-magic-nu
 ## 4. Import boundaries
 
 - **The message and the dynamic-import selector**: `frontend/eslint.config.mjs` ("const CROSS_APP_IMPORT_MESSAGE") and `frontend/eslint.config.mjs` ("const CROSS_APP_DYNAMIC_IMPORT"). The message is the fix: shared code moves into a library under `frontend/projects/` and is imported through its alias.
-- **Admin** (`frontend/eslint.config.mjs`, "files: ['projects/admin/**/*.ts']"): no `@mi-bolt/api/*`, `@mi-bolt/mocks/*` or `**/shop-api/**` (`frontend/eslint.config.mjs`, "The shop SDK and mocks are not for the admin"), no path with a `storefront/` or `demo-payment/` segment (`frontend/eslint.config.mjs`, "(^|/)(storefront|demo-payment)/"), and `consistent-type-assertions` with `assertionStyle: 'never'` (`frontend/eslint.config.mjs`, "assertionStyle: 'never'"), which still allows `as const`.
+- **Admin** (`frontend/eslint.config.mjs`, "files: ['projects/admin/**/*.ts']"): no `@mi-bolt/api/*`, `@mi-bolt/mocks/*` or `**/shop-api/**` (`frontend/eslint.config.mjs`, "The shop SDK and mocks are not for the admin"), no path with a `storefront/` or `demo-payment/` segment (`frontend/eslint.config.mjs`, "(^|/)(storefront|demo-payment)/"), and `consistent-type-assertions` with `assertionStyle: 'never'` (`frontend/eslint.config.mjs`, "also takes no type assertion at all"), which still allows `as const`.
 - **Storefront** (`frontend/eslint.config.mjs`, "files: ['projects/storefront/**/*.ts']"): no `admin/` or `demo-payment/` segment. **Demo-payment** (`frontend/eslint.config.mjs`, "files: ['projects/demo-payment/**/*.ts']"): no `storefront/` or `admin/` segment.
 - **Dynamic `import()`** between apps: app source at `frontend/eslint.config.mjs` ("Dynamic imports between apps, for app source"), app specs at `frontend/eslint.config.mjs` ("app spec files take the test policy and the dynamic-import ban together").
 - **The libraries** have no import ban of their own. The aliases (`frontend/tsconfig.json`, "paths") are visible to every project, so the lint rules above are the only thing keeping the admin off the shop's SDK and mocks.
@@ -125,7 +125,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs`, "no-magic-nu
 | `inject()` (`SKILL.md`, "Angular") | `prefer-inject` |
 | lazy feature routes (`SKILL.md`, "Angular") | written only |
 
-The installed angular-eslint ships rules that would check several of
+The installed angular-eslint 22.5.0 ships rules that would check several of
 the written-only rows, and the config enables none of them (`--print-config`
 on `frontend/projects/storefront/src/app/features/cart/cart-page.ts` and its
 `.html`): `prefer-host-metadata-property` (`@HostBinding`,

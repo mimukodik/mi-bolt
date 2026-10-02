@@ -53,16 +53,17 @@ depends on `//frontend:start:storefront` (`mise.toml`, "[tasks.storefront]"), wh
 npm runs a script from its package's root, so that `node_modules` is the one
 under `frontend/`
 (https://docs.npmjs.com/cli/v11/using-npm/scripts, "Working Directory for
-Scripts"). The six `start*` scripts at `frontend/package.json` ("scripts") all carry
+Scripts"). The six `start*` scripts at `frontend/package.json` ("--no-turbo-fast-api-calls") all carry
 that Node flag; `frontend/README.md` ("the dev server aborted under e2e load") records why (a V8 abort on Node
 26.10.0 under load, and `NODE_OPTIONS` refuses the flag). Start a dev server
 through those scripts, never `npx ng serve`.
 
 **Ports and base paths come from `frontend/angular.json`.** `demo-payment`
-serves on 4210 under `/demo-fizetes` (`frontend/angular.json`, "demo-payment:build:development") and
-`admin` on 4220 under `/admin` (`frontend/angular.json`, "admin:build:development"). The
-storefront's `serve` target sets no `port` (`frontend/angular.json`, "storefront:build:development");
-the ports table at `README.md` ("Ports") lists it on 4200.
+serves under `/demo-fizetes` (`frontend/angular.json`, "4210") and
+`admin` under `/admin` (`frontend/angular.json`, "4220"), each on the port
+`SKILL.md` ("Run modes") gives. The
+storefront's `serve` target sets no `port` (`frontend/angular.json`, "proxy.conf.json");
+its port is the one in the ports table at `README.md` ("Ports").
 
 **The `local-backend` configuration is what `dev` and `dev:docker` serve.** It
 swaps in `environment.local-backend.ts` for the storefront
@@ -127,7 +128,7 @@ override in that shell before the task runs.
 
 | Variable | Read by | Purpose |
 |---|---|---|
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `deploy/compose.yaml` ("POSTGRES_DB:"), `deploy/compose.yaml` ("MIBOLT_DB_URL:") | the database, its user and its password; the password is required and comes from the `.env` `deploy/compose.sh` creates |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `deploy/compose.yaml` ("environment: POSTGRES_DB:"), `deploy/compose.yaml` ("MIBOLT_DB_URL:") | the database, its user and its password; the password is required and comes from the `.env` `deploy/compose.sh` creates |
 | `MIBOLT_POSTGRES_PORT`, `MIBOLT_BACKEND_PORT`, `MIBOLT_WEB_PORT` | `deploy/compose.yaml` ("MIBOLT_POSTGRES_PORT:-55433"), `deploy/compose.yaml` ("MIBOLT_BACKEND_PORT:-8080"), `deploy/compose.yaml` ("MIBOLT_WEB_PORT:-4200") | host ports of the three services (`README.md`, "reads three environment variables to move the") |
 | `MIBOLT_POSTGRES_VOLUME` | `deploy/compose.yaml` ("MIBOLT_POSTGRES_VOLUME:-mi-bolt-postgres-data"), `deploy/compose.sh` ("MIBOLT_POSTGRES_VOLUME:-mi-bolt-postgres-data") | the PostgreSQL volume's name |
 | `COMPOSE_PROJECT_NAME` | Compose, `deploy/compose.sh` ("COMPOSE_PROJECT_NAME:-mi-bolt-local") | overrides the `mi-bolt-local` project name (https://docs.docker.com/compose/how-tos/project-name/) |
@@ -152,7 +153,7 @@ three ports are web 4600, backend 8100
 and PostgreSQL 55500, each plus the slot number (`deploy/stack.sh`, "Slot ledger").
 The claim is remembered in a gitignored state file beside the Compose file
 (`.gitignore`, "/deploy/.worktree-stack.env"), and the payment origins point at its own web port
-(`deploy/stack.sh`, "write_state"). `status` also prints the claim, and `health`
+(`deploy/stack.sh`, "write_state() {"). `status` also prints the claim, and `health`
 checks its PostgreSQL. Without `deploy/stack.sh reset --yes` the container, the volume
 and the port outlive the worktree (`backend/docs/04-adatbazis.md`, "Egy git worktree-nek saját stackje van", in
 Hungarian). Pass `--build` when the stack has to run this checkout's code: both
@@ -163,7 +164,7 @@ or the local cache and builds only when it finds none
 image").
 
 **From the main checkout**, `deploy/stack.sh` exits 2
-(`deploy/stack.sh`, "require_worktree"). `SKILL.md` ("Run a second stack beside the default
+(`deploy/stack.sh`, "require_worktree() {"). `SKILL.md` ("Run a second stack beside the default
 one") gives the variables to export, the `deploy/compose.sh` arguments, and
 how to stop that stack without stopping the default `mi-bolt-local` one.
 `.github/workflows/smoke.yml` ("COMPOSE_PROJECT_NAME: mi-bolt-smoke-ci") sets the project, the volume and the
@@ -186,7 +187,7 @@ app. `frontend/scripts/proxy-timeout.mjs` parses the timeout, and
 port.** Usage is at `tools/dev-server/dev-server.sh` ("usage()"):
 `start <port> -- <command>`, `stop <port>`, `status <port>`. It records a pid
 plus the process start time, so it never stops a process it did not start
-(`tools/dev-server/dev-server.sh`, "owned_pid"). `start` exits 3 when it
+(`tools/dev-server/dev-server.sh`, "owned_pid() {"). `start` exits 3 when it
 already manages the port, 4 when another process holds it, 5 when the command
 dies before listening and 6 when it does not listen within
 `DEV_SERVER_START_TIMEOUT` seconds; `stop` exits 2 with no pid file and 7 when
@@ -202,7 +203,7 @@ log files. `tools/dev-server/dev-server.test.ts` covers it.
 | `compose.sh: project … must set MIBOLT_POSTGRES_VOLUME` | a second project on the default volume | `deploy/compose.sh` ("must set MIBOLT_POSTGRES_VOLUME") |
 | `compose.sh: neither 'docker compose' nor 'docker-compose' is installed`, exit 127 | no Compose | `deploy/compose.sh` |
 | `compose.sh: no Docker answers here`, exit 127 | no `docker` command, or no Docker daemon answers | `deploy/compose.sh` |
-| `stack.sh: this is the main checkout…` or `HEAD is detached`, exit 2 | wrong checkout for `deploy/stack.sh` | `deploy/stack.sh` ("require_worktree") |
+| `stack.sh: this is the main checkout…` or `HEAD is detached`, exit 2 | wrong checkout for `deploy/stack.sh` | `deploy/stack.sh` ("require_worktree() {") |
 | `stack.sh: no free slot among 20` | every slot claimed | `deploy/stack.sh slots`, then `deploy/stack.sh prune --yes` for worktrees that no longer exist |
 | `up --wait` fails on `commerce` | readiness answers only after the catalogue loader and the admin bootstrap have run (`backend/services/commerce/src/main/resources/application.properties`, "Readiness probe for the Compose health check"); the health check allows a 20-second start period and 30 retries 5 seconds apart | `deploy/compose.yaml` ("start_period: 20s"); read `deploy/compose.sh logs commerce` |
 | a port is already bound | another mode, a second stack or a leftover static server holds it | the ports table at `README.md` ("Ports"); `tools/dev-server/dev-server.sh status <port>` for a server it started |

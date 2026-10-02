@@ -42,7 +42,7 @@ them (quickstart source, section 8).
   rejects
   `System.out` and `System.err` printing. Log through the class's SLF4J logger
   instead (section 5).
-- **`AvoidReassigningParameters`** 
+- **`AvoidReassigningParameters`**
   (`backend/config/pmd/ruleset.xml`, "AvoidReassigningParameters")
   rejects an assignment to a method or constructor parameter. Copy it to a
   local and change the local.
@@ -51,14 +51,14 @@ them (quickstart source, section 8).
   rejects an unchecked exception in a
   `throws` clause. The fix 0009 records is deleting the clause
   (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "the clause was deleted").
-- **`AvoidThrowingRawExceptionTypes`** 
+- **`AvoidThrowingRawExceptionTypes`**
   (`backend/config/pmd/ruleset.xml`, "AvoidThrowingRawExceptionTypes")
   rejects throwing `RuntimeException`, `Exception`, `Throwable` or `Error`
   themselves. Throw `DomainException` for a business failure and a specific JDK
   type otherwise; 0009 replaced two raw throws with `UncheckedIOException` and
   `IllegalStateException`
-  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "UncheckedIOException").
-- **`MethodNamingConventions`, re-added** 
+  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "throw new UncheckedIOException(e);").
+- **`MethodNamingConventions`, re-added**
   (`backend/config/pmd/ruleset.xml`, "category/java/codestyle.xml/MethodNamingConventions")
   with `junit5TestPattern` `[a-z][a-zA-Z0-9]*|f[0-9]+_[a-zA-Z0-9]*`. The
   `f<N>_` form is the smoke-test marker; its only use is
@@ -66,7 +66,7 @@ them (quickstart source, section 8).
   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/catalog/SmokeF6Test.java`
   ("f6_imageServingWorks").
   Every other method keeps PMD's default camelCase pattern.
-- **`UseUtilityClass`, excluded** 
+- **`UseUtilityClass`, excluded**
   (`backend/config/pmd/ruleset.xml`, "UseUtilityClass"),
   project-wide because a ruleset `<exclude>` cannot target one class; its only
   hit was the `@SpringBootApplication` entry point.
@@ -296,7 +296,7 @@ No document states these; the code follows them consistently.
   `backend/services/commerce/src` have tab-indented lines, and no Java file has
   a space-indented code line (the four others have no indented code at all).
   `backend/services/commerce/build.gradle` and
-  `backend/config/pmd/ruleset.xml` are tab-indented too. `./.editorconfig`
+  `backend/config/pmd/ruleset.xml` are tab-indented too. `.editorconfig`
   ("indent_style = space") sets `indent_style = space` and `indent_size = 2` for `[*]`, a section that
   matches every file (EditorConfig specification, section 8). No Java formatter
   is configured. Match the surrounding file; neither source is declared to win.
