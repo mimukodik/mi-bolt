@@ -172,7 +172,7 @@ section 5.
   `toLowerCase` and `toUpperCase`, which here is always `Locale.ROOT`; no
   unused import, local, private field, private method or parameter;
   `@Override` on every override. This list is not the full set: that is the
-  full quickstart ruleset the reference links, minus `UseUtilityClass`.
+  quickstart the reference links, minus `UseUtilityClass`.
 
 **Written, and checked only by review:**
 

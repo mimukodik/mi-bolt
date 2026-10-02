@@ -130,7 +130,7 @@ consumed, so contract drift is caught independently of the generated code.
 
 ## What the requirement docs ask of the tests
 
-`backend/docs/02-backend.md` ("7.2 Unit tesztek — lefedettség legalább 90%"), in short:
+`backend/docs/02-backend.md` ("7.2 Unit tesztek"), in short:
 
 - Every numbered invariant has a test that names its number
   (`backend/docs/02-backend.md`, "minden számozott invariánsa"), in a comment such as the one at

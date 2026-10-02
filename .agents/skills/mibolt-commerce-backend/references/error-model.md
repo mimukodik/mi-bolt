@@ -135,7 +135,7 @@ In this service that becomes:
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java`, "Terms must be accepted").
 - The admin write API applies the same split in three stages, bean
   validation, then `AdminProductValidator`, then database rules
-  (`backend/docs/decisions/0020-admin-catalogue-write-api.md`, "Validation in three stages, each answered whole").
+  (`backend/docs/decisions/0020-admin-catalogue-write-api.md`, "each answered whole").
 
 ## Field errors and JSON pointers
 

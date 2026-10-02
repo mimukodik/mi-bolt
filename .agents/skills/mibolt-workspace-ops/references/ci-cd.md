@@ -180,7 +180,7 @@ files; `deploy/candidate/README.md` ("Run local checks with:") runs `actionlint`
   versions for local runs (`mise.toml`, "[tools]").
 - `README.md` ("What CI runs") names four reusable workflows; `.github/components.yml`
   has five, the fifth being `smoke`.
-- `frontend/README.md` ("a ten-cell matrix") describes a ten-cell `e2e` matrix;
+- `frontend/README.md` ("one job per browser and viewport") describes a ten-cell `e2e` matrix;
   `.github/workflows/frontend.yml` ("To save CI minutes only the desktop (fullhd) cell of each browser runs") runs three cells and keeps the
   others commented out.
 

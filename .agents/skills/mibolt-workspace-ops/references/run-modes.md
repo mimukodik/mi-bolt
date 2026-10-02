@@ -31,7 +31,7 @@ to stop it.
 | `mise run backend` | `mise.toml` ("[tasks.backend]"), `backend/mise.toml` ("[tasks.run]") | `db`, then Gradle `bootRun` in the foreground | 8080, 55433 | Ctrl+C, then `mise run stop` |
 | `mise run backend:docker` | `mise.toml` ("The backend in its container (the mi-bolt-commerce image)") | `deploy/compose.sh up -d --build --wait postgres commerce` | 8080, 55433 | `mise run stop` |
 | `mise run dev` | `mise.toml` ("[tasks.dev]") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `mise run dev:docker` | `mise.toml` ("The three apps against the backend container") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run dev:docker` | `mise.toml` ("apps against the backend container") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
 | `mise run stack` | `mise.toml` ("[tasks.stack]") | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
 | `mise run stop` | `mise.toml` ("[tasks.stop]") | `deploy/compose.sh down` | — | — |
 
@@ -128,7 +128,7 @@ override in that shell before the task runs.
 | Variable | Read by | Purpose |
 |---|---|---|
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `deploy/compose.yaml` ("environment: POSTGRES_DB:"), `deploy/compose.yaml` ("MIBOLT_DB_URL:") | the database, its user and its password; the password is required and comes from the `.env` `deploy/compose.sh` creates |
-| `MIBOLT_POSTGRES_PORT`, `MIBOLT_BACKEND_PORT`, `MIBOLT_WEB_PORT` | `deploy/compose.yaml` ("MIBOLT_POSTGRES_PORT:-55433"), `deploy/compose.yaml` ("MIBOLT_BACKEND_PORT:-8080"), `deploy/compose.yaml` ("MIBOLT_WEB_PORT:-4200") | host ports of the three services (`README.md`, "reads three environment variables to move the") |
+| `MIBOLT_POSTGRES_PORT`, `MIBOLT_BACKEND_PORT`, `MIBOLT_WEB_PORT` | `deploy/compose.yaml` ("MIBOLT_POSTGRES_PORT:-55433"), `deploy/compose.yaml` ("MIBOLT_BACKEND_PORT:-8080"), `deploy/compose.yaml` ("MIBOLT_WEB_PORT:-4200") | host ports of the three services (`README.md`, "environment variables to move the") |
 | `MIBOLT_POSTGRES_VOLUME` | `deploy/compose.yaml` ("MIBOLT_POSTGRES_VOLUME:-mi-bolt-postgres-data"), `deploy/compose.sh` ("MIBOLT_POSTGRES_VOLUME:-mi-bolt-postgres-data") | the PostgreSQL volume's name |
 | `COMPOSE_PROJECT_NAME` | Compose, `deploy/compose.sh` ("COMPOSE_PROJECT_NAME:-mi-bolt-local") | overrides the `mi-bolt-local` project name (https://docs.docker.com/compose/how-tos/project-name/) |
 | `MIBOLT_PAYMENT_ORIGIN`, `MIBOLT_SHOP_ORIGIN` | `deploy/compose.yaml` ("MIBOLT_PAYMENT_REDIRECT_URL_PREFIX") | origins the backend's payment redirect and return prefixes are built from |
@@ -178,7 +178,7 @@ on `HOST`, `127.0.0.1` by default, and `PORT`, 4200 by default, and reads
 describes (`frontend/scripts/serve-static.mjs`, "// Environment:"), and
 `MI_BOLT_E2E_STATIC_DIR`, the directory it serves, `dist/storefront/browser`
 under `frontend/` by default (`frontend/scripts/serve-static.mjs`, "MI_BOLT_E2E_STATIC_DIR").
-`frontend/README.md` ("through two static hosts") gives the two invocations for the shop and the payment
+`frontend/README.md` ("static hosts") gives the two invocations for the shop and the payment
 app. `frontend/scripts/proxy-timeout.mjs` parses the timeout, and
 `frontend/tests/scripts/proxy-timeout.spec.ts` tests it.
 

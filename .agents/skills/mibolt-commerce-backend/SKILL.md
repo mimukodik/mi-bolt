@@ -321,7 +321,7 @@ stock: the `admin.catalog` package, from
 to `AdminProductCommandService` (create, replace, archive, restore),
 `AdminProductValidator` (cross-field rules) and `AdminProductEtags` (428 or
 412 on `If-Match`). Validation runs in three stages, each answered whole
-(`backend/docs/decisions/0020-admin-catalogue-write-api.md`, "Validation in three stages, each answered whole"). The API
+(`backend/docs/decisions/0020-admin-catalogue-write-api.md`, "each answered whole"). The API
 tests sign in with `AdminLogin`.
 
 **An error code**: the contract's `ProblemCode` first, then `ErrorCode`,

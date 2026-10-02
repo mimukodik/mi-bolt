@@ -116,7 +116,7 @@ no consumer, and an error code is searched with the `enum` kind.
      `frontend/tests/contract/schema.spec.ts` ("idempotency-key-required-on-mutations").
 
    The count 19 also sits in test titles and header comments across
-   `frontend/tests/contract/` and in `frontend/tests/contract/admin-tags.ts` ("19 shop operations");
+   `frontend/tests/contract/` and in `frontend/tests/contract/admin-tags.ts` ("shop operations");
    keep them true.
 4. **shop-mocks handler**: `mibolt-shop-frontend`. Skipped: see `SKILL.md`,
    "What fails when a step is skipped".
