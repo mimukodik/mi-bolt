@@ -92,6 +92,8 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   it answers, and where it fails, go straight to the mock and the backend tests.
   `mise run stop` stops every container and keeps the volume.
   `README.md` ("Ports") lists the ports, 4400 and 4410 for Playwright included.
+  [references/run-modes.md](references/run-modes.md) has the wiring behind
+  each mode.
 - **Two images, built through Compose.** `mi-bolt-web` puts the three
   production builds behind NGINX; `mi-bolt-commerce` is the backend. Both read
   named build contexts that a plain `docker build` of their directory does not

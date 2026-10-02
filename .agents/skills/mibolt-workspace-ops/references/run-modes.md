@@ -15,22 +15,24 @@ this skill's own file.
 
 ## The modes
 
-`README.md` ("Start the apps: which mode when") gives each mode with when to pick it; this table is the
-wiring behind them.
+`SKILL.md` ("Run modes") says which modes serve the apps on the in-page MSW
+mock, which start containers, on which ports, and that `mise run stop` keeps
+the volume; `README.md` ("Start the apps: which mode when") gives each mode
+with when to pick it and how to stop it. This table is the wiring behind them.
 
-| Command | Defined at | Starts | Ports | Stop |
-|---|---|---|---|---|
-| `mise run storefront` | `mise.toml` ("[tasks.storefront]"), `frontend/mise.toml` ("start:storefront") | `ng serve storefront`, `development` configuration, in-page MSW | 4200 | Ctrl+C |
-| `mise run admin` | `mise.toml` ("[tasks.admin]"), `frontend/mise.toml` ("start:admin") | `ng serve admin`, `development` configuration, in-page MSW | 4220 | Ctrl+C |
-| `mise run payment` | `mise.toml` ("[tasks.payment]"), `frontend/mise.toml` ("start:payment") | `ng serve demo-payment`, `development` configuration; `frontend/projects/demo-payment/src/main.ts` starts its mock while `isDevMode()` is true | 4210 | Ctrl+C |
-| `mise run frontend` | `mise.toml` ("[tasks.frontend]") | the three above together | 4200, 4210, 4220 | Ctrl+C |
-| `mise run db` | `mise.toml` ("[tasks.db]") | `deploy/compose.sh up -d --wait postgres` | 55433 | `mise run stop` |
-| `mise run backend` | `mise.toml` ("[tasks.backend]"), `backend/mise.toml` ("[tasks.run]") | `db`, then Gradle `bootRun` in the foreground | 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `mise run backend:docker` | `mise.toml` ("The backend in its container (the mi-bolt-commerce image)") | `deploy/compose.sh up -d --build --wait postgres commerce` | 8080, 55433 | `mise run stop` |
-| `mise run dev` | `mise.toml` ("[tasks.dev]") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `mise run dev:docker` | `mise.toml` ("The three apps against the backend container") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `mise run stack` | `mise.toml` ("[tasks.stack]") | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
-| `mise run stop` | `mise.toml` ("[tasks.stop]") | `deploy/compose.sh down`; the PostgreSQL volume keeps its data | — | — |
+| Command | Defined at | Runs |
+|---|---|---|
+| `mise run storefront` | `mise.toml` ("[tasks.storefront]"), `frontend/mise.toml` ("start:storefront") | `ng serve storefront`, `development` configuration |
+| `mise run admin` | `mise.toml` ("[tasks.admin]"), `frontend/mise.toml` ("start:admin") | `ng serve admin`, `development` configuration |
+| `mise run payment` | `mise.toml` ("[tasks.payment]"), `frontend/mise.toml` ("start:payment") | `ng serve demo-payment`, `development` configuration; `frontend/projects/demo-payment/src/main.ts` starts its mock while `isDevMode()` is true |
+| `mise run frontend` | `mise.toml` ("[tasks.frontend]") | the three above together |
+| `mise run db` | `mise.toml` ("[tasks.db]") | `deploy/compose.sh up -d --wait postgres` |
+| `mise run backend` | `mise.toml` ("[tasks.backend]"), `backend/mise.toml` ("[tasks.run]") | `db`, then Gradle `bootRun` in the foreground |
+| `mise run backend:docker` | `mise.toml` ("The backend in its container (the mi-bolt-commerce image)") | `deploy/compose.sh up -d --build --wait postgres commerce` |
+| `mise run dev` | `mise.toml` ("[tasks.dev]") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` |
+| `mise run dev:docker` | `mise.toml` ("The three apps against the backend container") | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` |
+| `mise run stack` | `mise.toml` ("[tasks.stack]") | every Compose service, built, with the payment redirect and return pointed at the web origin |
+| `mise run stop` | `mise.toml` ("[tasks.stop]") | `deploy/compose.sh down` |
 
 **`depends` entries run in parallel.** mise runs whatever it can in parallel up
 to `--jobs` (setting `jobs`, variable `MISE_JOBS`), which is what lets
@@ -84,8 +86,8 @@ directly.** The wrapper:
 - creates the gitignored `.env` beside the Compose file from
   `deploy/.env.example` on first use (`deploy/compose.sh`, "created deploy/.env",
   `.gitignore`, "/deploy/.env");
-- exits 127 with the alternatives when no Docker answers, before running
-  Compose at all (`deploy/compose.sh`);
+- exits 127 when no Docker answers, before running Compose at all, naming
+  the alternatives `SKILL.md` ("Run modes") gives (`deploy/compose.sh`);
 - runs the `docker compose` plugin when it answers, otherwise the standalone
   `docker-compose`, with every argument passed through, and exits 127 when
   neither exists (`deploy/compose.sh`).
@@ -140,18 +142,18 @@ override in that shell before the task runs.
 
 ## A second stack beside the default one
 
-**From a linked worktree, use `deploy/stack.sh`.** Its usage is at
-`deploy/stack.sh` ("Usage: deploy/stack.sh"). `deploy/stack.sh up --build` claims one of 20 slots in
+**From a linked worktree, use `deploy/stack.sh`.** `SKILL.md` ("Run a second
+stack beside the default one") gives the commands that claim a slot, print
+its ports, stop the stack and free the slot. Its usage is at
+`deploy/stack.sh` ("Usage: deploy/stack.sh"). A slot is one of 20 in
 a machine-wide ledger kept in the user's state directory
-(`MIBOLT_STACK_SLOTS_DIR` overrides it, `deploy/stack.sh`, "MIBOLT_STACK_SLOTS_DIR"), gives the
-worktree its own project name, volume and three ports (web 4600, backend 8100
-and PostgreSQL 55500, each plus the slot number, `deploy/stack.sh`, "Slot ledger"),
-remembers them in a gitignored state file beside the Compose file
-(`.gitignore`, "/deploy/.worktree-stack.env"), and points the payment origins at its own web port
-(`deploy/stack.sh`, "write_state"). `ports` and `status` print the claim, `health`
-checks its PostgreSQL, and `stop` and `down` keep the volume. Run
-`deploy/stack.sh reset --yes` before removing the worktree: it deletes that
-worktree's volume and frees the slot, and without it the container, the volume
+(`MIBOLT_STACK_SLOTS_DIR` overrides it, `deploy/stack.sh`, "MIBOLT_STACK_SLOTS_DIR"); its
+three ports are web 4600, backend 8100
+and PostgreSQL 55500, each plus the slot number (`deploy/stack.sh`, "Slot ledger").
+The claim is remembered in a gitignored state file beside the Compose file
+(`.gitignore`, "/deploy/.worktree-stack.env"), and the payment origins point at its own web port
+(`deploy/stack.sh`, "write_state"). `status` also prints the claim, and `health`
+checks its PostgreSQL. Without `deploy/stack.sh reset --yes` the container, the volume
 and the port outlive the worktree (`backend/docs/04-adatbazis.md`, "Egy git worktree-nek saját stackje van", in
 Hungarian). Pass `--build` when the stack has to run this checkout's code: both
 image names are fixed (`deploy/compose.yaml`, "image: mi-bolt-commerce", `deploy/compose.yaml`, "image: mi-bolt-web"), and
@@ -160,8 +162,8 @@ or the local cache and builds only when it finds none
 (https://docs.docker.com/reference/compose-file/build/, "Using build and
 image").
 
-**From the main checkout, `deploy/stack.sh` refuses** (exit 2,
-`deploy/stack.sh`, "require_worktree"). `SKILL.md` ("Run a second stack beside the default
+**From the main checkout**, `deploy/stack.sh` exits 2
+(`deploy/stack.sh`, "require_worktree"). `SKILL.md` ("Run a second stack beside the default
 one") gives the variables to export, the `deploy/compose.sh` arguments, and
 how to stop that stack without stopping the default `mi-bolt-local` one.
 `.github/workflows/smoke.yml` ("COMPOSE_PROJECT_NAME: mi-bolt-smoke-ci") sets the project, the volume and the
@@ -199,7 +201,7 @@ log files. `tools/dev-server/dev-server.test.ts` covers it.
 | Compose stops on `POSTGRES_PASSWORD` | Compose ran without `deploy/compose.sh`, so no `.env` exists | `deploy/compose.yaml` ("POSTGRES_PASSWORD:?copy deploy/.env.example"), `deploy/compose.sh` ("created deploy/.env") |
 | `compose.sh: project … must set MIBOLT_POSTGRES_VOLUME` | a second project on the default volume | `deploy/compose.sh` ("must set MIBOLT_POSTGRES_VOLUME") |
 | `compose.sh: neither 'docker compose' nor 'docker-compose' is installed`, exit 127 | no Compose | `deploy/compose.sh` |
-| `compose.sh: no Docker answers here`, exit 127 | no `docker` command, or no Docker daemon answers; the message names the mock modes and the backend tests to use instead | `deploy/compose.sh` |
+| `compose.sh: no Docker answers here`, exit 127 | no `docker` command, or no Docker daemon answers | `deploy/compose.sh` |
 | `stack.sh: this is the main checkout…` or `HEAD is detached`, exit 2 | wrong checkout for `deploy/stack.sh` | `deploy/stack.sh` ("require_worktree") |
 | `stack.sh: no free slot among 20` | every slot claimed | `deploy/stack.sh slots`, then `deploy/stack.sh prune --yes` for worktrees that no longer exist |
 | `up --wait` fails on `commerce` | readiness answers only after the catalogue loader and the admin bootstrap have run (`backend/services/commerce/src/main/resources/application.properties`, "Readiness probe for the Compose health check"); the health check allows a 20-second start period and 30 retries 5 seconds apart | `deploy/compose.yaml` ("start_period: 20s"); read `deploy/compose.sh logs commerce` |
