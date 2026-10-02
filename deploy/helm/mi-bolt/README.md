@@ -53,8 +53,28 @@ helm template pr-123 ./deploy/helm/mi-bolt \
 ```
 
 Commerce has one replica because admin sessions live in its process. Its
-`Recreate` strategy prevents old and new commerce processes from overlapping
-during schema migrations, with brief downtime during a revision. Liveness
-checks the app process; readiness controls traffic admission. Web's probe uses
-the static `/robots.txt` file. This chart does not provision a database,
-certificates, or platform controllers.
+`RollingUpdate` strategy uses `maxUnavailable: 0` and `maxSurge: 1`: the old
+pod keeps serving while the new pod migrates and loads the catalogue. The
+readiness probe admits the new pod only after startup runners finish; then
+the old pod stops. The cluster must have capacity for the extra commerce pod.
+
+Migrations must be additive and compatible with the previous revision's reads
+and writes. Hibernate validates mapped columns and ignores added, unmapped
+columns. Drops, renames, incompatible type changes or stricter constraints
+need expand/contract across releases; see
+[`backend/docs/04-adatbazis.md` §5](../../../backend/docs/04-adatbazis.md#5-migráció).
+A rollback must also remain compatible with the migrated schema.
+
+Process-local admin sessions are lost on every release and may fail while
+both pods serve traffic. For demo step 7, wait for the old pod to disappear,
+then log in to the stable admin again. Liveness checks the app process;
+web's probe uses the static `/robots.txt` file. This chart does not provision
+a database, certificates, or platform controllers.
+
+For stable acceptance, start a catalogue API probe through
+`https://bolt.mimukodik.hu` at five requests per second before the Helm
+upgrade, using the demo gate's cookie. Keep it running until the old commerce
+pod is gone. Record the release revision, probe start/end times, total
+requests, successes and failures; acceptance requires zero failures across
+that entire window. A rendered chart or a post-release smoke pass alone does
+not prove release continuity.

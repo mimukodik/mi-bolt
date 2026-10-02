@@ -72,6 +72,16 @@ how to reset it belong to `mibolt-workspace-ops`; the catalogue data under
 
 ## Forward-only, and why nothing else catches a violation
 
+Commerce uses `RollingUpdate` with `maxUnavailable: 0` and `maxSurge: 1`.
+The old pod serves while the new pod migrates and loads; readiness admits
+the new pod only after the startup runners finish. Migrations must therefore
+be additive and compatible with the previous code's reads and writes:
+new tables, nullable columns and indexes. Hibernate validates mapped columns
+and ignores added, unmapped columns. Drops, renames, incompatible type changes
+and stricter constraints require expand/contract over separate releases;
+remove the old shape only after no running revision uses it, and keep
+rollback schema-compatible (`backend/docs/04-adatbazis.md`, "Gördülő kiadás").
+
 The rule: a changeset that has run is never rewritten; a new one is added
 instead (`backend/docs/04-adatbazis.md`, "egy már futtatott changeset-et nem írunk át"). The model to copy is
 `backend/services/commerce/src/main/resources/db/changelog/changes/0006-idempotency-response-body.yaml` ("idempotency_record.response_body was declared clob in 0005-orders"),

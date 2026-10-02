@@ -119,6 +119,23 @@ Elvárások:
 - A `04-adatbazis.md` 4. szakaszában felsorolt megszorítások (egyediség, készlet nem negatív,
   egész pénzérték) a changelog részei, nem alkalmazáslogika.
 
+**Gördülő kiadás: a régi és az új commerce átmenetileg egyszerre fut.** A Helm chart
+`RollingUpdate` stratégiája `maxUnavailable: 0`, `maxSurge: 1` értékekkel megtartja a régi
+podot, amíg az új befejezi a migrációt és a katalógus betöltését, majd Ready lesz.
+Ezért a migráció csak hozzáadó és a régi kód olvasásaival, írásaival kompatibilis lehet:
+új tábla, új nullable oszlop vagy index. A Hibernate a leképezett oszlopokat validálja;
+a hozzáadott, nem leképezett oszlopokat figyelmen kívül hagyja.
+
+Oszlop törlése vagy átnevezése, inkompatibilis típusváltás vagy megszorítás szigorítása
+**expand/contract** lépésekben, több kiadáson át történik: először hozzáadjuk az új sémát,
+majd átállítjuk a kódot és az adatokat, és csak akkor távolítjuk el a régi alakot, amikor
+már egyik futó verzió sem használja. A visszaállított alkalmazásnak is kompatibilisnek kell
+lennie a már migrált sémával; az új migráció nem feltételezheti, hogy a régi pod leállt.
+
+Az admin munkamenet folyamaton belül él: minden kiadás elveszíti, és az átfedés alatt
+is megszakadhat. A demó 7. lépésében a régi pod eltűnése után újra be kell jelentkezni
+a stabil adminba.
+
 **A kezdőadat elkülönül a sémától.** A katalógus betöltése külön, **újrafuttatható** lépés, nem
 séma-changeset — a demót újra és újra fel kell tölteni, és a katalógus változása nem
 sémaváltozás. A `reset` utáni újratöltésnek egyetlen parancsból mennie kell.
