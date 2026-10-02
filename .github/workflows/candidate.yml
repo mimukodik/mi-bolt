@@ -33,8 +33,6 @@ jobs:
         run: |
           uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-candidate.py
           uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-stable-release.py
-          uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-preview-smoke.py
-          uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-github-deployment.py
           uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py
       - name: Test the worktree stack script
         run: uv run --no-project python deploy/tests/test-stack.py

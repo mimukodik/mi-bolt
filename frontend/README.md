@@ -103,15 +103,17 @@ Both `e2e` and `e2e:all` serve the `development` configuration on port 4400 by d
 
 The deployed web image serves the storefront at `/`, admin at `/admin/`, and
 the payment app at `/demo-fizetes/`. All three use `/api/v1` on the same HTTPS
-origin. A PR preview uses `https://bolt-pr-<PR-number>.mimukodik.hu`; the stable
+origin. A PR preview is enabled by the `bolt-preview` label at
+`https://bolt-pr-<PR-number>.mimukodik.hu`; the stable
 demo uses `https://bolt.mimukodik.hu`. Hosted builds use the real commerce
 backend, including the payment redirect and return flow.
 
 Before reporting a preview as verified, compare `/__candidate.json` with the
-Actions candidate receipt and wait for the deployed `Preview Smoke` receipt.
-The local `smoke` run and a healthy deployment are separate checks. See the
+Actions candidate receipt and exercise the deployed purchase flows manually.
+Deployment readiness does not require a browser acceptance receipt. See the
 [candidate rollout guide](../deploy/candidate/README.md) for eligibility and
-retry commands. A new PR commit resets preview data from the approved template.
+manual check command. A new PR commit starts a fresh preview database populated
+by that commit's commerce image.
 
 Once a preview is healthy, run the same two purchase flows against its public
 URL from the repository root:

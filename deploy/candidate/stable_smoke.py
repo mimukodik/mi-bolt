@@ -3,11 +3,45 @@ import argparse
 import json
 import os
 from pathlib import Path
+import subprocess
+import tempfile
 import time
+from urllib.request import Request, urlopen
 
-from preview_smoke import api, download, fence
+REPO = 'mimukodik/mi-bolt'
 
 ORIGIN = 'https://bolt.mimukodik.hu'
+
+
+def api(path):
+    return json.loads(subprocess.check_output(['gh', 'api', f'repos/{REPO}/{path}']))
+
+
+def download(run_id, artifact, filename):
+    with tempfile.TemporaryDirectory() as directory:
+        subprocess.run(['gh', 'run', 'download', str(run_id), '--repo', REPO,
+                        '--name', artifact, '--dir', directory], check=True)
+        return json.loads((Path(directory) / filename).read_text())
+
+
+def fence(receipt, origin=None):
+    origin = origin or ORIGIN
+    # Cache busting plus no-cache response prevents accepting an older release.
+    headers = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltStableSmoke/1.0)',
+               'Accept': 'application/json'}
+    request = Request(origin + '/__candidate.json?t=' + str(time.time_ns()), headers=headers)
+    with urlopen(request, timeout=15) as response:
+        observed = json.load(response)
+    expected = {'candidateId': receipt['candidateId'], 'headSha': receipt['headSha'],
+                'publisherRunId': receipt['publisherRunId'],
+                'images': {c: receipt['images'][c]['digest'] for c in ('web', 'commerce')}}
+    if observed != expected:
+        raise ValueError('stable release is not the requested candidate')
+    request = Request(origin + '/api/v1/actuator/health/readiness', headers=headers)
+    with urlopen(request, timeout=15) as response:
+        if json.load(response)['status'] != 'UP':
+            raise ValueError('backend not ready')
+    return origin
 
 
 def resolve():
