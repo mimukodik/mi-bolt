@@ -58,6 +58,13 @@ pod keeps serving while the new pod migrates and loads the catalogue. The
 readiness probe admits the new pod only after startup runners finish; then
 the old pod stops. The cluster must have capacity for the extra commerce pod.
 
+Commerce and web both wait 5 s in a `preStop` hook before their process stops.
+A stopping pod leaves the Service endpoints and Traefik's backends
+asynchronously, and it keeps receiving requests until that removal lands; the
+5 s normally covers it. Without the wait, the old commerce refused those
+requests (web's proxy answered 502), and requests sent to the old web pod
+failed with 502 or hung.
+
 Migrations must be additive and compatible with the previous revision's reads
 and writes. Hibernate validates mapped columns and ignores added, unmapped
 columns. Drops, renames, incompatible type changes or stricter constraints
@@ -73,8 +80,8 @@ a database, certificates, or platform controllers.
 
 For stable acceptance, start a catalogue API probe through
 `https://bolt.mimukodik.hu` at five requests per second before the Helm
-upgrade, using the demo gate's cookie. Keep it running until the old commerce
-pod is gone. Record the release revision, probe start/end times, total
+upgrade, using the demo gate's cookie. Keep it running until both old pods
+are gone. Record the release revision, probe start/end times, total
 requests, successes and failures; acceptance requires zero failures across
 that entire window. A rendered chart or a post-release smoke pass alone does
 not prove release continuity.
