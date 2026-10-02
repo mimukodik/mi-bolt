@@ -73,7 +73,7 @@ Every path under `backend/` triggers the `backend` and `smoke` components.
 | `tools/**` | tools | `mise run //tools:lint` and `mise run //tools:test`. |
 | `deploy/helm/**` | smoke | `mise run deploy:check`, which needs `helm` on PATH. |
 | `deploy/compose.yaml`, `deploy/compose.sh`, `deploy/.env.example` | smoke | The stack smoke: `mise run stack`, then `E2E_BASE_URL=http://localhost:4200 npm --prefix frontend run e2e:smoke`, then `mise run stop`. |
-| `deploy/candidate/**`, `deploy/tests/**` | smoke | The lines Candidate Build runs (`.github/workflows/candidate.yml:32-40`); `mibolt-workspace-ops` owns them. |
+| `deploy/candidate/**`, `deploy/tests/**` | smoke | The lines Candidate Build runs (`.github/workflows/candidate.yml:32-38`); `mibolt-workspace-ops` owns them. |
 | `mise.toml` | frontend, backend, tools, smoke | `mise tasks --all`, then the tasks that changed; `mibolt-workspace-ops` owns the task graph. |
 | `.github/**` | frontend, backend, tools, smoke | No local runner. Rerun the changed-paths script to see what a changed workflow now runs; `mibolt-workspace-ops` owns the workflows. |
 

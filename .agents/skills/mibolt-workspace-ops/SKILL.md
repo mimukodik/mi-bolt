@@ -94,7 +94,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   production builds behind NGINX; `mi-bolt-commerce` is the backend. Both read
   named build contexts that a plain `docker build` of their directory does not
   supply; `deploy/compose.yaml` supplies them, and CI builds from that file
-  (`.github/workflows/candidate.yml:51-60`).
+  (`.github/workflows/candidate.yml:49-58`).
   `backend/docs/06-uzembe-helyezes.md:49-56`, in Hungarian, builds the backend
   image by hand instead, passing its contexts to `docker build` with
   `--build-context`.
@@ -102,8 +102,8 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   `.github/components.yml` and calls up to five reusable workflows, then
   `ci-ok`. On the same pull-request and `main` push events, beside CI rather
   than after it, `.github/workflows/candidate.yml` builds the images
-  (`.github/workflows/candidate.yml:3-6`); the publish, preview-smoke,
-  stable-smoke and close-preview workflows run from the default branch. Only
+  (`.github/workflows/candidate.yml:3-6`); the publish and stable-smoke
+  workflows run from the default branch. Only
   `.github/workflows/contracts.yml` goes through mise; the other workflows call
   npm, Gradle, `deploy/compose.sh`, uv, Docker and Python directly, and none
   runs a root task.
@@ -303,8 +303,8 @@ other way.
 The deploy checks run through uv with no uv pinned at the root:
 `mise run deploy:check` runs
 `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
-(`mise.toml:103-105`), and `.github/workflows/candidate.yml:32-40` runs all
-six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
+(`mise.toml:103-105`), and `.github/workflows/candidate.yml:32-38` runs all
+four `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
 
 ### Naming
 
@@ -368,11 +368,11 @@ machine fails on every other, CI included.
 | a `start*` script | `frontend/mise.toml:29-45`; Playwright's own `ng serve` command at `frontend/playwright.config.ts:26`, which is end-to-end configuration outside this skill |
 | a dev-server port or proxy | `frontend/angular.json`, `frontend/proxy*.json`, the ports table at `README.md:229-239`, the payment URL defaults at `backend/README.md:29-30` |
 | a Compose port, service or variable | `deploy/.env.example`, `README.md:241-243`, `backend/README.md:19-31`, the slot state `deploy/stack.sh:367-383` writes, `.github/workflows/smoke.yml:19-25`, `.github/workflows/backend.yml:183-185` and `.github/workflows/backend.yml:221-222`, the chart |
-| a Compose `build:` block | `deploy/candidate/publish.py:169-184` on `main` first, `.github/workflows/candidate.yml:51-60`, `deploy/tests/test-candidate.py` |
+| a Compose `build:` block | `deploy/candidate/publish.py:169-184` on `main` first, `.github/workflows/candidate.yml:49-58`, `deploy/tests/test-candidate.py` |
 | a Dockerfile or NGINX file | `frontend/tests/web-image/` for an NGINX or `robots.txt` rule; expect a new image tag, because the input hash changes |
 | the `frontend` or `backend` list in `.github/components.yml` | `deploy/candidate/inputs.py:15-20` and `deploy/tests/test-candidate.py:34-40` in the same change, `docs/monorepo.md:57-63`, and `frontend/README.md:89` for the `frontend` list |
 | any other list in `.github/components.yml` | `docs/monorepo.md:57-63` |
-| a `workflow_run`, `schedule` or `pull_request_target` workflow, or a script in `deploy/candidate/` | the `deploy/tests/*.py` check that imports the script, where there is one. Those workflows run the default branch's copy of themselves and of the scripts they call, `deploy/candidate/publish.py` and the `deploy/candidate/inputs.py` it imports included (`deploy/candidate/publish.py:21`), so a change there takes effect only once it is on `main`; `.github/workflows/candidate.yml` runs the pull request's own `deploy/candidate/inputs.py` and `deploy/candidate/build_metadata.py` (`.github/workflows/candidate.yml:28`, `.github/workflows/candidate.yml:65`) |
+| a `workflow_run`, `schedule` or `pull_request_target` workflow, or a script in `deploy/candidate/` | the `deploy/tests/*.py` check that imports the script, where there is one. Those workflows run the default branch's copy of themselves and of the scripts they call, `deploy/candidate/publish.py` and the `deploy/candidate/inputs.py` it imports included (`deploy/candidate/publish.py:21`), so a change there takes effect only once it is on `main`; `.github/workflows/candidate.yml` runs the pull request's own `deploy/candidate/inputs.py` and `deploy/candidate/build_metadata.py` (`.github/workflows/candidate.yml:28`, `.github/workflows/candidate.yml:63`) |
 | the chart | `deploy/helm/mi-bolt/values.schema.json`, `deploy/tests/check-chart.py`, the Secret key list at `deploy/helm/mi-bolt/README.md:12-16` |
 
 ## How to verify
@@ -394,13 +394,13 @@ machine fails on every other, CI included.
   `frontend/tests/web-image/nginx-robots.spec.ts` reads, only building the
   image through Compose exercises it: `mise run stack` locally, and the
   `smoke` and `Candidate Build` workflows in CI
-  (`.github/workflows/smoke.yml:40-42`, `.github/workflows/candidate.yml:51-60`).
+  (`.github/workflows/smoke.yml:40-42`, `.github/workflows/candidate.yml:49-58`).
 - **A `tools/dev-server/` change:** `mise run //tools:lint` and
   `mise run //tools:test`; Vitest's default `include` collects
   `tools/dev-server/dev-server.test.ts` (https://vitest.dev/config/include).
 - **A `deploy/stack.sh` or `deploy/candidate/*.py` change:** the matching
   `deploy/tests/*.py` check, run with the command
-  `.github/workflows/candidate.yml:32-40` gives it;
+  `.github/workflows/candidate.yml:32-38` gives it;
   `deploy/candidate/build_metadata.py` has none.
 - **A workflow change** runs only on GitHub; nothing local executes a workflow.
 - **A change a browser can reach** is verified in a real browser, on the mode

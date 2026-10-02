@@ -102,26 +102,26 @@ actionlint -ignore 'label "blacksmith-2vcpu-ubuntu-2404" is unknown' \
   .github/workflows/candidate.yml .github/workflows/publish-candidate.yml
 ```
 
-External acceptance runs the existing MIM-271 smoke suite from the `main` smoke
-workflow. PR-controlled npm lifecycle hooks and modified tests never execute in
-the receipt-producing workflow. PR test changes still run in ordinary read-only
-CI; a change to the deployed acceptance suite takes effect once it merges to
-`main`. The platform pins neither publisher nor smoke wrapper revisions; a newer
-`main` wrapper can retry an older candidate using its own baseline suite.
+PR CI runs the PR's own E2E and real-stack smoke with the PR's tests. A preview
+is available at `https://bolt-pr-<PR-number>.mimukodik.hu` once the
+`bolt-preview` label is on and the published candidate is ready. The existing
+MIM-271 suite remains available for optional manual checks against that URL.
+Stable acceptance continues through `Stable Smoke` after merge.
+PR-controlled npm lifecycle hooks and modified tests never execute in the
+receipt-producing publisher workflow.
 
 ## First deployment and troubleshooting
 
 The first rollout needs an open same-repository PR after the publisher workflow
 has landed on `main`. A successful build of `main`, or of a PR that has already
-closed, does not publish a preview candidate. Keep the verification PR open,
-preferably as a draft, until its deployed browser checks finish. Add the
-`bolt-preview` label on the PR to enable its preview. The coordinator admits
-only labeled PRs. Remove the label to clean up the release and its database;
-adding it again creates a fresh empty database. Closing the PR also requests cleanup.
+closed, does not publish a preview candidate. Keep the verification PR open
+while checking its preview. Add the
+`bolt-preview` label on the PR to enable its preview at
+`https://bolt-pr-<PR-number>.mimukodik.hu`. Remove the label to clean up the
+release and its database; adding it again creates a fresh empty database.
+Closing the PR also requests cleanup.
 Build and publication still run for unlabeled PRs so the candidate receipt is
-ready when deployment is enabled. After browser acceptance, GitHub reports a
-deployment linked to the exact PR commit. Removing the label or closing the PR
-marks that deployment inactive.
+ready when deployment is enabled.
 
 Use the PR's current head to find the matching `CI` and `Candidate Build` runs,
 then inspect `Publish Candidate` and its `candidate-receipt` artifact. A green
@@ -130,21 +130,20 @@ match; the receipt is the evidence that publication actually happened.
 
 The expected URL is `https://bolt-pr-<PR-number>.mimukodik.hu`. Its
 `/__candidate.json` must match the receipt's head, publisher run ID and both
-image digests. Readiness alone does not mean browser acceptance: wait for the
-`Preview Smoke` workflow and its `preview-smoke-receipt` artifact as well.
-If platform activation or admission took longer than the initial smoke wait,
-retry the successful publisher run explicitly:
+image digests. To check the two purchase flows manually, run:
 
 ```sh
-gh workflow run preview-smoke.yml --repo mimukodik/mi-bolt \
-  -f publisher_run_id=<successful-publisher-run-id>
+E2E_BASE_URL=https://bolt-pr-<PR-number>.mimukodik.hu npm --prefix frontend run e2e:smoke
 ```
+
+If a manual check starts before the candidate is ready, wait until the public
+candidate marker and readiness endpoint match, then rerun the same command.
 
 Each new PR head receives a fresh, empty database; the commerce image applies
 its migrations, loads the catalogue from the image and bootstraps the admin
 account at boot, so the PR's own schema and catalogue are what its preview
 runs. Retrying the same head keeps its database. Stable releases to
 `https://bolt.mimukodik.hu` deploy automatically after main CI and preserve
-the stable database. Database bootstrap, coordinator configuration,
+the stable database. Database bootstrap, platform configuration,
 capacity/expiry, and explicit stable resets belong to Berek's
 [`docs/mibolt-preview-release.md`](https://github.com/mimukodik/berek/blob/main/docs/mibolt-preview-release.md).

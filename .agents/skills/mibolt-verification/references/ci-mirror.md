@@ -71,18 +71,18 @@ The changed-paths script does not list these.
 - **Candidate Build** (`.github/workflows/candidate.yml`) runs on every pull
   request and every push to `main`, with no path filter. It runs the Python
   tests under `deploy/tests/` and the chart check
-  (`.github/workflows/candidate.yml:32-40`), then builds both images. Locally
+  (`.github/workflows/candidate.yml:32-38`), then builds both images. Locally
   `mise run deploy:check` runs the chart check alone and needs `helm`, which
   CI installs (`.github/workflows/candidate.yml:29-31`) and no `mise.toml`
   does. The other test lines, and everything else about this workflow, belong
   to `mibolt-workspace-ops`.
-- **Publish Candidate, Preview Smoke, Stable Smoke and Deactivate Bolt Preview
-  Deployment** (`.github/workflows/publish-candidate.yml`,
-  `.github/workflows/preview-smoke.yml`, `.github/workflows/stable-smoke.yml`,
-  `.github/workflows/close-bolt-preview.yml`) run after other workflows, on a
-  schedule, by hand (`workflow_dispatch`) or on pull-request events. None has
+- **Publish Candidate and Stable Smoke**
+  (`.github/workflows/publish-candidate.yml`, `.github/workflows/stable-smoke.yml`)
+  run after other workflows or by hand (`workflow_dispatch`). Neither has
   a local mirror;
-  `mibolt-workspace-ops` owns them.
+  `mibolt-workspace-ops` owns them. PR previews become available at
+  `https://bolt-pr-<PR-number>.mimukodik.hu` when the `bolt-preview` label is on
+  and the published candidate is ready; optional browser checks run manually.
 
 ## Checks CI never runs
 

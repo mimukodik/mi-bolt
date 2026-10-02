@@ -25,7 +25,7 @@ build it. `docker build` takes them as `--build-context name=path` as well
 (https://docs.docker.com/reference/cli/docker/buildx/build/), which is how
 `backend/docs/06-uzembe-helyezes.md:49-56`, in Hungarian, builds the backend
 image by hand; the candidate pipeline builds only from `deploy/compose.yaml`
-(`.github/workflows/candidate.yml:51-60`).
+(`.github/workflows/candidate.yml:49-58`).
 
 - **`mi-bolt-web`**, `frontend/Dockerfile`. The build stage runs `npm ci`,
   copies the `catalog` context's `catalog.json` to where the admin mock seed
@@ -99,7 +99,7 @@ The candidate pipeline treats the build definition as a contract. A change to a
   set. `Publish Candidate` runs the default branch's copy of that file, so a
   pull request that changes a build context is not published until the matching
   `publish.py` change is on `main`.
-- `.github/workflows/candidate.yml:51-60` builds with `docker buildx bake` and
+- `.github/workflows/candidate.yml:49-58` builds with `docker buildx bake` and
   grants each context directory with `--allow fs.read=…`; a new context
   directory needs its own grant there.
 - `deploy/tests/test-candidate.py` builds a sandbox from the real
@@ -136,8 +136,8 @@ Ingress that sends every path, `/api/v1` included, to `web`.
 
 ## The deploy checks
 
-`deploy/tests/` holds six Python checks. CI runs all six, and its commands are
-at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
+`deploy/tests/` holds four Python checks. CI runs all four, and its commands are
+at `.github/workflows/candidate.yml:32-38`; `check-chart.py`,
 `test-candidate.py` and `test-stack.py` also state theirs in their docstring.
 
 - `check-chart.py` is the only one with a mise task: `mise run deploy:check`
@@ -147,9 +147,8 @@ at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
   (`deploy/tests/check-chart.py:50-110`), published-version labels, and six
   rejection cases (`deploy/tests/check-chart.py:138-149`). It writes only to a
   temporary directory.
-- `test-candidate.py`, `test-stable-release.py`, `test-preview-smoke.py` and
-  `test-github-deployment.py` import `inputs.py`, `publish.py`,
-  `stable_smoke.py`, `preview_smoke.py` and `github_deployment.py` from
+- `test-candidate.py` and `test-stable-release.py` import `inputs.py`,
+  `publish.py` and `stable_smoke.py` from
   `deploy/candidate/`; `deploy/candidate/build_metadata.py` has no test.
 - `test-stack.py` covers `deploy/stack.sh` in a throwaway git repository with a
   fake Compose wrapper, and never runs Docker
