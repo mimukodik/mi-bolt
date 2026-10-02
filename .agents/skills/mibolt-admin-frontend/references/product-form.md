@@ -16,41 +16,48 @@ a new list filter and a new list column. Paths resolve as `SKILL.md` says.
 
 ## 1. The edit page
 
-- `frontend/projects/admin/src/app/features/products/products.routes.ts:11-22` routes `uj`
-  (create) and `:productId` (edit) to `ProductEditPage`. The parameter arrives through the page's
-  `productId` input
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:66`).
+- `frontend/projects/admin/src/app/features/products/products.routes.ts` ("m.ProductEditPage")
+  routes `uj` (create) and `:productId` (edit) to `ProductEditPage`. The parameter arrives through
+  the page's `productId` input
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "readonly
+  productId = input").
 - The page provides `ProductEditStore`, `SubmitAttempt` and `UploadTracker`
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:63`), loads the
-  featured count and the brand list on creation, and resets the form from `toFormModel(product)`
-  after every load (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:129-153`).
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "providers:
+  [ProductEditStore, SubmitAttempt, UploadTracker]"), loads the featured count and the brand list on
+  creation, and resets the form from `toFormModel(product)` after every load
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "private async
+  open(").
 - Its `view` is `form`, `loading`, `not-found` or `error`; an id that is not a positive integer
   is `not-found` without a request
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:77-98`).
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "protected
+  readonly view = computed").
 - Mentés runs through `SubmitAttempt.run`, calls `create` or `save`, and switches on `SaveResult`
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:161-202`):
-  `saved` shows a snack-bar and, after a create, navigates to the new product's URL; `invalid`
-  maps the field errors onto the form; `conflict` opens `ConflictDialog` and reloads; `failed`
-  shows a snack-bar, with its own text for `VARIANT_IN_CART`.
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "private async
+  save()"): `saved` shows a snack-bar and, after a create, navigates to the new product's URL;
+  `invalid` maps the field errors onto the form; `conflict` opens `ConflictDialog` and reloads;
+  `failed` shows a snack-bar, with its own text for `VARIANT_IN_CART`.
 - Mentés is disabled while the form submits, after a failed attempt until the form is valid, and
   while an image uploads
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:118-120`).
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "saveDisabled").
 - The slug turns read-only once the product exists, because the backend rejects a changed slug
   with `SLUG_IMMUTABLE`
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:108-109`).
+  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "private readonly
+  slugLocked").
 - The form's `dirty()` is set only when a bound control writes a value or `markAsDirty()` is
   called (https://angular.dev/api/forms/signals/FieldState; in the installed `@angular/forms`
   22.1.6 a bound control writes `controlValue`, which marks the field dirty, and a write to
   `value` does not), and every `form().reset(...)` clears it. The cards with rows (highlights,
   colours, variants and spec groups) add and remove rows, and all but the variants card also move
   them, through `value.update(...)`, for example
-  `frontend/projects/admin/src/app/features/products/edit/sections/colors-section.ts:100-122`, and
-  the slug button and the swatch picker write through `value.set(...)`
-  (`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts:63-66`,
-  `frontend/projects/admin/src/app/features/products/edit/sections/colors-section.ts:92-98`), so
-  none of these marks the form dirty. A create navigates to `/termekek/<id>` without a reset
-  (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts:172-173`).
-  Anything that reads `dirty()`, a leave-page warning above all, accounts for both.
+  `frontend/projects/admin/src/app/features/products/edit/sections/colors-section.ts`
+  ("value.update"), and the slug button and the swatch picker write through `value.set(...)`
+  (`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts`,
+  "generateSlug()";
+  `frontend/projects/admin/src/app/features/products/edit/sections/colors-section.ts`,
+  "setSwatch("), so none of these marks the form dirty. A create navigates to `/termekek/<id>`
+  without a reset (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`,
+  "router.navigate(['/termekek', result.product.id]"). Anything that reads `dirty()`, a leave-page
+  warning above all, accounts for both.
 
 ## 2. Model, mapper and schema
 
@@ -63,15 +70,17 @@ a new list filter and a new list column. Paths resolve as `SKILL.md` says.
     midnight and each variant's colour looked up by code.
   - `toProductInput(model)` builds the `AdminProductInput`. It throws on a `null` the schema
     should have blocked instead of sending it, and derives each variant's `slug` with
-    `variantSlug` (`frontend/projects/admin/src/app/features/products/edit/variant-id.ts:7-9`).
+    `variantSlug` (`frontend/projects/admin/src/app/features/products/edit/variant-id.ts`, "function
+    variantSlug").
   - `toModelPointer(pointer)` rewrites a 422 pointer into the request body onto the model's path
     where the two differ, for example `/colors/N/imageId` onto `/colors/N/image`.
-- `frontend/projects/admin/src/app/features/products/edit/product-form.schema.ts:47-230`,
-  `productFormSchema(context)`, holds every client-side limit: lengths, patterns, integers and
-  ranges, list minimums and maximums, and the four-featured cap through `context.featuredOthers`.
-  It also raises four backend field codes on the client, before any request:
-  `DUPLICATE_COLOR_CODE`, `DUPLICATE_VARIANT`, `UNKNOWN_COLOR`, and `VARIANT_ID_TOO_LONG` against
-  `MAX_VARIANT_ID` (`frontend/projects/admin/src/app/features/products/edit/variant-id.ts:4`).
+- `frontend/projects/admin/src/app/features/products/edit/product-form.schema.ts` ("function
+  productFormSchema"), `productFormSchema(context)`, holds every client-side limit: lengths,
+  patterns, integers and ranges, list minimums and maximums, and the four-featured cap through
+  `context.featuredOthers`. It also raises four backend field codes on the client, before any
+  request: `DUPLICATE_COLOR_CODE`, `DUPLICATE_VARIANT`, `UNKNOWN_COLOR`, and `VARIANT_ID_TOO_LONG`
+  against `MAX_VARIANT_ID` (`frontend/projects/admin/src/app/features/products/edit/variant-id.ts`,
+  "export const MAX_VARIANT_ID").
 
 The Signal Forms rules used here are documented at
 https://angular.dev/guide/forms/signals/validation, cross-field rules at
@@ -79,11 +88,12 @@ https://angular.dev/api/forms/signals/validateTree.
 
 ## 3. Sections and error display
 
-`frontend/projects/admin/src/app/features/products/edit/product-edit-page.html:36-91` lays out
-five numbered sections and three side cards. The components are in
+`frontend/projects/admin/src/app/features/products/edit/product-edit-page.html` ("@case ('form')")
+lays out five numbered sections and three side cards. The components are in
 `frontend/projects/admin/src/app/features/products/edit/sections/`. The header comment of
-`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts:18-21` still
-calls the section a stub whose fields a later unit (F20) writes; the fields are implemented, and
+`frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts` ("Stub: F20
+writes the fields") still calls the section a stub whose fields a later unit (F20) writes; the
+fields are implemented, and
 `frontend/projects/admin/src/app/features/products/edit/sections/basics-section.html` binds all six
 with `[formField]`.
 
@@ -98,20 +108,21 @@ with `[formField]`.
 | Előnézet, Adatok | `SectionCard`, inline | read-only |
 
 - A section counts its fields' errors after an attempt from an explicit list, for example
-  `frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts:45-52` and
-  `frontend/projects/admin/src/app/features/products/edit/sections/display-card.ts:57-64`. A new
-  field joins its section's list, or its errors are missing from the card header's count.
+  `frontend/projects/admin/src/app/features/products/edit/sections/basics-section.ts` ("errorCount")
+  and `frontend/projects/admin/src/app/features/products/edit/sections/display-card.ts`
+  ("errorCount"). A new field joins its section's list, or its errors are missing from the card
+  header's count.
 - A control inside a `mat-form-field` shows `errors()[0]?.message` in `mat-error`. A control
   outside one, such as a slide toggle or the image upload, gets `adm-control-error`
   (`frontend/projects/admin/src/app/shared/forms/control-error.ts`).
 - The image upload is a custom Signal Forms control,
   `ImageUpload implements FormValueControl<Image | null>`
-  (`frontend/projects/admin/src/app/shared/image-upload/image-upload.ts:97`), bound with
-  `[formField]` like a native input
+  (`frontend/projects/admin/src/app/shared/image-upload/image-upload.ts`, "class ImageUpload
+  implements FormValueControl"), bound with `[formField]` like a native input
   (https://angular.dev/guide/forms/signals/custom-controls#formvaluecontrol).
 - A 400 or 422 answer with field errors reaches the fields through `toServerErrors(form, errors)`
-  (`frontend/projects/admin/src/app/shared/forms/server-errors.ts:65-73`); an error whose pointer
-  does not resolve lands on the form root.
+  (`frontend/projects/admin/src/app/shared/forms/server-errors.ts`, "export function
+  toServerErrors"); an error whose pointer does not resolve lands on the form root.
 
 ## 4. Chain: a new product field
 
@@ -133,79 +144,108 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
    `[formField]`, a `mat-hint` length counter where the card shows them, `adm-control-error`
    outside a `mat-form-field`, and the field in the card's error-count list.
 6. The write mock, `frontend/projects/admin/src/mocks/products-write.handlers.ts`: the member
-   allow-list `TOP_MEMBERS` (line 79), `readProductInput` (line 284), `beanValidationErrors`
-   (line 480), `validatorErrors` (line 514) if the backend validator checks it,
-   `toAdminProductInput` (line 601) and `buildProduct` (line 821). If seeded products
-   carry it, `seedCatalog` in `frontend/projects/admin/src/mocks/seed.ts:121-152`; if the list
-   shows it, chain 8.
+   allow-list `TOP_MEMBERS` (`frontend/projects/admin/src/mocks/products-write.handlers.ts`, "const
+   TOP_MEMBERS"), `readProductInput`
+   (`frontend/projects/admin/src/mocks/products-write.handlers.ts`, "async function
+   readProductInput"), `beanValidationErrors`
+   (`frontend/projects/admin/src/mocks/products-write.handlers.ts`, "function
+   beanValidationErrors"), `validatorErrors`
+   (`frontend/projects/admin/src/mocks/products-write.handlers.ts`, "function validatorErrors") if
+   the backend validator checks it, `toAdminProductInput`
+   (`frontend/projects/admin/src/mocks/products-write.handlers.ts`, "function toAdminProductInput")
+   and `buildProduct` (`frontend/projects/admin/src/mocks/products-write.handlers.ts`, "function
+   buildProduct"). If seeded products carry it, `seedCatalog` in
+   `frontend/projects/admin/src/mocks/seed.ts` ("export function seedCatalog"); if the list shows
+   it, chain 8.
 7. Specs: `frontend/projects/admin/src/app/features/products/edit/product-form.mapper.spec.ts`,
    `frontend/projects/admin/src/app/features/products/edit/product-form.schema.spec.ts`, the
    card's spec, `frontend/projects/admin/src/app/features/products/edit/product-edit-page.spec.ts`,
    and the write mock's specs, whose validation cases are in
    `frontend/projects/admin/src/mocks/products-write.validation.spec.ts`. The spec helper `inputOf`
-   (`frontend/projects/admin/src/testing/mock-spec-helpers.ts:82-110`) rebuilds an
-   `AdminProductInput` field by field, so it carries the new field too.
+   (`frontend/projects/admin/src/testing/mock-spec-helpers.ts`, "export function inputOf") rebuilds
+   an `AdminProductInput` field by field, so it carries the new field too.
 
 ## 5. The list keeps its state in the URL
 
 - The router query string is the only state of the list's filters and sort
-  (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts:1-19`,
-  `frontend/projects/admin/src/app/features/products/list/product-list.store.ts:1-30`). Hold no
-  filter in a component field or a store field. Both headers give
-  `frontend/docs/spec/architecture.md:67` as the source of this rule, writing the path relative to
-  `frontend/`; that line now describes request cancellation and write serialisation, so the code
-  and this section are the source.
+  (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`,
+  "router query codec for the Termékek list";
+  `frontend/projects/admin/src/app/features/products/list/product-list.store.ts`,
+  "The URL query string is the single source of truth"). Hold no
+  filter in a component field or a store field. Both headers give a line of
+  `frontend/docs/spec/architecture.md` as the source of this rule, writing the path relative to
+  `frontend/`; that line now describes request cancellation and write serialisation
+  (`frontend/docs/spec/architecture.md`, "Read requests use switchMap to cancel obsolete HTTP"),
+  so the code and this section are the source.
 - `frontend/projects/admin/src/app/features/products/list/product-list.query.ts` is the codec:
-  - `ProductListQuery` and `DEFAULT_PRODUCT_LIST_QUERY` (lines 29-50);
+  - `ProductListQuery`
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export
+    interface ProductListQuery") and `DEFAULT_PRODUCT_LIST_QUERY`
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export const
+    DEFAULT_PRODUCT_LIST_QUERY");
   - `parseProductListQuery`, lenient, with an unknown value falling back to the default
-    (lines 107-145);
-  - `serializeProductListQuery`, which omits defaults and sorts brands (lines 158-197);
-  - `toListParams`, the SDK parameters (lines 199-218);
-  - `PRODUCT_LIST_QUERY_KEYS` (lines 147-156);
-  - local literal-union guards in place of casts (lines 67-83).
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export
+    function parseProductListQuery");
+  - `serializeProductListQuery`, which omits defaults and sorts brands
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export
+    function serializeProductListQuery");
+  - `toListParams`, the SDK parameters
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export
+    function toListParams");
+  - `PRODUCT_LIST_QUERY_KEYS`
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export const
+    PRODUCT_LIST_QUERY_KEYS");
+  - local literal-union guards in place of casts
+    (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "Guard rather
+    than cast").
 - `ProductListStore.setQuery(patch)` merges and navigates. The store re-parses every
   `queryParamMap` emission, and a distinct query or a `retry()` builds a new
   `ProductListDataSource`, so a late page of an old query never lands in the new list
-  (`frontend/projects/admin/src/app/features/products/list/product-list.store.ts:93-156`).
+  (`frontend/projects/admin/src/app/features/products/list/product-list.store.ts`, "readonly
+  dataSource").
 - `ProductListDataSource`
-  (`frontend/projects/admin/src/app/features/products/list/product-list.data-source.ts:64`)
-  requests page 1 on connect and then the pages the virtual-scroll viewport asks for, 50 rows per
-  page (`PRODUCT_LIST_PAGE_SIZE`,
-  `frontend/projects/admin/src/app/features/products/list/product-list.query.ts:53`), into a
-  sparse cache.
+  (`frontend/projects/admin/src/app/features/products/list/product-list.data-source.ts`, "export
+  class ProductListDataSource") requests page 1 on connect and then the pages the virtual-scroll
+  viewport asks for, 50 rows per page (`PRODUCT_LIST_PAGE_SIZE`,
+  `frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "export const
+  PRODUCT_LIST_PAGE_SIZE"), into a sparse cache.
 - The overview cards open the list with query parameters
-  (`frontend/projects/admin/src/app/features/overview/overview.component.ts:28-54`); a renamed
-  query key breaks those links.
+  (`frontend/projects/admin/src/app/features/overview/overview.component.ts`, "const
+  PRODUCT_FILTER_CARDS"); a renamed query key breaks those links.
 
 ## 6. Filters, sort, columns and row actions
 
 - `ProductFilters`
-  (`frontend/projects/admin/src/app/features/products/list/product-filters.ts:63-124`) takes the
-  `query` and `filtered` inputs and emits `queryChange` with a partial query, or `clear`; it
-  holds no filter state and loads the brand list once. Its chip handlers ignore an event whose
-  `isUserInput` is false, because the programmatic `[selected]` write emits one too
-  (`frontend/projects/admin/src/app/features/products/list/product-filters.ts:109-118`).
+  (`frontend/projects/admin/src/app/features/products/list/product-filters.ts`, "export class
+  ProductFilters") takes the `query` and `filtered` inputs and emits `queryChange` with a partial
+  query, or `clear`; it holds no filter state and loads the brand list once. Its chip handlers
+  ignore an event whose `isUserInput` is false, because the programmatic `[selected]` write emits
+  one too (`frontend/projects/admin/src/app/features/products/list/product-filters.ts`, "if
+  (!event.isUserInput) return").
 - `SORTABLE_COLUMNS`
-  (`frontend/projects/admin/src/app/features/products/list/product-list-page.ts:27-33`) lists the
-  headers `matSort` offers. `rank` is the default order with no active header, and `releasedAt`
-  is not offered.
+  (`frontend/projects/admin/src/app/features/products/list/product-list-page.ts`, "const
+  SORTABLE_COLUMNS") lists the headers `matSort` offers. `rank` is the default order with no active
+  header, and `releasedAt` is not offered.
 - The desktop header
-  (`frontend/projects/admin/src/app/features/products/list/product-list-page.html:44-53`) has
+  (`frontend/projects/admin/src/app/features/products/list/product-list-page.html`, "Műveletek") has
   ten columns: image, Név (name), Márka (brand), Színek (colours), Változatok (variants), Ár
   (price), Készlet (stock), Kiemelt (featured), Státusz (status), Műveletek (actions).
-  The handset header (`frontend/projects/admin/src/app/features/products/list/product-list-page.html:39-42`)
-  has four: image, Név, Státusz and the menu. The column widths are the `--adm-product-columns`
-  variable, desktop at
-  `frontend/projects/admin/src/app/features/products/list/product-list-page.css:6` and handset at
-  `frontend/projects/admin/src/app/features/products/list/product-list-page.css:9`, shared by the
-  header and `ProductRow`
-  (`frontend/projects/admin/src/app/features/products/list/product-row.css:3`).
+  The handset header
+  (`frontend/projects/admin/src/app/features/products/list/product-list-page.html`, "@if
+  (handset())") has four: image, Név, Státusz and the menu. The column widths are the
+  `--adm-product-columns` variable, desktop at
+  `frontend/projects/admin/src/app/features/products/list/product-list-page.css` (".adm-table {")
+  and handset at `frontend/projects/admin/src/app/features/products/list/product-list-page.css`
+  (".adm-table.adm-handset"), shared by the header and `ProductRow`
+  (`frontend/projects/admin/src/app/features/products/list/product-row.css`, "grid-template-columns:
+  var(--adm-product-columns)").
 - `ProductRowActions`
   (`frontend/projects/admin/src/app/features/products/list/product-row-actions.ts`) confirms an
   archive through `openConfirm`
-  (`frontend/projects/admin/src/app/shared/confirm-dialog/confirm-dialog.ts:55`), offers
-  Visszavonás on the snack-bar, and reports `conflict` (the list reloads), `featured-limit` and
-  `failed`. Its `busy` signal keeps a second click from posting the same version again.
+  (`frontend/projects/admin/src/app/shared/confirm-dialog/confirm-dialog.ts`, "function
+  openConfirm"), offers Visszavonás on the snack-bar, and reports `conflict` (the list reloads),
+  `featured-limit` and `failed`. Its `busy` signal keeps a second click from posting the same
+  version again.
 
 ## 7. Chain: a new list filter
 
@@ -217,12 +257,16 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
 3. `frontend/projects/admin/src/app/features/products/list/product-filters.ts` and
    `frontend/projects/admin/src/app/features/products/list/product-filters.html`: the control,
    emitting through `queryChange`.
-4. `frontend/projects/admin/src/app/features/products/list/product-list-page.ts:83-92`: the
-   `filtered` computed, so the empty state offers Szűrők törlése.
+4. `frontend/projects/admin/src/app/features/products/list/product-list-page.ts` ("readonly filtered
+   = computed"): the `filtered` computed, so the empty state offers Szűrők törlése.
 5. The read mock, `frontend/projects/admin/src/mocks/products-read.handlers.ts`:
-   `KNOWN_QUERY_PARAMS` (lines 48-58), the conversion in `parseListQuery` (line 202), a predicate
-   beside `matchesFeatured` (line 305), and `filterAndSort` (line 380). An unknown query key is a
-   400 there, as on the backend.
+   `KNOWN_QUERY_PARAMS` (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "const
+   KNOWN_QUERY_PARAMS"), the conversion in `parseListQuery`
+   (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "function parseListQuery"), a
+   predicate beside `matchesFeatured`
+   (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "function matchesFeatured"), and
+   `filterAndSort` (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "function
+   filterAndSort"). An unknown query key is a 400 there, as on the backend.
 6. Specs: `frontend/projects/admin/src/app/features/products/list/product-list.query.spec.ts`,
    `frontend/projects/admin/src/app/features/products/list/product-filters.spec.ts`,
    `frontend/projects/admin/src/app/features/products/list/product-list-page.spec.ts` and
@@ -242,14 +286,15 @@ A field the generated `AdminProduct` and `AdminProductInput` do not carry yet st
    ("Accessibility") rules out work on ARIA, keyboard handling and AXE checks here. Add it to
    `SORTABLE_COLUMNS` only if the generated `AdminProductSortField` carries it, and then also to
    the codec's `SORT_VALUES`
-   (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts:56-64`), which
-   the compiler does not check for completeness: a value missing there parses back to the default
-   sort.
+   (`frontend/projects/admin/src/app/features/products/list/product-list.query.ts`, "const
+   SORT_VALUES"), which the compiler does not check for completeness: a value missing there parses
+   back to the default sort.
 3. The read mock's projection `toListItem`
-   (`frontend/projects/admin/src/mocks/products-read.handlers.ts:354-378`), and, if it sorts,
-   `sortValue` (line 315) and both spellings of the field, the wire value and its constant name,
-   in `SORT_VALUES` (`frontend/projects/admin/src/mocks/products-read.handlers.ts:77-92`), which
-   otherwise answers 400.
+   (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "function toListItem"), and, if
+   it sorts, `sortValue` (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "function
+   sortValue") and both spellings of the field, the wire value and its constant name, in
+   `SORT_VALUES` (`frontend/projects/admin/src/mocks/products-read.handlers.ts`, "const
+   SORT_VALUES"), which otherwise answers 400.
 4. Specs: `frontend/projects/admin/src/app/features/products/list/product-row.spec.ts`,
    `frontend/projects/admin/src/app/features/products/list/product-list-page.spec.ts` and
    `frontend/projects/admin/src/mocks/products-read.handlers.spec.ts`.
