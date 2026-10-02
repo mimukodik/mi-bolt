@@ -9,8 +9,14 @@ metadata:
     {{- include "mi-bolt.candidateAnnotations" . | nindent 4 }}
 spec:
   replicas: {{ .Values.commerce.replicas }} # Admin sessions are process-local.
+  # Keep the old pod serving until the new pod finishes migrations and loading.
+  # Migrations must be additive and compatible with the old code; drops/renames
+  # require expand/contract across releases (backend/docs/04-adatbazis.md §5).
   strategy:
-    type: Recreate # Avoid overlapping app revisions during migrations.
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       {{- include "mi-bolt.selectorLabels" . | nindent 6 }}

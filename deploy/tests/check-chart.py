@@ -70,7 +70,10 @@ commerce_container = commerce_pod["containers"][0]
 web_container = web_pod["containers"][0]
 
 require(commerce["spec"]["replicas"] == 1, "commerce must have one replica")
-require(commerce["spec"]["strategy"]["type"] == "Recreate", "commerce rollout must not overlap")
+require(commerce["spec"]["strategy"] == {
+    "type": "RollingUpdate",
+    "rollingUpdate": {"maxUnavailable": 0, "maxSurge": 1},
+}, "commerce must keep the old pod available until the new pod is ready")
 for component, deployment, pod, container in (
     ("commerce", commerce, commerce_pod, commerce_container),
     ("web", web, web_pod, web_container),

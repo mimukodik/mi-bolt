@@ -309,6 +309,10 @@ A stored value adds a migration.
    forgotten mapping.
 5. Never edit a changeset that has run; add a new one. The stable database
    has already recorded it, and Liquibase halts there on a changed checksum.
+   Commerce rolls with overlapping revisions: migrations must be additive
+   and compatible with the previous code's reads and writes. Drops, renames,
+   incompatible type changes and stricter constraints need expand/contract
+   across releases (`backend/docs/04-adatbazis.md`, "Gördülő kiadás").
 6. Run the script again with `--base` and expect exit 0, then the integration
    tests, which run the changelog on H2.
 

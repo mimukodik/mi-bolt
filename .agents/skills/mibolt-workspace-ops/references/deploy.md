@@ -124,10 +124,16 @@ Ingress that sends every path, `/api/v1` included, to `web`.
   a malformed origin or host, and a commerce replica count other than one. Helm
   validates the schema on `install`, `upgrade`, `lint` and `template`
   (https://helm.sh/docs/topics/charts/, "Schema Files").
-- **Commerce** runs one replica with the `Recreate` strategy, because admin
-  sessions live in its process and two revisions must not overlap during a
-  migration (`deploy/helm/mi-bolt/README.md`, "strategy prevents old and new commerce processes from overlapping";
-  `deploy/helm/mi-bolt/templates/deployments.yaml`, "type: Recreate"). It takes its runtime
+- **Commerce** runs one steady-state replica with `RollingUpdate`,
+  `maxUnavailable: 0` and `maxSurge: 1`: the old pod serves until the new
+  pod is ready after migrations and catalogue loading
+  (`deploy/helm/mi-bolt/README.md`, "pod keeps serving while the new pod migrates";
+  `deploy/helm/mi-bolt/templates/deployments.yaml`, "type: RollingUpdate").
+  Migrations must be additive and compatible with the old code; destructive
+  changes need expand/contract across releases (`backend/docs/04-adatbazis.md`,
+  "Gördülő kiadás"). Admin sessions remain process-local: after a release,
+  wait for the old pod to disappear and log in again for demo step 7.
+  It takes its runtime
   variables from the existing Secret named by `commerce.existingSecret` (the
   keys are listed at `deploy/helm/mi-bolt/README.md` ("That Secret must contain")) and gets the two
   payment URL prefixes derived from `publicOrigin`
