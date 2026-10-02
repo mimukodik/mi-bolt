@@ -137,7 +137,10 @@ Ingress that sends every path, `/api/v1` included, to `web`.
   variables from the existing Secret named by `commerce.existingSecret` (the
   keys are listed at `deploy/helm/mi-bolt/README.md` ("That Secret must contain")) and gets the two
   payment URL prefixes derived from `publicOrigin`
-  (`deploy/helm/mi-bolt/templates/deployments.yaml`, ".Values.publicOrigin").
+  (`deploy/helm/mi-bolt/templates/deployments.yaml`, ".Values.publicOrigin"), and
+  `MIBOLT_PUBLISHER_RUN_ID`, which it reports at `/api/v1/actuator/info` so a
+  release check can tell which revision answers during the overlap
+  (`deploy/helm/mi-bolt/templates/deployments.yaml`, "name: MIBOLT_PUBLISHER_RUN_ID").
 - **Web** gets `BACKEND_ORIGIN` pointed at the commerce Service
   (`deploy/helm/mi-bolt/templates/deployments.yaml`, "name: BACKEND_ORIGIN") and probes
   `/robots.txt`.

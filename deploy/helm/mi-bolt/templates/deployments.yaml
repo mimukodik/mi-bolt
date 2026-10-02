@@ -64,6 +64,10 @@ spec:
               value: {{ printf "%s/demo-fizetes/" .Values.publicOrigin | quote }}
             - name: MIBOLT_PAYMENT_RETURN_URL_PREFIX
               value: {{ printf "%s/penztar?paymentIntentId=" .Values.publicOrigin | quote }}
+            # Reported at /api/v1/actuator/info, so a release check can tell which
+            # revision answers while the old and the new pod overlap.
+            - name: MIBOLT_PUBLISHER_RUN_ID
+              value: {{ .Values.candidate.publisherRunId | int64 | quote }}
           startupProbe:
             httpGet:
               path: /api/v1/actuator/health/liveness

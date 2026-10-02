@@ -80,7 +80,10 @@ before publication.
 Stable upgrades retain the existing runtime Secret and `mibolt` database. They
 apply application migrations without cloning or resetting demo data.
 `Stable Smoke` waits for the exact public deployment and runs both checkout
-flows, requiring no retries or skips. Both journeys buy only the hidden
+flows, requiring no retries or skips. The deployment counts as exact when web's
+`/__candidate.json` matches the receipt and commerce's `/api/v1/actuator/info`
+reports the receipt's publisher run. Commerce rolls, so its readiness alone
+can come from the previous release's pod. Both journeys buy only the hidden
 `mi-bolt-smoke-canary` fixture, never a catalogue phone; a missing fixture fails
 the run without a fallback. Demo/preview charts enable `MIBOLT_SMOKE_ENABLED`.
 The backend seeds the fixture idempotently even in an already populated database

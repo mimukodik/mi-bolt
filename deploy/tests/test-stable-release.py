@@ -1,4 +1,6 @@
 """Main publication eligibility and stable acceptance boundary checks."""
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -6,6 +8,8 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'candidate'))
 import publish
@@ -141,6 +145,36 @@ class StableReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'wrong release'):
                 stable_smoke.passed(receipt, report)
             fence.assert_called_once_with(receipt, origin='https://bolt.mimukodik.hu')
+
+    def test_fence_requires_the_receipt_commerce_not_just_a_ready_one(self):
+        digests = {'web': 'sha256:' + 'c' * 64, 'commerce': 'sha256:' + 'd' * 64}
+        receipt = {'candidateId': 'main-aaaaaaaaaaaa', 'headSha': HEAD, 'publisherRunId': 37049383413,
+                   'images': {c: {'digest': d} for c, d in digests.items()}}
+        candidate = {'candidateId': 'main-aaaaaaaaaaaa', 'headSha': HEAD, 'publisherRunId': 37049383413,
+                     'images': digests}
+
+        def serving(info):
+            def urlopen(request, timeout):
+                path = urlsplit(request.full_url).path
+                body = {'/__candidate.json': candidate,
+                        '/api/v1/actuator/health/readiness': {'status': 'UP'},
+                        '/api/v1/actuator/info': info}[path]
+                if body is None:
+                    raise HTTPError(request.full_url, 404, 'Not Found', {}, None)
+                return contextlib.nullcontext(io.BytesIO(json.dumps(body).encode()))
+            return urlopen
+
+        # Web already serves the new candidate while the previous release's commerce answers.
+        for name, info in (('previous release', {'release': {'publisherRunId': '37049262466'}}),
+                           ('commerce without the release id', {'release': {'publisherRunId': ''}}),
+                           ('commerce before info was exposed', None)):
+            with self.subTest(name), patch.object(stable_smoke, 'urlopen', side_effect=serving(info)):
+                with self.assertRaises((ValueError, HTTPError)):
+                    stable_smoke.fence(receipt, origin='https://bolt.example.test')
+        with patch.object(stable_smoke, 'urlopen',
+                          side_effect=serving({'release': {'publisherRunId': '37049383413'}})):
+            self.assertEqual(stable_smoke.fence(receipt, origin='https://bolt.example.test'),
+                             'https://bolt.example.test')
 
 
 if __name__ == '__main__':
