@@ -62,7 +62,7 @@ runs in `backend/services/commerce/`. The local report paths below are inside
 |---|---|---|
 | `contracts.yml` `check` | `mise run contracts:check` | The same task. CI installs the tools pinned in `contracts/mise.toml` first (`.github/workflows/contracts.yml:22-23`). |
 | `tools.yml` `check` | `mise run //tools:lint`, then `mise run //tools:test` | The same two scripts in `tools/`. |
-| `smoke.yml` `smoke` | no single command | CI builds the whole stack from the commit under a compose project and volume of its own, checks readiness through the web container, runs `npm run e2e:smoke` against `E2E_BASE_URL=http://localhost:4200`, and removes everything with `down -v` (`.github/workflows/smoke.yml:19-28`, `.github/workflows/smoke.yml:40-67`, `.github/workflows/smoke.yml:100-103`). Locally: `mise run stack`, then `E2E_BASE_URL=http://localhost:4200 npm --prefix frontend run e2e:smoke`, then `mise run stop`, which keeps the database volume (`mise.toml:58-60`). |
+| `smoke.yml` `smoke` | no single command | CI builds the whole stack from the commit under a compose project and volume of its own, checks readiness through the web container, runs `npm run e2e:smoke` against `E2E_BASE_URL=http://localhost:4200`, and removes everything with `down -v` (`.github/workflows/smoke.yml:19-28`, `.github/workflows/smoke.yml:40-67`, `.github/workflows/smoke.yml:100-103`). Locally: `mise run stack`, then `E2E_BASE_URL=http://localhost:4200 npm --prefix frontend run e2e:smoke`, then `mise run stop`, which keeps the database volume (`mise.toml:65-67`). |
 
 ## Workflows outside ci.yml
 

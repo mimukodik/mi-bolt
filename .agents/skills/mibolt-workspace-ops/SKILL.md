@@ -83,6 +83,11 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   `mise run backend` adds a native Gradle `bootRun`; `mise run dev` and
   `mise run dev:docker` serve the three apps in their `local-backend`
   configuration against the backend on 8080, with PostgreSQL on 55433.
+  A container mode stops and names what to do instead where no Docker answers:
+  serve the apps on their mock, and verify backend work with the backend tests
+  (`deploy/compose.sh`).
+  Run `docker info` before choosing a run mode: choose a container mode only where
+  it answers, and where it fails, go straight to the mock and the backend tests.
   `mise run stop` stops every container and keeps the volume.
   `README.md:229-239` lists the ports, 4400 and 4410 for Playwright included.
 - **Two images, built through Compose.** `mi-bolt-web` puts the three
@@ -109,7 +114,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
 - **Dev tooling.** `deploy/stack.sh` gives a linked worktree a Compose stack of
   its own; `tools/dev-server/dev-server.sh` starts and stops one process on one
   port; `frontend/scripts/serve-static.mjs` serves a production build.
-- **`api:drift` checks the frontend clients only** (`mise.toml:88-90`). The
+- **`api:drift` checks the frontend clients only** (`mise.toml:95-97`). The
   backend stubs are generated into the Gradle build directory on every build
   (`backend/services/commerce/build.gradle:92`) and no file of them is tracked.
 - **`tools/` is an npm workspace root** with `catalog-import` as its member
@@ -120,9 +125,9 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
 
 | Task | Start at | Example to copy |
 |---|---|---|
-| a root task | `mise.toml` | `verify` (`mise.toml:66-82`) for a task made of other tasks; `db` (`mise.toml:31-33`) for one that runs a command |
+| a root task | `mise.toml` | `verify` (`mise.toml:73-89`) for a task made of other tasks; `db` (`mise.toml:31-33`) for one that runs a command |
 | an area task | the area's `mise.toml` | `frontend/mise.toml:11-21`, a `run` list |
-| a run mode, a port | `README.md:81-243`, then `mise.toml:15-60` | `stack` (`mise.toml:52-56`) |
+| a run mode, a port | `README.md:81-243`, then `mise.toml:15-67` | `stack` (`mise.toml:59-63`) |
 | a Compose service, a volume, an env var | `deploy/compose.yaml`, `deploy/.env.example` | `deploy/compose.sh` for how every Compose call is made |
 | a second stack | `deploy/stack.sh:9-26` | `.github/workflows/smoke.yml:19-25` |
 | an image or NGINX | `frontend/Dockerfile`, `backend/services/commerce/Dockerfile`, `frontend/nginx/default.conf.template` | `frontend/tests/web-image/nginx-api-gzip.spec.ts` |
@@ -142,7 +147,7 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    they must not overlap, as `{ task = … }` entries of a `run` list, which
    mise runs one after another, the way `verify` does. A step that
    has no task of its own goes under `run` and runs from the root, the way
-   `stop` runs `deploy/compose.sh down` (`mise.toml:58-60`). A task
+   `stop` runs `deploy/compose.sh down` (`mise.toml:65-67`). A task
    that runs the contract checks and the frontend contract suite, for
    example, can depend on `//contracts:check`, which
    `mise run //contracts:check` runs alone, and run
@@ -159,9 +164,9 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
    repeat it word for word.
 5. Add the same row to `README.md:352-369` and to `docs/monorepo.md:28-45`.
    Both tables list the other 16 root tasks; `mise run deploy:check`
-   (`mise.toml:96-98`) is in neither.
+   (`mise.toml:103-105`) is in neither.
 6. When the workspace as a whole should pass it, add it to `verify`'s `run` list
-   (`mise.toml:66-82`). What a `verify` run writes, and that a run can leave a
+   (`mise.toml:73-89`). What a `verify` run writes, and that a run can leave a
    tracked file outside the change modified, is in
    `mibolt-verification/references/commands.md` ("What a check writes or
    starts").
@@ -215,7 +220,7 @@ workflow, or a trigger that does not fire: read
   containers and `deploy/stack.sh down` removes them with their network; both
   keep the volume and the slot (`deploy/stack.sh:482-490`).
   `deploy/stack.sh reset --yes` deletes that worktree's volume and frees the
-  slot (`deploy/stack.sh:593-595`); run it before the worktree is removed.
+  slot (`deploy/stack.sh:596-598`); run it before the worktree is removed.
 - **From the main checkout**, where `deploy/stack.sh` refuses to run: export
   `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME` and the three port
   variables (`deploy/.env.example:18-23`), on ports that neither the table at
@@ -223,7 +228,7 @@ workflow, or a trigger that does not fire: read
   `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN` set to
   `http://localhost:<web-port>`, then run
   `deploy/compose.sh up -d --build --wait`, the arguments `mise run stack`
-  passes (`mise.toml:56`). The wrapper refuses a second project on the
+  passes (`mise.toml:63`). The wrapper refuses a second project on the
   default volume. Stop it with `deploy/compose.sh down` in that same
   environment, adding `-v` to delete its volume; `mise run stop` without those
   variables stops the default `mi-bolt-local` project instead
@@ -298,7 +303,7 @@ other way.
 The deploy checks run through uv with no uv pinned at the root:
 `mise run deploy:check` runs
 `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
-(`mise.toml:96-98`), and `.github/workflows/candidate.yml:32-40` runs all
+(`mise.toml:103-105`), and `.github/workflows/candidate.yml:32-40` runs all
 six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
 
 ### Naming
@@ -317,7 +322,7 @@ file.
 Keep every committed file free of paths that exist on one machine only: no
 home directory, no `~`, no temp directory, no `file:` URL pointing at a local
 checkout. Derive a location at run time or write it repository-relative:
-`deploy/compose.sh:8` and `deploy/stack.sh:29-30` find their own directory
+`deploy/compose.sh:9` and `deploy/stack.sh:29-30` find their own directory
 through `BASH_SOURCE`, `frontend/scripts/serve-static.mjs:63` finds the
 repository root from `import.meta.url`, and `deploy/stack.sh:44` keeps its
 slot ledger under `XDG_STATE_HOME`, falling back to `HOME`. Prose names such a
@@ -331,9 +336,9 @@ machine fails on every other, CI included.
   and `npx ng serve` does not (`frontend/package.json:6-11`,
   `frontend/README.md:30`).
 - **Call Compose through `deploy/compose.sh`,** because the volume guard and
-  the `.env` creation live there (`deploy/compose.sh:10-22`).
+  the `.env` creation live there (`deploy/compose.sh:21-33`).
 - **Leave the default volume alone unless the user asks for a reset.** `stop`
-  keeps it (`mise.toml:58-60`), `.github/workflows/smoke.yml` runs `down -v`
+  keeps it (`mise.toml:65-67`), `.github/workflows/smoke.yml` runs `down -v`
   only on a project of its own, and `deploy/stack.sh` refuses the
   `mi-bolt-local` project (`deploy/stack.sh:126-131`); removing it removes the
   developer's data. The reset is `deploy/compose.sh down -v`, with no project
@@ -380,7 +385,7 @@ machine fails on every other, CI included.
 - **An NGINX or static-server change:**
   `npm --prefix frontend run test:contract`, which collects
   `frontend/tests/web-image/` and `frontend/tests/scripts/` through
-  `frontend/vitest.contract.config.ts:18`. Those specs read the NGINX files
+  `frontend/vitest.contract.config.ts:21`. Those specs read the NGINX files
   and `frontend/Dockerfile` as text and test
   `frontend/scripts/proxy-timeout.mjs`; no spec runs
   `frontend/scripts/serve-static.mjs` itself, which the Playwright suite

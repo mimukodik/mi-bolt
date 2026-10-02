@@ -48,7 +48,7 @@ root, except `SKILL.md`, which is this skill's own file.
 | Area | Responsibility | Owner | Depth | Unknowns |
 |---|---|---|---|---|
 | `mise.toml`, `.gitignore`, `.gitattributes` | root task graph, tool pins, ignore and line-ending rules | `mibolt-workspace-ops` | full | — |
-| `README.md`, `docs/monorepo.md` | install and run-mode guide, ports, command and CI-filter tables | `mibolt-workspace-ops` for the tables; this skill's docs index for reading | full | both command tables omit `mise run deploy:check`, which `mise.toml:96-98` defines |
+| `README.md`, `docs/monorepo.md` | install and run-mode guide, ports, command and CI-filter tables | `mibolt-workspace-ops` for the tables; this skill's docs index for reading | full | both command tables omit `mise run deploy:check`, which `mise.toml:103-105` defines |
 | `.editorconfig` | editor settings | `mibolt-workspace-ops` for the file; the formatting facts sit in `mibolt-frontend-code-standards` and `mibolt-backend-code-standards` | full | — |
 
 ## Frontend workspace configuration

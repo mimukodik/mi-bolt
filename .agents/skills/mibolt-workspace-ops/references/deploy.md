@@ -86,7 +86,7 @@ turns gzip off, and `frontend/tests/web-image/nginx-robots.spec.ts` asserts the
 robots file, its place in `frontend/Dockerfile`, the snippet's `X-Robots-Tag`,
 and that every location outside `/api/` includes the snippet.
 `npm --prefix frontend run test:contract` runs them, because its config
-collects `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:18`). Change
+collects `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:21`). Change
 a template rule and its spec in the same change.
 
 ## What pins the Compose build definition
@@ -141,7 +141,7 @@ at `.github/workflows/candidate.yml:32-40`; `check-chart.py`,
 `test-candidate.py` and `test-stack.py` also state theirs in their docstring.
 
 - `check-chart.py` is the only one with a mise task: `mise run deploy:check`
-  (`mise.toml:96-98`). It runs `helm lint` and `helm template` with synthetic
+  (`mise.toml:103-105`). It runs `helm lint` and `helm template` with synthetic
   values, then asserts the exact resource set, the commerce `envFrom` and `env`
   entries, the web `BACKEND_ORIGIN`, the probe paths, the Ingress and TLS shape
   (`deploy/tests/check-chart.py:50-110`), published-version labels, and six

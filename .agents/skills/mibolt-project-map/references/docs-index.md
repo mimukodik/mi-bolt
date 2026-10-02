@@ -14,7 +14,7 @@ pre-implementation document as a description of the current apps.
 
 | Document | Authoritative for | Language | Currency |
 |---|---|---|---|
-| `README.md` | install, the run modes, ports (`README.md:229-239`), the stack and order-flow diagrams, the root command reference | English | the command table at `README.md:352-369` omits `mise run deploy:check`, which `mise.toml:96-98` defines |
+| `README.md` | install, the run modes, ports (`README.md:229-239`), the stack and order-flow diagrams, the root command reference | English | the command table at `README.md:352-369` omits `mise run deploy:check`, which `mise.toml:103-105` defines |
 | `docs/monorepo.md` | the folder map, the root commands, the CI component filters | English | its command table at `docs/monorepo.md:28-45` omits the same task |
 
 ## Frontend

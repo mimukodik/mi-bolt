@@ -343,7 +343,7 @@ One line each; the source named owns the rule.
 
 | Step skipped | What fails | Where it runs |
 |---|---|---|
-| regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json:32`) | the `api-drift` CI job (`.github/workflows/frontend.yml:136-159`), `mise run api:drift`, `mise run verify` (`mise.toml:66-82`) |
+| regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json:32`) | the `api-drift` CI job (`.github/workflows/frontend.yml:136-159`), `mise run api:drift`, `mise run verify` (`mise.toml:73-89`) |
 | leaving a generated file as hand-edited | the same `api:drift`, since regeneration overwrites the edit | as above |
 | updating a spec example or a sample the change invalidated | examples on a shop operation: `frontend/tests/contract/schema.spec.ts:177`; samples: `contracts/check-samples.sh` | `npm --prefix frontend run test:contract`; `mise run contracts:check` and the Contracts CI workflow (`.github/workflows/contracts.yml:24-25`) |
 | moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts:123-127`, and for an admin operation `frontend/tests/contract/sdk-split.spec.ts:141`; for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts:35`) and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts:88-108`) | `npm --prefix frontend run test:contract` |
@@ -367,7 +367,7 @@ the full set for a change and how CI maps onto them.
 |---|---|---|
 | the consumer finder, the command under "Find every consumer first" | nothing by itself: it lists candidates; the step is done when every non-empty bucket is handled or dismissed, and, for `--kind operation`, every empty one that should hold a consumer has been searched by hand for the two URL shapes the path search misses | none |
 | `mise run contracts:check` | `vacuum lint` passes on the contract, every sample validates against its schema, and `plantuml -checkonly` passes on the diagrams (`contracts/mise.toml:14-19`), which the file's header calls a syntax check (`contracts/mise.toml:1-2`); `-checkonly` is PlantUML's legacy spelling, no longer documented: the current CLI lists `--check-syntax`, "Check diagram syntax without generating images" (https://plantuml.com/command-line), and keeps legacy options for a transition period (https://github.com/plantuml/plantuml/issues/2377) | `contracts/check-samples.sh` writes only into a temporary directory it deletes on exit (`contracts/check-samples.sh:9-10`); the tools are pinned in `contracts/mise.toml:5-9`, and CI installs them first (`.github/workflows/contracts.yml:22-23`) |
-| `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:16-22`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
+| `npm --prefix frontend run test:contract` | the contract suite passes, in a Node environment (`frontend/vitest.contract.config.ts:18-25`); its `tests/**/*.spec.ts` glob also runs the other specs under `frontend/tests/` | none |
 | `mise run api:drift` | the clients in the index equal what the working-tree contract generates; in CI, with nothing staged, that the committed clients match the committed contract | rewrites the tracked files in both client directories before it compares them, as `api:generate` does |
 | `npm --prefix frontend run fixtures:catalog:check` | the committed fixture matches `data/catalog/catalog.json`; silent exit 0 when it does | none |
 | `mise run api:generate`, `npm --prefix frontend run fixtures:catalog` | nothing: these write, they do not check | `api:generate` rewrites both client directories and the backend output in the Gradle build directory; `fixtures:catalog` rewrites `frontend/docs/api/fixtures/catalog.json` |
@@ -413,7 +413,7 @@ Update this skill and its references in the same change as any of these:
 - `frontend/ng-openapi-gen.json` or `frontend/ng-openapi-gen.admin.json`;
 - the `api:*` and `fixtures:catalog*` scripts in `frontend/package.json:31-34`,
   or the root tasks behind `mise run api:generate`, `mise run api:drift` and
-  `mise run contracts:check` (`mise.toml:84-94`);
+  `mise run contracts:check` (`mise.toml:91-101`);
 - the openapi block of `backend/services/commerce/build.gradle:39-139`;
 - `frontend/projects/core-api/src/public-api.ts`;
 - `data/catalog/catalog.schema.json` or

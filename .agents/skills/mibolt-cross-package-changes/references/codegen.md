@@ -94,11 +94,11 @@ Both rewrite the tracked files under the two generated directories,
 `frontend/projects/admin/src/app/api/generated/`; `api:generate` also
 regenerates the backend output, which git ignores (section 4).
 
-- `mise run api:generate` (`mise.toml:84-86`) runs `//frontend:api:generate`,
+- `mise run api:generate` (`mise.toml:91-93`) runs `//frontend:api:generate`,
   which is `npm run api:generate` in `frontend/`: both configs in sequence
   (`frontend/package.json:31`), and `//backend:api:generate`, which is
   `./gradlew :services:commerce:openApiGenerate` (`backend/mise.toml:18-19`).
-- `mise run api:drift` (`mise.toml:88-90`) runs only `//frontend:api:drift`,
+- `mise run api:drift` (`mise.toml:95-97`) runs only `//frontend:api:drift`,
   which is `frontend/package.json:32`:
   1. `npm run api:generate`, so it regenerates first and leaves the result in
      the working tree;
