@@ -18,30 +18,30 @@ which CI job, and which checks a change needs, are not here:
 
 **`.github/workflows/ci.yml` is the one entry point.** It runs on every pull
 request, whatever its base, and on every push to `main`
-(`.github/workflows/ci.yml:3-6`), and cancels an older run of the same pull
-request (`.github/workflows/ci.yml:11-13`). Its `changes` job runs
+(`.github/workflows/ci.yml`, "branches: [main]"), and cancels an older run of the same pull
+request (`.github/workflows/ci.yml`, "cancel-in-progress"). Its `changes` job runs
 `dorny/paths-filter`, pinned by commit SHA, with
-`filters: .github/components.yml` (`.github/workflows/ci.yml:16-34`). The
+`filters: .github/components.yml` (`.github/workflows/ci.yml`, "filters: .github/components.yml"). The
 action matches paths with picomatch, compares a pull request against its base
 branch, and sets one `'true'` or `'false'` output per filter
 (https://github.com/dorny/paths-filter). One job per component calls that
 component's reusable workflow when its output is `'true'`
-(`.github/workflows/ci.yml:36-59`), and `ci-ok` fails unless every needed job's
-result is `success` or `skipped` (`.github/workflows/ci.yml:61-81`).
+(`.github/workflows/ci.yml`, "if: needs.changes.outputs"), and `ci-ok` fails unless every needed job's
+result is `success` or `skipped` (`.github/workflows/ci.yml`, "Every needed branch passed or was skipped").
 
 **`.github/components.yml` has five components.**
 
 | Component | Paths | Workflow |
 |---|---|---|
-| `frontend` | `.github/components.yml:3-9` | `.github/workflows/frontend.yml` |
-| `backend` | `.github/components.yml:10-16` | `.github/workflows/backend.yml` |
-| `contracts` | `.github/components.yml:17-18` | `.github/workflows/contracts.yml` |
-| `tools` | `.github/components.yml:19-22` | `.github/workflows/tools.yml` |
-| `smoke` | `.github/components.yml:23-30` | `.github/workflows/smoke.yml` |
+| `frontend` | `.github/components.yml` ("frontend:") | `.github/workflows/frontend.yml` |
+| `backend` | `.github/components.yml` ("backend:") | `.github/workflows/backend.yml` |
+| `contracts` | `.github/components.yml` ("contracts:") | `.github/workflows/contracts.yml` |
+| `tools` | `.github/components.yml` ("tools:") | `.github/workflows/tools.yml` |
+| `smoke` | `.github/components.yml` ("smoke:") | `.github/workflows/smoke.yml` |
 
-`docs/monorepo.md:50-69` transcribes the same table for readers; a change that
+`docs/monorepo.md` ("Which CI branch runs for which change") transcribes the same table for readers; a change that
 matches no component runs only `changes` and `ci-ok`, which is green
-(`docs/monorepo.md:68-69`).
+(`docs/monorepo.md`, "A change that matches no component").
 
 ## The reusable workflows
 
@@ -53,8 +53,8 @@ and the caller names it as `uses: ./.github/workflows/<file>`
   `actions/setup-node`: `lint` (ESLint, Prettier), `unit-tests`
   (`npm run test`, `npm run test:contract`, one coverage summary per project,
   one `coverage-unit` artifact), `build` (the build, dist and boot checks,
-  `.github/workflows/frontend.yml:101-134`), `api-drift` (`npm run api:drift`),
-  `e2e` (a matrix of three cells, `.github/workflows/frontend.yml:161-241`) and
+  `.github/workflows/frontend.yml`, "Production build"), `api-drift` (`npm run api:drift`),
+  `e2e` (a matrix of three cells, `.github/workflows/frontend.yml`, "E2E ${{ matrix.project }}") and
   `e2e-report`, which merges the cells' blob reports.
 - **`.github/workflows/backend.yml`** runs in `backend/` on Java 21 from
   `actions/setup-java` with `gradle/actions/setup-gradle`: `unit-tests` and
@@ -63,29 +63,29 @@ and the caller names it as `uses: ./.github/workflows/<file>`
   verification on the downloaded data, and `postgres-smoke` needs the two test
   jobs and `lint`, boots the jar on a PostgreSQL 16 service container and runs
   `backend/services/commerce/scripts/smoke.sh`
-  (`.github/workflows/backend.yml:175-249`).
+  (`.github/workflows/backend.yml`, "PostgreSQL boot and smoke").
 - **`.github/workflows/contracts.yml`** is the only workflow that runs through
   mise: `jdx/mise-action` (pinned by SHA, mise 2026.9.12), then
   `mise -C contracts install` and `mise -C contracts run check`
-  (`.github/workflows/contracts.yml:18-25`).
+  (`.github/workflows/contracts.yml`, "Contract checks").
 - **`.github/workflows/tools.yml`** runs `npm ci`, `npm run typecheck` and
-  `npm test` in `tools/` (`.github/workflows/tools.yml:14-37`).
+  `npm test` in `tools/` (`.github/workflows/tools.yml`, "Tools typecheck and tests").
 - **`.github/workflows/smoke.yml`** builds and starts the whole Compose stack
   from the commit under a project and volume of its own, with the payment
-  origins on the web port (`.github/workflows/smoke.yml:19-25`), checks backend
+  origins on the web port (`.github/workflows/smoke.yml`, "MIBOLT_PAYMENT_ORIGIN"), checks backend
   readiness through the web container, runs `npm run e2e:smoke` against it,
   prints the stack logs on failure and ends with `deploy/compose.sh down -v` on
-  its own project (`.github/workflows/smoke.yml:40-103`).
+  its own project (`.github/workflows/smoke.yml`, "Smoke on the real stack").
 
 **CI does not call the root mise tasks.** Apart from
 `.github/workflows/contracts.yml`, every job runs its tools directly, npm and
 Gradle in the component workflows and `deploy/compose.sh` as well in
 `.github/workflows/smoke.yml`, so a mise task and the CI step that does the
 same thing are two edits.
-`frontend/mise.toml:11-21` and `.github/workflows/frontend.yml:122-134` list
-the same eight build steps, for example, and `frontend/mise.toml:8-9` passes
-`-- --watch=false` to the unit run where `.github/workflows/frontend.yml:62`
-does not.
+`frontend/mise.toml` ("[tasks.build]") and `.github/workflows/frontend.yml` ("Production build") list
+the same eight build steps, for example, and `frontend/mise.toml` ("[tasks.test]") passes
+`-- --watch=false` to the unit run where `.github/workflows/frontend.yml`
+("Vitest with coverage") does not.
 
 ## The candidate and deployment chain
 
@@ -94,11 +94,11 @@ promoted; this is only the wiring.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm v4.2.2, computes the image input hashes (`deploy/candidate/inputs.py`), runs the six `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml:25-71`) |
-| `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml:3-87`) |
-| `.github/workflows/preview-smoke.yml` ("Preview Smoke") | `workflow_run` of `Publish Candidate`, a daily `schedule`, `workflow_dispatch` | waits for the deployed preview and runs `npm run e2e:smoke` against it, then reports the deployment to GitHub (`.github/workflows/preview-smoke.yml:1-123`) |
-| `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | the same against the stable demo (`.github/workflows/stable-smoke.yml:1-90`) |
-| `.github/workflows/close-bolt-preview.yml` ("Deactivate Bolt Preview Deployment") | `pull_request_target`, `closed` or `unlabeled` | for a same-repository pull request that closed or lost the `bolt-preview` label, marks its preview deployment inactive (`.github/workflows/close-bolt-preview.yml:3-31`) |
+| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm v4.2.2, computes the image input hashes (`deploy/candidate/inputs.py`), runs the six `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
+| `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml`, "Verify inputs, publish immutable images and chart, write receipt") |
+| `.github/workflows/preview-smoke.yml` ("Preview Smoke") | `workflow_run` of `Publish Candidate`, a daily `schedule`, `workflow_dispatch` | waits for the deployed preview and runs `npm run e2e:smoke` against it, then reports the deployment to GitHub (`.github/workflows/preview-smoke.yml`, "Existing smoke tests against the public preview") |
+| `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | the same against the stable demo (`.github/workflows/stable-smoke.yml`, "Existing smoke tests against the stable demo") |
+| `.github/workflows/close-bolt-preview.yml` ("Deactivate Bolt Preview Deployment") | `pull_request_target`, `closed` or `unlabeled` | for a same-repository pull request that closed or lost the `bolt-preview` label, marks its preview deployment inactive (`.github/workflows/close-bolt-preview.yml`, "Mark preview inactive in GitHub") |
 
 **Everything after `.github/workflows/candidate.yml` runs the default branch's
 copy.** A `workflow_run` workflow triggers only when its file exists on the
@@ -107,8 +107,8 @@ the context of the base repository's default branch; a `schedule` runs on its
 latest commit
 (https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 These workflows also check out `ref: ${{ github.sha }}` for the code they run
-(`.github/workflows/publish-candidate.yml:25-30`,
-`.github/workflows/preview-smoke.yml:30-35`). An edit to any of them, or to the
+(`.github/workflows/publish-candidate.yml`, "Checkout trusted publisher and chart";
+`.github/workflows/preview-smoke.yml`, "Trusted receipt and fencing wrapper"). An edit to any of them, or to the
 `deploy/candidate/*.py` scripts they call, takes effect only once it is on
 `main`.
 
@@ -116,27 +116,28 @@ These workflows also check out `ref: ${{ github.sha }}` for the code they run
 
 **A path added to or removed from the `frontend` or `backend` list fails the
 candidate build unless the hash contract changes with it.**
-`deploy/candidate/inputs.py:13-20` pins those two lists exactly and raises
+`deploy/candidate/inputs.py` ("EXPECTED_FILTERS") pins those two lists exactly and raises
 `path filter diverged from candidate hash contract` on any difference
-(`deploy/candidate/inputs.py:66-70`), and
-`deploy/tests/test-candidate.py:34-40` writes the same lists into its fixture.
+(`deploy/candidate/inputs.py`, "path filter diverged from candidate hash contract"), and
+`deploy/tests/test-candidate.py` ("setUp") writes the same lists into its fixture.
 `Publish Candidate` hashes with the default branch's `inputs.py`
-(`deploy/candidate/publish.py:21`, `deploy/candidate/publish.py:185`), so it
+(`deploy/candidate/publish.py`, "from inputs import file_digest, hashes, tracked_files";
+`deploy/candidate/publish.py`, "expected = hashes(source)"), so it
 fails for such a pull request until the change is on `main`. Edit, in one
 change:
 
 1. `.github/components.yml`;
-2. `deploy/candidate/inputs.py:15-20` and
-   `deploy/tests/test-candidate.py:34-40` when the `frontend` or `backend` list
+2. `deploy/candidate/inputs.py` ("EXPECTED_FILTERS") and
+   `deploy/tests/test-candidate.py` ("setUp") when the `frontend` or `backend` list
    changed;
-3. the component table at `docs/monorepo.md:57-63`;
-4. `frontend/README.md:89`, which spells out the `frontend` list in prose.
+3. the component table at `docs/monorepo.md` ("Workflow it runs");
+4. `frontend/README.md` ("finds a changed path under"), which spells out the `frontend` list in prose.
 
 **A new component also needs** its list in `.github/components.yml`, an output
-in the `changes` job (`.github/workflows/ci.yml:23-28`), a job calling its
-workflow (`.github/workflows/ci.yml:36-59` shows the shape), that job's name in
-`ci-ok`'s `needs` (`.github/workflows/ci.yml:63`), the new workflow file with
-`on: workflow_call`, and a row in `docs/monorepo.md:57-63`.
+in the `changes` job (`.github/workflows/ci.yml`, "steps.filter.outputs"), a job calling its
+workflow (`.github/workflows/ci.yml`, "if: needs.changes.outputs" shows the shape), that job's name in
+`ci-ok`'s `needs` (`.github/workflows/ci.yml`, "needs: [changes, frontend, backend, contracts, tools, smoke]"), the new workflow file with
+`on: workflow_call`, and a row in `docs/monorepo.md` ("Workflow it runs").
 
 ## Adding a job or a step
 
@@ -146,7 +147,7 @@ workflow (`.github/workflows/ci.yml:36-59` shows the shape), that job's name in
   `.github/workflows/` uses.
 - `actions/checkout@v7` with
   `ref: ${{ github.event.pull_request.head.sha || github.sha }}` and
-  `persist-credentials: false`, as in `.github/workflows/frontend.yml:19-23`.
+  `persist-credentials: false`, as in `.github/workflows/frontend.yml` ("ref: ${{ github.event.pull_request.head.sha || github.sha }}").
 - `defaults.run.working-directory` set to the workspace in
   `.github/workflows/frontend.yml`, `.github/workflows/backend.yml` and
   `.github/workflows/tools.yml`, so commands read as that area's own npm or
@@ -157,46 +158,47 @@ workflow (`.github/workflows/ci.yml:36-59` shows the shape), that job's name in
   `.github/workflows/contracts.yml` sets none.
 - For Node, `actions/setup-node@v7` with `node-version: 26`, `cache: npm` and
   the workspace's lockfile as `cache-dependency-path`, then `npm ci`
-  (`.github/workflows/frontend.yml:24-30`).
+  (`.github/workflows/frontend.yml`, "cache-dependency-path: frontend/package-lock.json").
 - An artifact another job needs goes through `actions/upload-artifact` and
-  `actions/download-artifact`, as `.github/workflows/backend.yml:35-41` and
-  `.github/workflows/backend.yml:152-158` pass the JaCoCo data to
+  `actions/download-artifact`, as `.github/workflows/backend.yml` ("Upload coverage data") and
+  `.github/workflows/backend.yml` ("Download coverage data") pass the JaCoCo data to
   `coverage-gate`.
 
 `dorny/paths-filter` and `jdx/mise-action` are pinned by commit SHA
-(`.github/workflows/ci.yml:32`, `.github/workflows/contracts.yml:18`); every
-other action is pinned by a version tag. `.gitattributes:2-3` keeps every
+(`.github/workflows/ci.yml`, "dorny/paths-filter@";
+`.github/workflows/contracts.yml`, "jdx/mise-action@"); every
+other action is pinned by a version tag. `.gitattributes` ("*.yml text eol=lf") keeps every
 `*.yml` and `*.yaml` file on LF line endings. No mise task lints workflow
-files; `deploy/candidate/README.md:91-97` runs `actionlint` by hand, and no
+files; `deploy/candidate/README.md` ("Run local checks with:") runs `actionlint` by hand, and no
 `mise.toml` pins it.
 
 ## Current state worth knowing
 
 - `'tools/ci/**'` is listed in the `frontend` and `backend` filters
-  (`.github/components.yml:9`, `.github/components.yml:16`) and in the pinned
-  copies (`deploy/candidate/inputs.py:17`, `deploy/candidate/inputs.py:19`;
-  `deploy/tests/test-candidate.py:37`, `deploy/tests/test-candidate.py:40`),
+  (`.github/components.yml`, "tools/ci/**") and in the pinned
+  copies (`deploy/candidate/inputs.py`, "tools/ci/**";
+  `deploy/tests/test-candidate.py`, "tools/ci/**"),
   and `git ls-files tools/ci` lists no file: the pattern matches no tracked
   path today.
 - CI takes Node 26 and Java 21 from the setup actions, while mise pins exact
-  versions for local runs (`mise.toml:11-13`).
-- `README.md:340-346` names four reusable workflows; `.github/components.yml`
+  versions for local runs (`mise.toml`, "[tools]").
+- `README.md` ("What CI runs") names four reusable workflows; `.github/components.yml`
   has five, the fifth being `smoke`.
-- `frontend/README.md:87` describes a ten-cell `e2e` matrix;
-  `.github/workflows/frontend.yml:171-188` runs three cells and keeps the
+- `frontend/README.md` ("a ten-cell matrix") describes a ten-cell `e2e` matrix;
+  `.github/workflows/frontend.yml` ("To save CI minutes only the desktop (fullhd) cell of each browser runs") runs three cells and keeps the
   others commented out.
 
 ## When a workflow does not run
 
 | Symptom | Cause | Where |
 |---|---|---|
-| only `changes` and `ci-ok` ran | the change matched no component | `.github/components.yml`, `docs/monorepo.md:68-69` |
+| only `changes` and `ci-ok` ran | the change matched no component | `.github/components.yml`, `docs/monorepo.md` ("A change that matches no component") |
 | a component's workflow was skipped on a pull request touching it | the path is missing from that component's list | `.github/components.yml` |
 | `Candidate Build` failed at "Compute tracked build inputs" | `.github/components.yml` and `deploy/candidate/inputs.py` disagree | "Changing a path filter" above |
 | an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The candidate and deployment chain" above |
-| `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md:120-123` |
-| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md:108-118`, `deploy/candidate/README.md:24-25` |
+| `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md` ("deliberate no-op") |
+| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md` ("The coordinator admits only labeled PRs"), `deploy/candidate/README.md` ("fork PRs have no automatic candidate receipt") |
 
 Re-running the preview smoke by hand dispatches a workflow on GitHub
-(`deploy/candidate/README.md:129-135`): that is an action outside this
+(`deploy/candidate/README.md`, "retry the successful publisher run explicitly"): that is an action outside this
 repository, and the user decides on it.
