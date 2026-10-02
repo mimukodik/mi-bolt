@@ -44,7 +44,7 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
   `HttpContext` (the contract-change-chain reference, section 8).
 - `ignoreUnusedModels: true`: "ignore model files that are not referenced by
   any operation". A schema reachable only from admin operations is not
-  generated into the shop SDK, and the reverse: on 2026-09-26 the shop SDK had
+  generated into the shop SDK, and the reverse: the shop SDK has
   no `admin-*` model and the admin client no cart, checkout, order or
   catalogue model (`Product`, `CatalogItem`).
 - `enumStyle: "alias"` and `enumArray: true`: an enum becomes a union type,
@@ -84,8 +84,6 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
   import the generated files through `@mi-bolt/api/*`
   (`frontend/tsconfig.json`, "@mi-bolt/api/*"). The admin client lives inside the admin app
   and is imported by relative path; there is no alias for it.
-
-Counts on 2026-09-26: 88 tracked files in the shop SDK, 54 in the admin client.
 
 ## 3. `api:generate` and `api:drift`, exactly
 

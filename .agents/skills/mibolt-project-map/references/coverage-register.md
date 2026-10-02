@@ -29,10 +29,10 @@ root, except `SKILL.md`, which is this skill's own file.
 - **"As files"** means the owner carries reading and editing those files, not
   a dependency upgrade: no MiBolt skill carries choosing or moving a
   dependency version.
-- **Depth** records what was read when the set was mapped on 2026-09-26 at
-  commit `7099e689`: *full* (every file named was read), *mostly full*,
-  *sampled* (representative files read), *headers* (header comments only),
-  *config only*, *names only* or *existence*.
+- **Depth** records what was read when the set was mapped: *full* (every file
+  named was read), *mostly full*, *sampled* (representative files read),
+  *headers* (header comments only), *config only*, *names only* or
+  *existence*.
 - **Unknowns** were not read, or are questions the reading did not settle.
   Open the file before claiming anything about it, and do not describe a
   *sampled* or *headers* area as fully understood.

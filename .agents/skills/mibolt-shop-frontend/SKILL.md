@@ -94,8 +94,7 @@ compile time as well.
   shell, the UI primitives, the types, the utilities and the media helper.
 - `frontend/projects/storefront/src/styles.css` imports Tailwind and declares
   the one `@theme` block, so templates lay out and space with Tailwind
-  utilities (39 of the 57 component templates carry a `flex`, `grid` or
-  `gap-*` class, counted 2026-09-26) and a component's `.scss` carries the
+  utilities and a component's `.scss` carries the
   rest. `frontend/projects/storefront/src/styles/tokens.css` names the design
   tokens, mapped row by row in `frontend/docs/design/yettel.md` §9; its
   colour, radius and font names resolve to those theme variables.
@@ -330,8 +329,8 @@ because they are easy to break in this area.
   `Api`, as
   `frontend/projects/storefront/src/app/features/catalog/catalog.facade.spec.ts` ("{ provide: Api, useValue: api }")
   does. Extend a unit's spec the way it is already written.
-- Some specs carry a `// @vitest-environment jsdom` comment and some do not
-  (31 of the 74 storefront specs, counted 2026-09-26). Start a new spec from
+- Some specs carry a `// @vitest-environment jsdom` comment and some do not.
+  Start a new spec from
   the header of the nearest spec of the same kind rather than from memory.
 - A bug fix comes with a test that fails before it and passes after it, per
   `mibolt-verification` ("Tests and coverage").
@@ -346,7 +345,7 @@ from, the list- and device-page feature inventories, and in §9 the
 storefront's token mapping. Take every colour, type, radius, spacing and
 recipe value from it and name its section beside the value in a comment, as
 `frontend/projects/storefront/src/app/core/navigation/footer-nav.scss` ("docs/design/yettel.md §5")
-does; most component stylesheets do not (15 of 53 cite it, counted 2026-09-26).
+does; most component stylesheets do not.
 A value it lacks is measured on `frontend/docs/design/yettel/css/portal.css`,
 the captured yettel.hu stylesheet, and added to the document, with its
 selector, before any code uses it. It also records values that are the

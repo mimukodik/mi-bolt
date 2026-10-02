@@ -48,7 +48,7 @@ review finding, so the author knows whether the build would have caught it.
 - **structural**: the build's wiring prevents it without a rule that names it.
 - **review-only**: written down, and nothing but a reviewer checks it.
 - **observed**: no document states it; the code follows it consistently. The
-  counts, measured on 2026-09-26, are in the reference.
+  counts are in the reference.
 - **conflict**: two sources disagree. Both are stated, and neither is declared
   the winner.
 

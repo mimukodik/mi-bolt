@@ -279,9 +279,7 @@ root has no `package.json`, so run there it misses the `node_modules` under
 `frontend/` and runs a copy from outside the workspace, one that npx installs
 into npm's cache when it has none
 (https://docs.npmjs.com/cli/v11/commands/npx), which need not be the version
-the workspace pins (measured 2026-09-26: `npx --no -- eslint --version`
-printed v10.10.0 in `frontend/` and v10.11.0 at the root, from a copy already
-in npm's cache). The package manager is npm (`frontend/package.json`, "packageManager");
+the workspace pins. The package manager is npm (`frontend/package.json`, "packageManager");
 there is no `pnpm`.
 
 A task, npm script or Gradle task that `mise tasks --all`, the "scripts" block

@@ -4,8 +4,7 @@ The detail behind section 5 of `SKILL.md`: which block of the ESLint config
 reaches which files, the options each rule runs with, which written Angular
 and TypeScript rules no tool checks, and what the relax pass switched off.
 Globs are quoted as the config writes them, relative to `frontend/`. The effective values were read
-with `npx eslint --print-config` on 2026-09-26 (ESLint 10.10.0,
-typescript-eslint 8.69.0, angular-eslint 22.5.0); when the config has changed,
+with `npx eslint --print-config`; when the config has changed,
 read the rule again with that command rather than trusting this file. In that
 output the severity is 0 off, 1 warn, 2 error, and only 2 changes the exit code
 (https://eslint.org/docs/latest/use/configure/rules).
@@ -126,10 +125,10 @@ The rules switched off in this block (`frontend/eslint.config.mjs`, "no-magic-nu
 | `inject()` (`SKILL.md`, "Angular") | `prefer-inject` |
 | lazy feature routes (`SKILL.md`, "Angular") | written only |
 
-The installed angular-eslint 22.5.0 ships rules that would check several of
+The installed angular-eslint ships rules that would check several of
 the written-only rows, and the config enables none of them (`--print-config`
 on `frontend/projects/storefront/src/app/features/cart/cart-page.ts` and its
-`.html`, 2026-09-26): `prefer-host-metadata-property` (`@HostBinding`,
+`.html`): `prefer-host-metadata-property` (`@HostBinding`,
 `@HostListener`), `prefer-output-emitter-ref` (`@Output()`),
 `prefer-signal-model` (an `input()` paired with an `output()` for a two-way
 binding), `prefer-service-decorator` (`@Injectable({ providedIn: 'root' })`),
@@ -138,9 +137,8 @@ and the template rules `prefer-class-binding` and `prefer-style-binding`
 `meta.docs.description`. Enabling one is a rule change, not part of a fix.
 
 `git grep -nE 'standalone:|ChangeDetectionStrategy|@HostBinding|@HostListener|@Input\(|@Output\(|ngClass|ngStyle|CommonModule' -- frontend/projects ':!**/generated/**'`,
-run from the repository root on 2026-09-26, printed nothing and exited 1, so
-any of them in a diff is new rather than a local habit. Re-run it before
-relying on the sentence.
+run from the repository root, finds any of them in the tree; where it prints
+nothing and exits 1, any of them in a diff is new rather than a local habit.
 
 ## 8. The relax pass, and what stays
 
@@ -164,7 +162,7 @@ tracked file matches.
 
 ## 9. Suppression comments in the tree
 
-On 2026-09-26 hand-written code carried two: `eslint-disable-next-line
+Hand-written code carries `eslint-disable-next-line
 @typescript-eslint/no-deprecated` at
 `frontend/projects/admin/src/app/shared/image-upload/media-uploader.spec.ts` ("eslint-disable-next-line @typescript-eslint/no-deprecated")
 and `@ts-expect-error` with its reason at

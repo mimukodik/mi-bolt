@@ -2,7 +2,7 @@
 
 Which document is authoritative for each area, the language it is written
 in, and where it no longer matches the repository. Paths are relative to the
-repository root; the currency notes were checked on 2026-09-26. A dash in the
+repository root. A dash in the
 currency column means no mismatch was found, not that every line was
 checked.
 

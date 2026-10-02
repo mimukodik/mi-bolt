@@ -66,8 +66,7 @@ no consumer, and an error code is searched with the `enum` kind.
 - `contracts/commerce/sequences/*.puml`, when a flow they draw changes;
   `contracts/mise.toml` ("PlantUML syntax of the sequence diagrams") describes the contract task's check of them as
   syntax only.
-- `info.version` at `contracts/commerce/openapi.yaml` ("info:") (2.3.0 on
-  2026-09-26). `backend/docs/decisions/0014-openapi-tags-and-admin-contract.md`
+- `info.version` at `contracts/commerce/openapi.yaml` ("info:"). `backend/docs/decisions/0014-openapi-tags-and-admin-contract.md`
   records an additive change moving it as a semver minor.
 
 ## 3. A new or changed field on a schema

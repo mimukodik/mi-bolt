@@ -1,8 +1,8 @@
 # Frontend conflict register
 
 Places where two sources disagree, or where the code does something a written
-rule words differently. Each entry gives the sources, the state measured on
-2026-09-26, and what is left alone. None of them is a defect report, and none
+rule words differently. Each entry gives the sources, the measured state,
+and what is left alone. None of them is a defect report, and none
 records a decision: where no source decides, the entry says so rather than
 choosing. A change that would settle one is a rule change for the user, never a
 side effect of other work, and once the user settles one, its entry leaves this
@@ -49,7 +49,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 ## C5. `.scss` files written as CSS, with Sass line comments in three
 
-- **Observed**: 53 `.scss` files under `frontend/projects/storefront/`, none using `@use`, `@import`, `@mixin`, `@include`, `@forward` or a `$variable:` declaration (`git grep`, 2026-09-26). Three of them carry Sass's `//` line comments, which CSS does not have (https://sass-lang.com/documentation/syntax/comments/, https://www.w3.org/TR/css-syntax-3/): `frontend/projects/storefront/src/app/features/catalog/filter-drawer.scss` ("// A count being re-fetched"), `frontend/projects/storefront/src/app/features/catalog/filter-panel.scss` ("// A count being re-fetched"), `frontend/projects/storefront/src/app/layouts/checkout-layout.scss` ("// This <main> is projected") and `frontend/projects/storefront/src/app/layouts/checkout-layout.scss` ("// The last item has no connector"). The one other `.scss`, `frontend/projects/admin/src/material-theme.scss`, uses Sass (`@use '@angular/material' as mat;` at `frontend/projects/admin/src/material-theme.scss` ("@use '@angular/material' as mat;")).
+- **Observed**: the `.scss` files under `frontend/projects/storefront/`, none using `@use`, `@import`, `@mixin`, `@include`, `@forward` or a `$variable:` declaration (`git grep`). Three of them carry Sass's `//` line comments, which CSS does not have (https://sass-lang.com/documentation/syntax/comments/, https://www.w3.org/TR/css-syntax-3/): `frontend/projects/storefront/src/app/features/catalog/filter-drawer.scss` ("// A count being re-fetched"), `frontend/projects/storefront/src/app/features/catalog/filter-panel.scss` ("// A count being re-fetched"), `frontend/projects/storefront/src/app/layouts/checkout-layout.scss` ("// This <main> is projected") and `frontend/projects/storefront/src/app/layouts/checkout-layout.scss` ("// The last item has no connector"). The one other `.scss`, `frontend/projects/admin/src/material-theme.scss`, uses Sass (`@use '@angular/material' as mat;` at `frontend/projects/admin/src/material-theme.scss` ("@use '@angular/material' as mat;")).
 - **Unknown**: whether Sass features are meant to be available in the storefront's files. angular.dev says the CLI "supports CSS imports and all major CSS preprocessors" (https://angular.dev/reference/configs/workspace-config#extra-build-and-test-options), but no page found in angular.dev's version 22 documentation says which preprocessor a component stylesheet's extension selects, so nothing here asserts that rule.
 - **Left alone**: the file names and the existing comments. Introducing any other Sass feature into a storefront `.scss` file, such as `@use`, a mixin or a `$` variable, is a decision to raise, not a style choice.
 
@@ -72,7 +72,7 @@ file and the rule goes into section 5 of `SKILL.md`.
 
 `frontend/scripts/check-budgets.mjs` and
 `npm --prefix frontend run fixtures:catalog:check` both exist, and no workflow
-under `.github/` and no `mise.toml` runs either (`git grep`, 2026-09-26), while
+under `.github/` and no `mise.toml` runs either (`git grep`), while
 `frontend/README.md` ("Proving the committed fixture matches the source catalogue") and the script's own header
 (`frontend/scripts/build-catalog-fixture.mjs`, "npm script is the CI entry point") describe the second as
 CI's check. Both belong to `mibolt-verification`, which states their status in
@@ -87,5 +87,5 @@ full; they are named here only because frontend documents cite them as checks.
 ## C10. The `async` pipe written, subscriptions into signals observed
 
 - **Written**: an observable a template reads goes through the `async` pipe, and state lives in signals (`SKILL.md`, "Angular").
-- **Observed**: no template reads an observable. Outside the specs and the generated clients, `| async` occurs nowhere and `.subscribe(` occurs 20 times in class code (`git grep`, 2026-09-26), for example at `frontend/projects/storefront/src/app/features/home/home-page.ts` (".invoke(listProducts, { featured: true })"), which writes a generated client's result into a signal.
+- **Observed**: no template reads an observable. Outside the specs and the generated clients, `| async` occurs nowhere and `.subscribe(` occurs in class code (`git grep`), for example at `frontend/projects/storefront/src/app/features/home/home-page.ts` (".invoke(listProducts, { featured: true })"), which writes a generated client's result into a signal.
 - **Left alone**: the existing subscriptions. No source says whether a new unit hands its template an observable through the pipe or a signal set from a subscription.

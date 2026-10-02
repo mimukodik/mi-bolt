@@ -15,7 +15,7 @@ commands are read the way the opening paragraph of `SKILL.md` says.
 ## 1. What is in `data/catalog/`
 
 - `data/catalog/catalog.json`: an object with `generatedAt`, `source` and
-  `products` (48 products on 2026-09-26).
+  `products`.
 - `data/catalog/catalog.schema.json`: JSON Schema 2020-12 for that file, with
   `additionalProperties: false` on each of its seven object definitions (the
   root at `data/catalog/catalog.schema.json` ("MiBolt demo catalogue (yettel.hu import)"), a product at `data/catalog/catalog.schema.json` ("#/$defs/product")). Only the importer validates against it

@@ -52,28 +52,27 @@ every tracked sub-area of the project.
 **Stack.** Declared versions come from the manifests cited. The lockfile
 column is `frontend/package-lock.json`; the backend has no lockfile, and what
 `backend/services/commerce/build.gradle` leaves unpinned resolves through
-Spring Boot's dependency management. The local column is what one machine had
-on 2026-09-26: re-measure it before relying on it.
+Spring Boot's dependency management.
 
-| Part | Declared | Lockfile | Local |
-|---|---|---|---|
-| Node | 26.10.0 (`mise.toml`, "[tools]"); engines `^22.22.3 \|\| ^24.15.0 \|\| ^26.0.0` (`frontend/package.json`, "engines") | — | 26.10.0 |
-| npm | `npm@11.17.0` (`frontend/package.json`, "packageManager") | — | 11.19.1 |
-| Java | `temurin-21.0.12+101.0.LTS` (`mise.toml`, "[tools]"); toolchain 21 (`backend/services/commerce/build.gradle`, "languageVersion") | — | Temurin 21.0.12.1 |
-| Angular core | `^22.1.0` (`frontend/package.json`, "@angular/core") | 22.1.6 | 22.1.6 |
-| Angular CLI and build | `^22.1.8` (`frontend/package.json`, "@angular/build"; `frontend/package.json`, "@angular/cli") | 22.1.8 | 22.1.8 |
-| TypeScript | `~6.0.2` (`frontend/package.json`, "typescript") | 6.0.3 | 6.0.3 |
-| Vitest | `^4.0.8` (`frontend/package.json`, "vitest") | 4.1.11 | 4.1.11 |
-| MSW | `^2.15.0` (`frontend/package.json`, "msw") | 2.15.0 | 2.15.0 |
-| Playwright | `1.63.0` (`frontend/package.json`, "@playwright/test") | 1.63.0 | 1.63.0 |
-| ESLint | `^10.9.1` (`frontend/package.json`, "eslint") | 10.10.0 | 10.10.0 |
-| ng-openapi-gen | `^1.0.5` (`frontend/package.json`, "ng-openapi-gen") | 1.0.5 | 1.0.5 |
-| Spring Boot | 4.1.1 (`backend/services/commerce/build.gradle`, "id 'org.springframework.boot'") | — | — |
-| OpenAPI Generator (backend) | 7.25.0 (`backend/services/commerce/build.gradle`, "id 'org.openapi.generator'") | — | — |
-| PMD | 7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion") | — | — |
-| Gradle wrapper | 9.7.1 (`backend/gradle/wrapper/gradle-wrapper.properties`, "distributionUrl") | — | — |
-| PostgreSQL | `postgres:16.15-alpine3.24`, digest-pinned (`deploy/compose.yaml`, "image: postgres") | — | — |
-| uv, for the contract tools | 0.12.17 (`contracts/mise.toml`, "[tools]") | — | 0.12.17 for the tasks in `contracts/`, which run with that directory's pin; 0.8.15 at the repository root, where `mise.toml` ("[tools]") pins no uv |
+| Part | Declared | Lockfile |
+|---|---|---|
+| Node | 26.10.0 (`mise.toml`, "[tools]"); engines `^22.22.3 \|\| ^24.15.0 \|\| ^26.0.0` (`frontend/package.json`, "engines") | — |
+| npm | `npm@11.17.0` (`frontend/package.json`, "packageManager") | — |
+| Java | `temurin-21.0.12+101.0.LTS` (`mise.toml`, "[tools]"); toolchain 21 (`backend/services/commerce/build.gradle`, "languageVersion") | — |
+| Angular core | `^22.1.0` (`frontend/package.json`, "@angular/core") | 22.1.6 |
+| Angular CLI and build | `^22.1.8` (`frontend/package.json`, "@angular/build"; `frontend/package.json`, "@angular/cli") | 22.1.8 |
+| TypeScript | `~6.0.2` (`frontend/package.json`, "typescript") | 6.0.3 |
+| Vitest | `^4.0.8` (`frontend/package.json`, "vitest") | 4.1.11 |
+| MSW | `^2.15.0` (`frontend/package.json`, "msw") | 2.15.0 |
+| Playwright | `1.63.0` (`frontend/package.json`, "@playwright/test") | 1.63.0 |
+| ESLint | `^10.9.1` (`frontend/package.json`, "eslint") | 10.10.0 |
+| ng-openapi-gen | `^1.0.5` (`frontend/package.json`, "ng-openapi-gen") | 1.0.5 |
+| Spring Boot | 4.1.1 (`backend/services/commerce/build.gradle`, "id 'org.springframework.boot'") | — |
+| OpenAPI Generator (backend) | 7.25.0 (`backend/services/commerce/build.gradle`, "id 'org.openapi.generator'") | — |
+| PMD | 7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion") | — |
+| Gradle wrapper | 9.7.1 (`backend/gradle/wrapper/gradle-wrapper.properties`, "distributionUrl") | — |
+| PostgreSQL | `postgres:16.15-alpine3.24`, digest-pinned (`deploy/compose.yaml`, "image: postgres") | — |
+| uv, for the contract tools | 0.12.17 (`contracts/mise.toml`, "[tools]") | — |
 
 **How the parts connect.**
 
@@ -261,7 +260,7 @@ is also verified in a real browser before it is called done,
 - a MiBolt skill added, renamed or given a new description: the routing table;
 - a document added, moved or rewritten: the docs index;
 - `scripts/check-skill-references.mjs`: its header comment and
-  `references/citation-check.md`, with both runs quoted there re-measured.
+  `references/citation-check.md`.
 
 **Run the citation check after editing any MiBolt skill, and after moving or
 rewriting a file one cites**, because a cited path, section name or

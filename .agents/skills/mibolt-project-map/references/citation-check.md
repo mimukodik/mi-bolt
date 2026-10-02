@@ -158,23 +158,16 @@ directory outside a git checkout, or mise missing or failing without
 `--no-mise`. Each of those is settled before the first line is printed, so an
 exit 2 comes with nothing on stdout; the message goes to stderr.
 
-Excerpts of two runs on this skill from its own directory, on 2026-09-26; the
-counts and line numbers move with every edit:
+An excerpt of a run on this skill from its own directory; `<line>` stands
+for a line number and `<n>` for a count:
 
 ```text
-$ node scripts/check-skill-references.mjs --show-anchors mibolt-project-map
-...
-ANCHOR SKILL.md:169 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
-  50: mibolt.checkout.free-shipping-threshold-huf=30000
-...
-mibolt-project-map: 484 checked, 0 FAIL, 0 UNVERIFIED
-
 $ node scripts/check-skill-references.mjs --no-mise mibolt-project-map
-UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
+UNVERIFIED SKILL.md:<line> mise mise run api:generate — mise task check skipped (--no-mise)
 ...
-UNVERIFIED references/citation-check.md:36 mise backend:docker — mise task check skipped (--no-mise)
+UNVERIFIED references/citation-check.md:<line> mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 484 checked, 0 FAIL, 12 UNVERIFIED
+mibolt-project-map: <n> checked, 0 FAIL, <n> UNVERIFIED
 ```
 
 ## Write citations the checker can read

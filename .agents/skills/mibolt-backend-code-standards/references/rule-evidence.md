@@ -4,8 +4,7 @@ The evidence behind the rules in `SKILL.md`: for each one, the line that states
 it, what enforces it, an example in the code, and the exceptions that exist
 today. The §9 forbidden list, with each line's enforcement, is in `SKILL.md`
 and is not repeated here. `SKILL.md` is this skill's own; every other path is
-repository-relative. Counts were measured on 2026-09-26; section 7 gives the
-commands that reproduce them.
+repository-relative. Section 7 gives the commands that reproduce the counts.
 
 ## Contents
 
@@ -348,8 +347,6 @@ The guard count is lower than the number of guarded calls because
 `AdminBootstrap` puts two calls under one guard.
 
 ## 8. Sources outside the repository
-
-Read on 2026-09-26.
 
 - PMD 7.24.0 quickstart ruleset, the 124 active rules and the commented-out
   ones: https://github.com/pmd/pmd/blob/pmd_releases/7.24.0/pmd-java/src/main/resources/rulesets/java/quickstart.xml
