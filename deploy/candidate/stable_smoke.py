@@ -41,6 +41,12 @@ def fence(receipt, origin=None):
     with urlopen(request, timeout=15) as response:
         if json.load(response)['status'] != 'UP':
             raise ValueError('backend not ready')
+    # Commerce rolls, so the old pod also answers readiness until the new one is ready.
+    request = Request(origin + '/api/v1/actuator/info', headers=headers)
+    with urlopen(request, timeout=15) as response:
+        served = json.load(response).get('release', {}).get('publisherRunId')
+    if served != str(receipt['publisherRunId']):
+        raise ValueError('commerce is not the requested candidate')
     return origin
 
 

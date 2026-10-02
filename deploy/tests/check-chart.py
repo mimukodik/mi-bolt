@@ -95,7 +95,27 @@ require(commerce_env == {
     "MIBOLT_SMOKE_ENABLED": "true",
     "MIBOLT_PAYMENT_REDIRECT_URL_PREFIX": "https://pr-123.example.test/demo-fizetes/",
     "MIBOLT_PAYMENT_RETURN_URL_PREFIX": "https://pr-123.example.test/penztar?paymentIntentId=",
-}, "payment URLs must use public origin")
+    "MIBOLT_PUBLISHER_RUN_ID": "123",
+}, "payment URLs must use public origin and commerce must know its release")
+
+# Flux passes values as a file, where Helm reads a run id as a float; it must still render
+# as the integer the stable smoke fence compares with the receipt.
+with tempfile.TemporaryDirectory() as temp:
+    values_file = Path(temp) / "values.yaml"
+    values_file.write_text(yaml.safe_dump({"candidate": {"publisherRunId": 37049383413}}))
+    result = subprocess.run(["helm", "template", "pr-123", str(CHART), "-f", str(values_file),
+                             *[arg for key, value in VALUES.items() if key != "candidate.publisherRunId"
+                               for arg in ("--set-string" if not key.endswith(".replicas") else "--set",
+                                           f"{key}={value}")]],
+                            text=True, capture_output=True, check=False)
+    require(result.returncode == 0, f"values-file render failed: {result.stderr}")
+    rendered = {doc["metadata"]["labels"]["app.kubernetes.io/component"]: doc
+                for doc in yaml.safe_load_all(result.stdout) if doc and doc["kind"] == "Deployment"}
+    run_env = {entry["name"]: entry["value"]
+               for entry in rendered["commerce"]["spec"]["template"]["spec"]["containers"][0]["env"]}
+    require(run_env["MIBOLT_PUBLISHER_RUN_ID"] == "37049383413", "large run id must render as an integer")
+    require(rendered["commerce"]["metadata"]["annotations"]["mi-bolt.io/publisher-run"] == "37049383413",
+            "publisher run annotation must render as an integer")
 require(web_container["env"] == [{"name": "BACKEND_ORIGIN",
                                    "value": "http://pr-123-mi-bolt-commerce:8080"}], "web backend proxy")
 for probe, path in ((commerce_container["readinessProbe"], "/api/v1/actuator/health/readiness"),
