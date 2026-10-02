@@ -23,7 +23,7 @@
     "test:contract": "vitest run --config vitest.contract.config.ts",
     "e2e": "E2E_COVERAGE_GATE=1 playwright test --project=seed --project=integration-chromium-fullhd --project=integration-chromium-mobile",
     "e2e:all": "playwright test --project=seed --project='integration-*'",
-    "e2e:smoke": "E2E_TARGET=local-backend playwright test --project=smoke",
+    "e2e:smoke": "node scripts/smoke-docker-check.mjs && E2E_TARGET=local-backend playwright test --project=smoke",
     "e2e:install": "playwright install --with-deps chromium firefox webkit",
     "lint": "ng lint",
     "format": "prettier --write .",
