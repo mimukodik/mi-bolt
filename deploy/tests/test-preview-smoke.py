@@ -17,6 +17,9 @@ import preview_smoke as smoke  # noqa: E402
 
 PUBLISHER_SHA = "a" * 40
 HEAD = "b" * 40
+HEAD_DATE = "2026-10-02T09:00:00Z"
+LABEL_RUNS = ('actions/workflows/publish-candidate.yml/runs?status=success&per_page=100'
+              '&created=%3E%3D2026-10-02T09%3A00%3A00Z')
 WEB_DIGEST = "sha256:" + "c" * 64
 COMMERCE_DIGEST = "sha256:" + "d" * 64
 
@@ -54,7 +57,8 @@ class PreviewSmokeTests(unittest.TestCase):
                        'sha': HEAD, 'repo': {'full_name': smoke.REPO}}}}
         paths = {
             'pulls/123': pr_state(),
-            'actions/workflows/publish-candidate.yml/runs?status=success&per_page=100&page=1':
+            f'commits/{HEAD}': {'commit': {'committer': {'date': HEAD_DATE}}},
+            LABEL_RUNS + '&page=1':
                 {'workflow_runs': [publisher_run(458), publisher_run(457), publisher_run()]},
             'actions/runs/458/artifacts': {'artifacts': []},
             'actions/runs/457/artifacts': {'artifacts': [
@@ -118,9 +122,11 @@ class PreviewSmokeTests(unittest.TestCase):
         def api(path):
             if path == 'pulls/123':
                 return pr_state()
-            if path.endswith('page=1'):
+            if path == f'commits/{HEAD}':
+                return {'commit': {'committer': {'date': HEAD_DATE}}}
+            if path == LABEL_RUNS + '&page=1':
                 return {'workflow_runs': [publisher_run(457)] * 100}
-            if path.endswith('page=2'):
+            if path == LABEL_RUNS + '&page=2':
                 return {'workflow_runs': [publisher_run()]}
             raise AssertionError(path)
         with patch.object(smoke, 'api', side_effect=api), \
@@ -130,6 +136,31 @@ class PreviewSmokeTests(unittest.TestCase):
         with patch.object(smoke, 'api', side_effect=api), \
                 patch.object(smoke, 'publisher_receipt', return_value=None):
             self.assertIsNone(smoke.labeled_receipt(payload))
+
+    def test_label_requests_only_runs_created_since_head_commit_when_unpublished(self):
+        payload = {'action': 'labeled', 'label': {'name': 'bolt-preview'},
+                   'pull_request': {**pr_state(), 'head': {
+                       'sha': HEAD, 'repo': {'full_name': smoke.REPO}}}}
+        paths = {
+            'pulls/123': pr_state(),
+            f'commits/{HEAD}': {'commit': {'committer': {'date': HEAD_DATE}}},
+            LABEL_RUNS + '&page=1': {'workflow_runs': []},
+        }
+        with patch.object(smoke, 'api', side_effect=lambda path: paths[path]) as api, \
+                patch.object(smoke, 'download') as download:
+            self.assertIsNone(smoke.labeled_receipt(payload))
+            self.assertEqual([call.args[0] for call in api.call_args_list], list(paths))
+            download.assert_not_called()
+
+    def test_schedule_stops_after_one_full_page_without_matching_receipts(self):
+        query = 'actions/workflows/publish-candidate.yml/runs?status=success&per_page=100'
+        paths = {'pulls?state=open&per_page=100': [pr_state()],
+                 query: {'workflow_runs': [publisher_run()] * 100}}
+        with patch.object(smoke, 'api', side_effect=lambda path: paths[path]) as api, \
+                patch.object(smoke, 'publisher_receipt', return_value=None) as receipt:
+            self.assertIsNone(smoke.scheduled_publisher())
+            self.assertEqual([call.args[0] for call in api.call_args_list], list(paths))
+            self.assertEqual(receipt.call_count, 100)
 
     def test_workflow_triggers_only_label_admission_for_same_repository(self):
         root = Path(__file__).resolve().parents[2]
@@ -327,7 +358,7 @@ class PreviewSmokeTests(unittest.TestCase):
         receipt = candidate()
         paths = {
             "pulls?state=open&per_page=100": [pr_state()],
-            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100&page=1":
+            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100":
                 {"workflow_runs": [publisher_run()]},
             "actions/runs/456/artifacts": {"artifacts": [
                 {"name": "candidate-receipt", "expired": False, "size_in_bytes": 1000}]},
@@ -365,7 +396,7 @@ class PreviewSmokeTests(unittest.TestCase):
         receipts = {456: candidate(pr=123, run_id=456), 457: candidate(pr=124, run_id=457)}
         paths = {
             "pulls?state=open&per_page=100": [pr_state(pr=123), pr_state(pr=124)],
-            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100&page=1":
+            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100":
                 {"workflow_runs": [publisher_run(456), publisher_run(457)]},
             "actions/runs/456/artifacts": {"artifacts": [
                 {"name": "candidate-receipt", "expired": False, "size_in_bytes": 1000}]},

@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import time
 from urllib.request import Request, urlopen
+from urllib.parse import urlencode
 
 REPO = 'mimukodik/mi-bolt'
 
@@ -88,20 +89,25 @@ def publisher_receipt(event):
     return receipt
 
 
-def published_candidates(prs):
+def published_candidates(prs, created_since=None):
     # Publisher runs have main's SHA, not the PR head. Both daily recovery
     # and label admission select PR heads from the same trusted receipts.
+    query = 'actions/workflows/publish-candidate.yml/runs?status=success&per_page=100'
+    if created_since is not None:
+        query += '&' + urlencode({'created': '>=' + created_since})
     page = 1
     while True:
-        runs = api('actions/workflows/publish-candidate.yml/runs?'
-                   f'status=success&per_page=100&page={page}')['workflow_runs']
+        path = query if created_since is None else f'{query}&page={page}'
+        runs = api(path)['workflow_runs']
         for run in runs:
             receipt = publisher_receipt(run)
             if receipt and any(p['number'] == receipt['pr'] and p['state'] == 'open'
                     and p['head']['sha'] == receipt['headSha']
                     and any(label['name'] == 'bolt-preview' for label in p['labels']) for p in prs):
                 yield run, receipt
-        if len(runs) < 100:
+        # Daily recovery retains its original one-page bound. Only label
+        # admission paginates, within the current head commit's date range.
+        if created_since is None or len(runs) < 100:
             return
         page += 1
 
@@ -116,7 +122,8 @@ def labeled_receipt(payload):
     if (pr['state'] != 'open' or pr['head']['sha'] != event_pr['head']['sha']
             or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
         return None
-    match = next(published_candidates([pr]), None)
+    commit = api(f"commits/{pr['head']['sha']}")
+    match = next(published_candidates([pr], created_since=commit['commit']['committer']['date']), None)
     return match[1] if match else None
 
 
