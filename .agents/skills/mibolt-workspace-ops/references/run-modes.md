@@ -27,17 +27,19 @@ wiring behind them.
 | `mise run db` | `mise.toml:31-33` | `deploy/compose.sh up -d --wait postgres` | 55433 | `mise run stop` |
 | `mise run backend` | `mise.toml:35-38`, `backend/mise.toml:15-16` | `db`, then Gradle `bootRun` in the foreground | 8080, 55433 | Ctrl+C, then `mise run stop` |
 | `mise run backend:docker` | `mise.toml:40-42` | `deploy/compose.sh up -d --build --wait postgres commerce` | 8080, 55433 | `mise run stop` |
-| `mise run dev` | `mise.toml:44-46` | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `mise run dev:docker` | `mise.toml:48-50` | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
-| `mise run stack` | `mise.toml:52-56` | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
-| `mise run stop` | `mise.toml:58-60` | `deploy/compose.sh down`; the PostgreSQL volume keeps its data | — | — |
+| `mise run dev` | `mise.toml:49-52` | the three `start:*:local-backend` area tasks and, beside them, `mise run backend` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run dev:docker` | `mise.toml:54-57` | the three `start:*:local-backend` area tasks and, beside them, `mise run backend:docker` | 4200, 4210, 4220, 8080, 55433 | Ctrl+C, then `mise run stop` |
+| `mise run stack` | `mise.toml:59-63` | every Compose service, built, with the payment redirect and return pointed at the web origin | 4200, 8080, 55433 | `mise run stop` |
+| `mise run stop` | `mise.toml:65-67` | `deploy/compose.sh down`; the PostgreSQL volume keeps its data | — | — |
 
 **`depends` entries run in parallel.** mise runs whatever it can in parallel up
 to `--jobs` (setting `jobs`, variable `MISE_JOBS`), which is what lets
-`frontend`, `dev` and `dev:docker` hold several long-running servers at once
+`frontend` hold several long-running servers at once
 (https://mise.jdx.dev/tasks/task-configuration.html, "depends";
-https://mise.jdx.dev/cli/run.html). `backend` is the exception in shape: it
-lists `db` under `depends` and then runs `mise run //backend:run` itself.
+https://mise.jdx.dev/cli/run.html). `backend` lists `db` under `depends` and
+then runs `mise run //backend:run` itself, and `dev` and `dev:docker` run the
+hidden `docker:check` (`deploy/compose.sh check`) first and start their
+servers together only once it passes.
 
 ## How a frontend mode reaches `ng serve`
 
@@ -78,13 +80,15 @@ directly.** The wrapper:
 
 - refuses, exit 1, a `COMPOSE_PROJECT_NAME` other than `mi-bolt-local` that
   keeps the default PostgreSQL volume, so two servers never share one data
-  directory (`deploy/compose.sh:10-17`);
+  directory (`deploy/compose.sh:21-28`);
 - creates the gitignored `.env` beside the Compose file from
-  `deploy/.env.example` on first use (`deploy/compose.sh:19-22`,
+  `deploy/.env.example` on first use (`deploy/compose.sh:30-33`,
   `.gitignore:321`);
+- exits 127 with the alternatives when no Docker answers, before running
+  Compose at all (`deploy/compose.sh`);
 - runs the `docker compose` plugin when it answers, otherwise the standalone
   `docker-compose`, with every argument passed through, and exits 127 when
-  neither exists (`deploy/compose.sh:24-30`).
+  neither exists (`deploy/compose.sh`).
 
 Compose reads that `.env` from the directory of the first `-f` file, and a
 variable already set in the shell wins over it
@@ -103,7 +107,7 @@ and implies detached mode
 
 **`stack` is the only mode that moves the payment URLs.** Its `run` line sets
 `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN` to the web origin
-(`mise.toml:52-56`), because the web container serves the payment app too;
+(`mise.toml:59-63`), because the web container serves the payment app too;
 `deploy/compose.yaml:44-45` derives the backend's redirect and return prefixes
 from them, defaulting to the dev servers' 4210 and 4200 for
 `mise run backend:docker` and `mise run dev:docker`.
@@ -123,8 +127,8 @@ override in that shell before the task runs.
 |---|---|---|
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `deploy/compose.yaml:12-15`, `deploy/compose.yaml:41-43` | the database, its user and its password; the password is required and comes from the `.env` `deploy/compose.sh` creates |
 | `MIBOLT_POSTGRES_PORT`, `MIBOLT_BACKEND_PORT`, `MIBOLT_WEB_PORT` | `deploy/compose.yaml:18`, `deploy/compose.yaml:50`, `deploy/compose.yaml:71` | host ports of the three services (`README.md:241-243`) |
-| `MIBOLT_POSTGRES_VOLUME` | `deploy/compose.yaml:75`, `deploy/compose.sh:13` | the PostgreSQL volume's name |
-| `COMPOSE_PROJECT_NAME` | Compose, `deploy/compose.sh:12` | overrides the `mi-bolt-local` project name (https://docs.docker.com/compose/how-tos/project-name/) |
+| `MIBOLT_POSTGRES_VOLUME` | `deploy/compose.yaml:75`, `deploy/compose.sh:24` | the PostgreSQL volume's name |
+| `COMPOSE_PROJECT_NAME` | Compose, `deploy/compose.sh:23` | overrides the `mi-bolt-local` project name (https://docs.docker.com/compose/how-tos/project-name/) |
 | `MIBOLT_PAYMENT_ORIGIN`, `MIBOLT_SHOP_ORIGIN` | `deploy/compose.yaml:44-45` | origins the backend's payment redirect and return prefixes are built from |
 | `MIBOLT_DB_URL`, `MIBOLT_DB_USER`, `MIBOLT_DB_PASSWORD` | the backend; Compose sets them at `deploy/compose.yaml:41-43` | the backend's database connection |
 | `MIBOLT_ADMIN_INITIAL_PASSWORD` | the backend | the password of the admin account the backend bootstraps; `backend/README.md:26` says what happens when it is empty |
@@ -192,14 +196,15 @@ log files. `tools/dev-server/dev-server.test.ts` covers it.
 | Symptom | Cause | Where |
 |---|---|---|
 | mise refuses to parse a config file | the tree is not trusted yet | `mise trust --all`, `README.md:31-39` |
-| Compose stops on `POSTGRES_PASSWORD` | Compose ran without `deploy/compose.sh`, so no `.env` exists | `deploy/compose.yaml:15`, `deploy/compose.sh:19-22` |
-| `compose.sh: project … must set MIBOLT_POSTGRES_VOLUME` | a second project on the default volume | `deploy/compose.sh:10-17` |
-| `compose.sh: neither 'docker compose' nor 'docker-compose' is installed`, exit 127 | no Compose | `deploy/compose.sh:24-30` |
+| Compose stops on `POSTGRES_PASSWORD` | Compose ran without `deploy/compose.sh`, so no `.env` exists | `deploy/compose.yaml:15`, `deploy/compose.sh:30-33` |
+| `compose.sh: project … must set MIBOLT_POSTGRES_VOLUME` | a second project on the default volume | `deploy/compose.sh:21-28` |
+| `compose.sh: neither 'docker compose' nor 'docker-compose' is installed`, exit 127 | no Compose | `deploy/compose.sh` |
+| `compose.sh: no Docker answers here`, exit 127 | no `docker` command, or no Docker daemon answers; the message names the mock modes and the backend tests to use instead | `deploy/compose.sh` |
 | `stack.sh: this is the main checkout…` or `HEAD is detached`, exit 2 | wrong checkout for `deploy/stack.sh` | `deploy/stack.sh:72-87` |
 | `stack.sh: no free slot among 20` | every slot claimed | `deploy/stack.sh slots`, then `deploy/stack.sh prune --yes` for worktrees that no longer exist |
 | `up --wait` fails on `commerce` | readiness answers only after the catalogue loader and the admin bootstrap have run (`backend/services/commerce/src/main/resources/application.properties:67-68`); the health check allows a 20-second start period and 30 retries 5 seconds apart | `deploy/compose.yaml:51-56`; read `deploy/compose.sh logs commerce` |
 | a port is already bound | another mode, a second stack or a leftover static server holds it | the ports table at `README.md:229-239`; `tools/dev-server/dev-server.sh status <port>` for a server it started |
-| the payment step redirects to 4210 under the full stack | Compose ran without the origin variables `mise run stack` sets | `mise.toml:52-56` |
+| the payment step redirects to 4210 under the full stack | Compose ran without the origin variables `mise run stack` sets | `mise.toml:59-63` |
 | a changed `MIBOLT_DEMO_*` value has no effect | the demo user is created only while its table is empty, and `stop` keeps the volume; in `mise run backend` and `mise run dev`, also a value edited in the `.env` beside the Compose file, which never reaches `bootRun` | `backend/README.md:27-28`; for the native backend, "Environment variables" above |
 | `docker build frontend/` fails on `catalog` | the image needs the named `catalog` context, which a plain `docker build` does not supply; build through Compose | `frontend/Dockerfile:3-6` |
 | the dev server aborts with "Lazy deopt after a fast API call" | `ng serve` started without the `start*` scripts | `frontend/README.md:30` |

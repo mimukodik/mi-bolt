@@ -20,7 +20,6 @@ tools:
   - 'tools/**'
   - 'mise.toml'
   - '.github/**'
-  - '.claude/hooks/**'
 smoke:
   - 'frontend/**'
   - 'backend/**'

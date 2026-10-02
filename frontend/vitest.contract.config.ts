@@ -13,8 +13,11 @@
 
 import { defineConfig } from 'vitest/config';
 
+const ci = Boolean(process.env['CI']);
+
 export default defineConfig({
   test: {
+    maxWorkers: ci ? undefined : 6,
     include: ['tests/**/*.spec.ts'],
     environment: 'node',
     globals: true,

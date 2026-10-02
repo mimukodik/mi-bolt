@@ -58,7 +58,7 @@ Everything else goes elsewhere:
   and the same aggregate floor: statements 80, branches 75, functions 80,
   lines 80, `perFile: false`. Each project writes its own report inside
   `frontend/`: `coverage/unit/` for the storefront
-  (`frontend/projects/storefront/vitest.config.ts:6`), `coverage/<project>/`
+  (`frontend/projects/storefront/vitest.config.ts:9`), `coverage/<project>/`
   for the other four. Each target's `coverageInclude` names every `.ts` file
   under the project's `src/`, and its `coverageExclude` takes some back out
   (`frontend/angular.json:116-117` for the storefront); no project's
@@ -70,7 +70,7 @@ Everything else goes elsewhere:
   such as a new file with no spec that no tested file imports, lowers its
   project's aggregate.
 - **Contract suite.** `test:contract` runs Vitest in Node over
-  `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:16-22`) and
+  `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:18-25`) and
   collects no coverage. `ng test` discovers no spec under `frontend/tests/`
   (`frontend/vitest.contract.config.ts:8-9`), so a spec there runs under this
   suite alone. Two helpers there run under `ng test` as well:
@@ -164,7 +164,7 @@ These exist and work by hand; nothing runs them automatically.
 
 Start from the changed-paths script in step 1 below; it reads
 `.github/components.yml`, `.github/workflows/ci.yml` and the triggered
-workflows live. `mise tasks --all` lists every root and area task, and
+workflows live. `mise tasks --all` lists every root and area task except hidden ones, and
 `frontend/README.md` ("npm scripts") describes every frontend script. The
 canonical examples are the gate list under "Gates before a commit" below,
 `frontend/mise.toml:8-21` (exactly what `//frontend:test` and
@@ -296,7 +296,7 @@ gating, and styling. A green typecheck, a green test run and a read of the
 diff are necessary and never enough, because the unit suite runs in jsdom
 rather than in a browser (https://angular.dev/cli/test, option `browsers`).
 
-1. Serve the app the change reaches: `mise run storefront` (port 4200),
+1. Serve only the app the change reaches: `mise run storefront` (port 4200),
    `mise run admin` (4220) or `mise run payment` (4210). Each is `ng serve`
    with the MSW mock running in the browser, so no backend has to be up. A
    flow that crosses from the storefront into the payment page needs the
@@ -305,6 +305,8 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
    serves all three apps. When the result comes from the backend, use
    `mise run dev` instead: the three apps on their `local-backend`
    configuration, against the backend on 8080 and PostgreSQL in its container.
+   Where no Docker answers, that mode stops and names what to do instead
+   (`mibolt-workspace-ops`, "Run modes").
 2. Open the affected screen and drive the changed flow as a user would:
    click, type, submit. Looking at the page is not a pass.
 3. Capture the page structure and a screenshot, before and after the
@@ -314,7 +316,8 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
 5. Exercise the states the change creates, the negative ones included:
    signed out, an empty list, the error path.
 6. Keep a screenshot of any failure.
-7. Stop every server the pass started.
+7. Stop every server the pass started before a check or a test run, so
+   nothing runs beside one.
 
 **What does not count**, for any change: a file's existence or size on disk,
 or reading the diff back; a green typecheck, unit or Vitest run; an HTTP 200
@@ -325,6 +328,22 @@ screenshot of step 3 and the console reading of step 4 all stand behind it.
 
 **A change is exempt only when it cannot reach a browser at all**, such as a
 build script, a CI setting or a document with no rendered output.
+
+### One memory limit
+
+Everything a session starts may share one memory limit, and reaching it
+kills every process under it, the agent included. Apart from `e2e:smoke` and
+`smoke.sh`, which need a running backend, no check this skill names
+needs a running app: the unit and contract suites carry their own mock, the
+backend tests run on H2, and the boot checks start their own server. An app
+runs beside a test run only when the change needs both.
+
+- Serve only the apps the change reaches, and never start a second instance
+  of a server or a browser that is already up.
+- Stop every server and close every browser before a check or
+  `mise run verify`.
+- Run the gates one after another; `mise run verify` does so by itself
+  (`references/commands.md`, "What a check writes or starts").
 
 ### Tests and coverage
 

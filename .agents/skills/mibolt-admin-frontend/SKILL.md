@@ -305,7 +305,7 @@ before a commit"); the admin adds its own build checks, below.
   `--coverage=false`.
 - **The full unit suite**, `npm --prefix frontend run test`, runs every project with coverage on.
   It writes the admin's report to `coverage/admin/` in `frontend/`
-  (`frontend/projects/admin/vitest.config.ts:6`) and holds the admin to the floor in
+  (`frontend/projects/admin/vitest.config.ts:9`) and holds the admin to the floor in
   `frontend/angular.json:374-380`, which `mibolt-verification` ("Tests and coverage") explains.
 - **Build checks.** The gate's `npm --prefix frontend run build` builds the storefront alone
   (`frontend/package.json:12`), so every admin change also runs the admin's own, as

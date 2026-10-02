@@ -121,10 +121,10 @@ export default defineConfig({
   // https://playwright.dev/docs/test-configuration (read 2026-09-22).
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
-  // At most three workers on a developer machine (the owner's rule); CI takes
+  // At most two workers on a developer machine (the owner's rule); CI takes
   // Playwright's default, half of the logical CPU cores:
   // https://playwright.dev/docs/api/class-testconfig#test-config-workers
-  workers: process.env['CI'] ? undefined : 3,
+  workers: process.env['CI'] ? undefined : 2,
   reporter: [
     ...(process.env['CI'] ? [['blob'] as const] : []),
     ['list'],
