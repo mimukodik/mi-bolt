@@ -58,12 +58,12 @@ are described under "What a check writes or starts" below.
   generated clients and the Gradle output above, and binds port 4299; it runs
   neither `smoke.sh` nor `mise run deploy:check` (`mise.toml:73-89`). It can
   also leave a tracked file outside the change modified, so read
-  `git status --short` after it. It runs its nine checks one after another,
-  `contracts:check` first and then the eight in its `run` list in order, and
+  `git status --short` after it. It runs its checks one after another,
+  `contracts:check` first and then the rest in its `run` list in order, and
   stops at the first that fails, so they do not overlap one another in the
-  one checkout; with mise's `--continue-on-error` flag it runs all nine and
+  one checkout; with mise's `--continue-on-error` flag it runs them all and
   lists every failure. Tasks listed together under `depends` instead start
-  up to eight at once, in no set order
+  in parallel, in no set order
   (https://mise.jdx.dev/tasks/running-tasks.html).
 
 ## Discovery
