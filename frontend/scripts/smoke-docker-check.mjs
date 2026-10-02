@@ -21,7 +21,8 @@ function dockerAnswers() {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const problem = smokeDockerProblem(process.env['E2E_BASE_URL'], dockerAnswers());
+  const baseUrl = process.env['E2E_BASE_URL'];
+  const problem = baseUrl ? null : smokeDockerProblem(baseUrl, dockerAnswers());
   if (problem !== null) {
     console.error(problem);
     process.exit(1);
