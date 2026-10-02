@@ -97,6 +97,7 @@ promoted; this is only the wiring.
 | `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm v4.2.2, computes the image input hashes (`deploy/candidate/inputs.py`), runs the six `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml:25-71`) |
 | `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml:3-87`) |
 | `.github/workflows/preview-smoke.yml` ("Preview Smoke") | `workflow_run` of `Publish Candidate`, a daily `schedule`, `workflow_dispatch` | waits for the deployed preview and runs `npm run e2e:smoke` against it, then reports the deployment to GitHub (`.github/workflows/preview-smoke.yml:1-123`) |
+| `.github/workflows/label-bolt-preview.yml` ("Start Bolt Preview Smoke") | `pull_request_target`, `labeled` with `bolt-preview`, same-repository head only | resolves the current head's trusted publisher receipt and dispatches `Preview Smoke` on `main`; `actions: write` is confined to this short default-branch job |
 | `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | the same against the stable demo (`.github/workflows/stable-smoke.yml:1-90`) |
 | `.github/workflows/close-bolt-preview.yml` ("Deactivate Bolt Preview Deployment") | `pull_request_target`, `closed` or `unlabeled` | for a same-repository pull request that closed or lost the `bolt-preview` label, marks its preview deployment inactive (`.github/workflows/close-bolt-preview.yml:3-31`) |
 
@@ -194,9 +195,9 @@ files; `deploy/candidate/README.md:91-97` runs `actionlint` by hand, and no
 | a component's workflow was skipped on a pull request touching it | the path is missing from that component's list | `.github/components.yml` |
 | `Candidate Build` failed at "Compute tracked build inputs" | `.github/components.yml` and `deploy/candidate/inputs.py` disagree | "Changing a path filter" above |
 | an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The candidate and deployment chain" above |
-| `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md:120-123` |
-| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md:108-118`, `deploy/candidate/README.md:24-25` |
+| `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md:134-137` |
+| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md:114-132`, `deploy/candidate/README.md:24-25` |
 
 Re-running the preview smoke by hand dispatches a workflow on GitHub
-(`deploy/candidate/README.md:129-135`): that is an action outside this
+(`deploy/candidate/README.md:143-149`): that is an action outside this
 repository, and the user decides on it.

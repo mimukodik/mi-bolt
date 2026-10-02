@@ -28,15 +28,9 @@ def scheduled_publisher():
     # after its initial workflow_run wait timed out. Rotate among open PRs so a
     # failing smoke suite cannot starve another preview's acceptance.
     prs = api('pulls?state=open&per_page=100')
-    runs = api('actions/workflows/publish-candidate.yml/runs?status=success&per_page=100')['workflow_runs']
     available = {}
-    for run in runs:
-        artifacts = api(f"actions/runs/{run['id']}/artifacts")['artifacts']
-        if not any(a['name'] == 'candidate-receipt' and not a['expired'] for a in artifacts):
-            continue
-        receipt = download(run['id'], 'candidate-receipt', 'candidate.json')
-        if receipt['pr'] in available or not any(p['number'] == receipt['pr'] and p['head']['sha'] == receipt['headSha']
-                and any(label['name'] == 'bolt-preview' for label in p['labels']) for p in prs):
+    for run, receipt in published_candidates(prs):
+        if receipt['pr'] in available:
             continue
         try:
             fence(receipt)
@@ -71,6 +65,76 @@ def scheduled_publisher():
     return remaining[int(time.time() // 600) % len(remaining)] if remaining else None
 
 
+def publisher_receipt(event):
+    if event is None:
+        return None
+    if (event['conclusion'] != 'success' or event['event'] != 'workflow_run'
+            or event['path'] != '.github/workflows/publish-candidate.yml'
+            or event['head_branch'] != 'main' or event['repository']['full_name'] != REPO
+            or not re.fullmatch(r'[a-f0-9]{40}', event['head_sha'])):
+        raise ValueError('unexpected publisher')
+    artifacts = api(f"actions/runs/{event['id']}/artifacts")['artifacts']
+    matches = [a for a in artifacts if a['name'] == 'candidate-receipt' and not a['expired']]
+    if not matches:
+        return None
+    if len(matches) != 1 or matches[0]['size_in_bytes'] > 1000000:
+        raise ValueError('unexpected publisher artifact')
+    receipt = download(event['id'], 'candidate-receipt', 'candidate.json')
+    if (receipt['repo'] != REPO or receipt['publisherRunId'] != event['id']
+            or receipt['publisherRevision'] != event['head_sha']
+            or not re.fullmatch(r'[a-f0-9]{40}', receipt['headSha'])
+            or type(receipt['pr']) is not int or not 0 < receipt['pr'] < 100000000):
+        raise ValueError('candidate receipt identity mismatch')
+    return receipt
+
+
+def published_candidates(prs):
+    # Publisher runs have main's SHA, not the PR head. Both daily recovery
+    # and label admission select PR heads from the same trusted receipts.
+    page = 1
+    while True:
+        runs = api('actions/workflows/publish-candidate.yml/runs?'
+                   f'status=success&per_page=100&page={page}')['workflow_runs']
+        for run in runs:
+            receipt = publisher_receipt(run)
+            if receipt and any(p['number'] == receipt['pr'] and p['state'] == 'open'
+                    and p['head']['sha'] == receipt['headSha']
+                    and any(label['name'] == 'bolt-preview' for label in p['labels']) for p in prs):
+                yield run, receipt
+        if len(runs) < 100:
+            return
+        page += 1
+
+
+def labeled_receipt(payload):
+    if payload['action'] != 'labeled' or payload['label']['name'] != 'bolt-preview':
+        return None
+    event_pr = payload['pull_request']
+    if event_pr['head']['repo']['full_name'] != REPO:
+        return None
+    pr = api(f"pulls/{int(event_pr['number'])}")
+    if (pr['state'] != 'open' or pr['head']['sha'] != event_pr['head']['sha']
+            or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
+        return None
+    match = next(published_candidates([pr]), None)
+    return match[1] if match else None
+
+
+def dispatch():
+    payload = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+    receipt = labeled_receipt(payload)
+    if receipt is None:
+        print('No current published candidate; publisher completion will trigger smoke.')
+        return
+    pr = api(f"pulls/{receipt['pr']}")
+    if (pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']
+            or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
+        print('Preview disabled or head superseded before dispatch.')
+        return
+    subprocess.run(['gh', 'workflow', 'run', 'preview-smoke.yml', '--repo', REPO,
+                    '--ref', 'main', '-f', f"publisher_run_id={receipt['publisherRunId']}"], check=True)
+
+
 def resolve():
     payload = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     if os.environ['GITHUB_EVENT_NAME'] == 'schedule':
@@ -79,32 +143,11 @@ def resolve():
         event = api(f"actions/runs/{int(payload['inputs']['publisher_run_id'])}")
     else:
         event = payload['workflow_run']
-    if event is None:
-        with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
-            output.write('ready=false\n')
-        return
-    if (event['conclusion'] != 'success' or event['event'] != 'workflow_run'
-            or event['path'] != '.github/workflows/publish-candidate.yml'
-            or event['head_branch'] != 'main' or event['repository']['full_name'] != REPO
-            or not re.fullmatch(r'[a-f0-9]{40}', event['head_sha'])):
-        raise ValueError('unexpected publisher')
-    artifacts = api(f"actions/runs/{event['id']}/artifacts")['artifacts']
-    matches = [a for a in artifacts if a['name'] == 'candidate-receipt' and not a['expired']]
+    receipt = publisher_receipt(event)
     with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
-        if not matches:
+        if receipt is None:
             output.write('ready=false\n')
             return
-        if len(matches) != 1 or matches[0]['size_in_bytes'] > 1000000:
-            raise ValueError('unexpected publisher artifact')
-        with tempfile.TemporaryDirectory() as directory:
-            subprocess.run(['gh', 'run', 'download', str(event['id']), '--repo', REPO,
-                            '--name', 'candidate-receipt', '--dir', directory], check=True)
-            receipt = json.loads((Path(directory) / 'candidate.json').read_text())
-        if (receipt['repo'] != REPO or receipt['publisherRunId'] != event['id']
-                or receipt['publisherRevision'] != event['head_sha']
-                or not re.fullmatch(r'[a-f0-9]{40}', receipt['headSha'])
-                or type(receipt['pr']) is not int or not 0 < receipt['pr'] < 100000000):
-            raise ValueError('candidate receipt identity mismatch')
         pr = api(f"pulls/{receipt['pr']}")
         if (pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']
                 or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
@@ -167,10 +210,12 @@ def passed(receipt, report):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['resolve', 'wait', 'passed'])
+    parser.add_argument('command', choices=['resolve', 'wait', 'passed', 'dispatch'])
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    if args.command == 'resolve':
+    if args.command == 'dispatch':
+        dispatch()
+    elif args.command == 'resolve':
         resolve()
     elif args.command == 'wait':
         wait(json.loads(Path('candidate.json').read_text()))

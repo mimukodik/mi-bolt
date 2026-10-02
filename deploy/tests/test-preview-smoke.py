@@ -48,6 +48,136 @@ class PreviewSmokeTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
 
+    def test_label_finds_exact_event_head_after_publication(self):
+        payload = {'action': 'labeled', 'label': {'name': 'bolt-preview'},
+                   'pull_request': {**pr_state(), 'head': {
+                       'sha': HEAD, 'repo': {'full_name': smoke.REPO}}}}
+        paths = {
+            'pulls/123': pr_state(),
+            'actions/workflows/publish-candidate.yml/runs?status=success&per_page=100&page=1':
+                {'workflow_runs': [publisher_run(458), publisher_run(457), publisher_run()]},
+            'actions/runs/458/artifacts': {'artifacts': []},
+            'actions/runs/457/artifacts': {'artifacts': [
+                {'name': 'candidate-receipt', 'expired': False, 'size_in_bytes': 1000}]},
+            'actions/runs/456/artifacts': {'artifacts': [
+                {'name': 'candidate-receipt', 'expired': False, 'size_in_bytes': 1000}]},
+        }
+        def download_run(args, check):
+            run_id = int(args[3])
+            receipt = candidate(pr=124, run_id=457) if run_id == 457 else candidate()
+            (Path(args[-1]) / 'candidate.json').write_text(json.dumps(receipt))
+
+        with patch.object(smoke, 'api', side_effect=lambda path: paths[path]), \
+                patch.object(smoke.subprocess, 'run', side_effect=download_run):
+            self.assertEqual(smoke.labeled_receipt(payload), candidate())
+
+    def test_label_dispatches_existing_smoke_on_main_and_rechecks_freshness(self):
+        event_path = self.directory / 'event.json'
+        event_path.write_text('{}')
+        with patch.dict(os.environ, {'GITHUB_EVENT_PATH': str(event_path)}), \
+                patch.object(smoke, 'labeled_receipt', return_value=candidate()) as lookup, \
+                patch.object(smoke, 'api', return_value=pr_state()) as api, \
+                patch.object(smoke.subprocess, 'run') as run:
+            smoke.dispatch()
+            run.assert_called_once_with(['gh', 'workflow', 'run', 'preview-smoke.yml',
+                '--repo', smoke.REPO, '--ref', 'main', '-f', 'publisher_run_id=456'], check=True)
+            for current in (pr_state(state='closed'), pr_state(head='f' * 40),
+                            {**pr_state(), 'labels': []}):
+                run.reset_mock()
+                api.return_value = current
+                smoke.dispatch()
+                run.assert_not_called()
+            lookup.return_value = None
+            api.reset_mock()
+            smoke.dispatch()
+            api.assert_not_called()
+            run.assert_not_called()
+
+    def test_label_ignores_unrelated_fork_closed_unlabeled_and_superseded_pr(self):
+        payload = {'action': 'labeled', 'label': {'name': 'bolt-preview'},
+                   'pull_request': {**pr_state(), 'head': {
+                       'sha': HEAD, 'repo': {'full_name': smoke.REPO}}}}
+        for event, current in (
+            ({**payload, 'action': 'unlabeled'}, pr_state()),
+            ({**payload, 'label': {'name': 'other'}}, pr_state()),
+            ({**payload, 'pull_request': {**payload['pull_request'], 'head': {
+                'sha': HEAD, 'repo': {'full_name': 'other/fork'}}}}, pr_state()),
+            (payload, pr_state(state='closed')),
+            (payload, {**pr_state(), 'labels': []}),
+            (payload, pr_state(head='f' * 40)),
+        ):
+            with self.subTest(event=event, current=current), \
+                    patch.object(smoke, 'api', return_value=current) as api:
+                self.assertIsNone(smoke.labeled_receipt(event))
+                self.assertTrue(all(call.args[0] == 'pulls/123' for call in api.call_args_list))
+
+    def test_label_paginates_and_skips_receipts_for_old_heads(self):
+        payload = {'action': 'labeled', 'label': {'name': 'bolt-preview'},
+                   'pull_request': {**pr_state(), 'head': {
+                       'sha': HEAD, 'repo': {'full_name': smoke.REPO}}}}
+        def api(path):
+            if path == 'pulls/123':
+                return pr_state()
+            if path.endswith('page=1'):
+                return {'workflow_runs': [publisher_run(457)] * 100}
+            if path.endswith('page=2'):
+                return {'workflow_runs': [publisher_run()]}
+            raise AssertionError(path)
+        with patch.object(smoke, 'api', side_effect=api), \
+                patch.object(smoke, 'publisher_receipt', side_effect=lambda run:
+                    candidate(run_id=457, head='f' * 40) if run['id'] == 457 else candidate()):
+            self.assertEqual(smoke.labeled_receipt(payload), candidate())
+        with patch.object(smoke, 'api', side_effect=api), \
+                patch.object(smoke, 'publisher_receipt', return_value=None):
+            self.assertIsNone(smoke.labeled_receipt(payload))
+
+    def test_workflow_triggers_only_label_admission_for_same_repository(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = root / '.github/workflows/label-bolt-preview.yml'
+        data = yaml.safe_load(workflow.read_text())
+        self.assertEqual(data[True]['pull_request_target']['types'], ['labeled'])
+        condition = data['jobs']['dispatch']['if']
+        self.assertIn("github.event.label.name == 'bolt-preview'", condition)
+        self.assertIn('github.event.pull_request.head.repo.full_name == github.repository', condition)
+        self.assertEqual(data['permissions'], {
+            'contents': 'read', 'pull-requests': 'read', 'actions': 'write'})
+        steps = data['jobs']['dispatch']['steps']
+        self.assertEqual(steps[0]['with']['ref'], '${{ github.event.repository.default_branch }}')
+        self.assertIs(steps[0]['with']['persist-credentials'], False)
+        self.assertEqual(steps[1]['run'], 'python3 deploy/candidate/preview_smoke.py dispatch')
+        smoke_workflow = yaml.safe_load((root / '.github/workflows/preview-smoke.yml').read_text())
+        self.assertEqual(set(smoke_workflow[True]), {'workflow_run', 'workflow_dispatch', 'schedule'})
+        self.assertEqual(smoke_workflow[True]['schedule'], [{'cron': '0 0 * * *'}])
+
+    def test_publisher_receipt_rejects_untrusted_runs_and_mismatched_identity(self):
+        for mutation in ({'conclusion': 'failure'}, {'event': 'pull_request'},
+                         {'path': '.github/workflows/other.yml'}, {'head_branch': 'other'},
+                         {'repository': {'full_name': 'other/fork'}}, {'head_sha': 'invalid'}):
+            with self.subTest(mutation=mutation), patch.object(smoke, 'api') as api:
+                with self.assertRaisesRegex(ValueError, 'unexpected publisher'):
+                    smoke.publisher_receipt({**publisher_run(), **mutation})
+                api.assert_not_called()
+        artifact = {'name': 'candidate-receipt', 'expired': False, 'size_in_bytes': 1000}
+        for artifacts in ([{**artifact, 'expired': True}], [artifact, artifact],
+                          [{**artifact, 'size_in_bytes': 1000001}]):
+            with self.subTest(artifacts=artifacts), \
+                    patch.object(smoke, 'api', return_value={'artifacts': artifacts}), \
+                    patch.object(smoke, 'download') as download:
+                if artifacts[0]['expired']:
+                    self.assertIsNone(smoke.publisher_receipt(publisher_run()))
+                else:
+                    with self.assertRaisesRegex(ValueError, 'unexpected publisher artifact'):
+                        smoke.publisher_receipt(publisher_run())
+                download.assert_not_called()
+        for mutation in ({'repo': 'other/fork'}, {'publisherRunId': 457},
+                         {'publisherRevision': 'f' * 40}, {'headSha': 'invalid'},
+                         {'pr': '123'}, {'pr': 0}):
+            with self.subTest(mutation=mutation), \
+                    patch.object(smoke, 'api', return_value={'artifacts': [artifact]}), \
+                    patch.object(smoke, 'download', return_value={**candidate(), **mutation}):
+                with self.assertRaisesRegex(ValueError, 'candidate receipt identity mismatch'):
+                    smoke.publisher_receipt(publisher_run())
+
     def test_public_fence_rejects_either_image_head_and_readiness(self):
         receipt = candidate()
         expected = {"candidateId": receipt["candidateId"], "headSha": HEAD, "publisherRunId": 456,
@@ -197,10 +327,10 @@ class PreviewSmokeTests(unittest.TestCase):
         receipt = candidate()
         paths = {
             "pulls?state=open&per_page=100": [pr_state()],
-            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100":
+            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100&page=1":
                 {"workflow_runs": [publisher_run()]},
             "actions/runs/456/artifacts": {"artifacts": [
-                {"name": "candidate-receipt", "expired": False}]},
+                {"name": "candidate-receipt", "expired": False, "size_in_bytes": 1000}]},
             "actions/workflows/preview-smoke.yml/runs?status=success&per_page=100":
                 {"workflow_runs": []},
         }
@@ -235,12 +365,12 @@ class PreviewSmokeTests(unittest.TestCase):
         receipts = {456: candidate(pr=123, run_id=456), 457: candidate(pr=124, run_id=457)}
         paths = {
             "pulls?state=open&per_page=100": [pr_state(pr=123), pr_state(pr=124)],
-            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100":
+            "actions/workflows/publish-candidate.yml/runs?status=success&per_page=100&page=1":
                 {"workflow_runs": [publisher_run(456), publisher_run(457)]},
             "actions/runs/456/artifacts": {"artifacts": [
-                {"name": "candidate-receipt", "expired": False}]},
+                {"name": "candidate-receipt", "expired": False, "size_in_bytes": 1000}]},
             "actions/runs/457/artifacts": {"artifacts": [
-                {"name": "candidate-receipt", "expired": False}]},
+                {"name": "candidate-receipt", "expired": False, "size_in_bytes": 1000}]},
             "actions/workflows/preview-smoke.yml/runs?status=success&per_page=100":
                 {"workflow_runs": [{"id": 789, "head_sha": PUBLISHER_SHA}]},
             "actions/runs/789/artifacts": {"artifacts": [
@@ -267,6 +397,8 @@ class PreviewSmokeTests(unittest.TestCase):
         for step in checkouts:
             self.assertEqual(step["with"]["ref"], "${{ github.sha }}")
             self.assertIs(step["with"]["persist-credentials"], False)
+        report = yaml.safe_load(workflow.read_text())['jobs']['report']['steps'][0]
+        self.assertEqual(report['with']['ref'], '${{ github.sha }}')
         self.assertFalse(any("pull_request.head.sha" in json.dumps(step) for step in steps))
 
 

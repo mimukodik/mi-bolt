@@ -123,6 +123,14 @@ ready when deployment is enabled. After browser acceptance, GitHub reports a
 deployment linked to the exact PR commit. Removing the label or closing the PR
 marks that deployment inactive.
 
+Adding `bolt-preview` starts `Start Bolt Preview Smoke` through `pull_request_target`.
+Its default-branch job finds a trusted publisher receipt for the PR's exact head,
+then dispatches `Preview Smoke` on `main` with that publisher run ID. The smoke
+retains its trusted wrapper and suite, and its `workflow_dispatch` event is
+accepted by the coordinator. Neither job checks out PR code. Other labels,
+forks, closed PRs and superseded heads do nothing. Pending publication starts
+smoke through the existing `workflow_run` trigger once its receipt is ready.
+
 Use the PR's current head to find the matching `CI` and `Candidate Build` runs,
 then inspect `Publish Candidate` and its `candidate-receipt` artifact. A green
 publisher run can be a deliberate no-op when the eligibility checks do not
