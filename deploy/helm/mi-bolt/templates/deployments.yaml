@@ -47,6 +47,12 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          # A stopping pod still receives requests until its endpoint removal reaches
+          # kube-proxy and Traefik; the wait keeps it serving through that window.
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
           envFrom:
             - secretRef:
                 name: {{ .Values.commerce.existingSecret | quote }}
@@ -132,6 +138,10 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5 # Same drain as commerce.
           env:
             - name: BACKEND_ORIGIN
               value: {{ printf "http://%s-commerce:8080" (include "mi-bolt.fullname" .) | quote }}

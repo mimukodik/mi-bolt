@@ -87,6 +87,8 @@ for component, deployment, pod, container in (
     require(pod["securityContext"]["runAsNonRoot"] is True, f"{component} must run nonroot")
     require(container["securityContext"]["allowPrivilegeEscalation"] is False,
             f"{component} privilege escalation")
+    require(container.get("lifecycle") == {"preStop": {"sleep": {"seconds": 5}}},
+            f"{component} must keep serving until its endpoint removal propagates")
 
 require(commerce_container["envFrom"] == [{"secretRef": {"name": "mi-bolt-runtime"}}],
         "commerce must consume existing runtime Secret")

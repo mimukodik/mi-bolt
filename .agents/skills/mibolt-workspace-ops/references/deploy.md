@@ -141,6 +141,10 @@ Ingress that sends every path, `/api/v1` included, to `web`.
 - **Web** gets `BACKEND_ORIGIN` pointed at the commerce Service
   (`deploy/helm/mi-bolt/templates/deployments.yaml`, "name: BACKEND_ORIGIN") and probes
   `/robots.txt`.
+- **Stopping.** Commerce and web both sleep 5 s in a `preStop` hook
+  (`deploy/helm/mi-bolt/templates/deployments.yaml`, "preStop:") before their
+  process stops, which normally covers the endpoint removal reaching
+  kube-proxy and Traefik.
 
 ## The deploy checks
 
