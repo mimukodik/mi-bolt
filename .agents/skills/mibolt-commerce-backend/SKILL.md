@@ -28,7 +28,11 @@ English index into them.
 Inside: what the service does and how each subsystem is changed, including
 its test harness, its decision records, `backend/settings.gradle`, and the
 plugin, toolchain, repositories and dependencies blocks at
-`backend/services/commerce/build.gradle:1-37`, which section 2 describes.
+`backend/services/commerce/build.gradle` ("plugins {";
+`backend/services/commerce/build.gradle`, "toolchain {";
+`backend/services/commerce/build.gradle`, "repositories {";
+`backend/services/commerce/build.gradle`, "dependencies {"), which section 2
+describes.
 Choosing or moving a plugin or dependency version is not inside, and no MiBolt
 skill carries it (`mibolt-project-map/references/coverage-register.md`, "How
 to read a row"). Outside, and where each case goes:
@@ -57,12 +61,12 @@ to read a row"). Outside, and where each case goes:
 ## 2. The service
 
 **Stack.** Spring Boot 4.1.1, a Java 21 toolchain and OpenAPI Generator 7.25.0
-(`backend/services/commerce/build.gradle:1-17`); the webmvc, JPA, Liquibase,
+(`backend/services/commerce/build.gradle`, "plugins {"); the webmvc, JPA, Liquibase,
 validation, security and actuator starters, PostgreSQL at run time and H2 in
-tests, all from Maven Central (`:19-37`). Jackson is version 3, package `tools.jackson`
-(`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java:22-23`).
-One Gradle subproject, `services:commerce` (`backend/settings.gradle:3`). The
-API answers on port 8080 under `/api/v1` (`backend/README.md:34`).
+tests, all from Maven Central (`backend/services/commerce/build.gradle`, "dependencies {"). Jackson is version 3, package `tools.jackson`
+(`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrdersController.java`, "import tools.jackson").
+One Gradle subproject, `services:commerce` (`backend/settings.gradle`, "include 'services:commerce'"). The
+API answers on port 8080 under `/api/v1` (`backend/README.md`, "The service answers on port 8080").
 
 **Packages**, under `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/`:
 
@@ -80,13 +84,13 @@ API answers on port 8080 under `/api/v1` (`backend/README.md:34`).
 **Generated interfaces.** The `api` and `api.model` packages are generated
 from the contract into `build/generated/openapi/` inside
 `backend/services/commerce/` before every compile, wiped each run and never
-committed (`backend/services/commerce/build.gradle:89-139`). Eleven
+committed (`backend/services/commerce/build.gradle`, "openApiGenerate {"). Eleven
 controllers each implement one generated `*Api` interface, one per contract
-tag (`useTags`, `:101`), and declare no route, method or status of their own
-(`backend/docs/02-backend.md:34-35`); a twelfth, `ProblemErrorController`,
+tag (`useTags`, `backend/services/commerce/build.gradle`, "useTags"), and declare no route, method or status of their own
+(`backend/docs/02-backend.md`, "deklarál saját útvonalat"); a twelfth, `ProblemErrorController`,
 serves `/error`. `prepareOpenApiSpec` rewrites four single-value discriminator
 enums before generation and fails, naming the block, when the contract's text
-for one of them changes (`backend/services/commerce/build.gradle:39-87`,
+for one of them changes (`backend/services/commerce/build.gradle`, "tasks.register('prepareOpenApiSpec')",
 `backend/docs/decisions/0001-openapi-generator-and-discriminator-workaround.md`);
 that failure is a contract change, so it goes to `mibolt-cross-package-changes`.
 
@@ -103,12 +107,12 @@ and [references/error-model.md](references/error-model.md).
 **Where the rules are written.**
 
 - `backend/docs/02-backend.md` (Hungarian): invariants 1-47 in §4
-  (`:66-184`), the data model in §5, tests in §7, decision records in §8, the
+  (`backend/docs/02-backend.md`, "4. Domain-invariánsok"), the data model in §5, tests in §7, decision records in §8, the
   forbidden list in §9.
 - `backend/docs/04-adatbazis.md` (Hungarian): schema constraints (§4) and
   migrations (§5).
 - `contracts/commerce/kommunikacio.md` (English): session, versioning,
-  idempotency and the error contract. `backend/docs/02-backend.md:3-4` makes it
+  idempotency and the error contract. `backend/docs/02-backend.md` ("ennek a dokumentumnak a része") makes it
   part of the backend requirements; `mibolt-cross-package-changes` edits it.
 - `backend/docs/decisions/` (English): 22 records, `0001` to `0022`, the why
   behind each non-obvious choice.
@@ -118,12 +122,12 @@ and [references/error-model.md](references/error-model.md).
 - **Transactions.** `CartService`, `CheckoutService`, `PaymentIntentService`
   and `IdempotencyService` are `@Transactional(noRollbackFor =
   DomainException.class)` (for example
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:26`),
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "@Transactional(noRollbackFor = DomainException.class)"),
   so a refusal they throw does not by itself undo what the call already
   wrote, such as the expired cart `expireIfPast` deletes before answering
-  `CART_EXPIRED` (`:192-197`). `OrderService` is plain `@Transactional`: any
+  `CART_EXPIRED` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "void expireIfPast"). `OrderService` is plain `@Transactional`: any
   refusal inside `place` rolls back the whole order (rule 42;
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:31-39`).
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java`, "The whole {@code place} call is one transaction").
   Spring rolls back on an unchecked exception unless a no-rollback rule
   matches it
   (https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html).
@@ -139,7 +143,7 @@ and [references/error-model.md](references/error-model.md).
   exception (`backend/docs/decisions/0020-admin-catalogue-write-api.md`).
 - **Stock is decremented atomically**, by a conditional update, never by
   read-then-write
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/ProductVariantRepository.java:19-21`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/ProductVariantRepository.java`, "decrementStock").
 - **Hosted smoke is stock-neutral only for its reserved canary** (ADR 0023).
   `mibolt.smoke.enabled` defaults to false; demo charts and Compose enable it.
   Orders restore the exact canary variant's quantity within the same transaction,
@@ -147,16 +151,16 @@ and [references/error-model.md](references/error-model.md).
   Bootstrap works in an already populated database and public listings hide it.
 - **Payment-intent expiry is lazy**: evaluated on every read and outcome
   call; there is no scheduler
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java:124-132`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/PaymentIntentService.java`, "applyLazyExpiry").
 
 **Configuration** lives in
 `backend/services/commerce/src/main/resources/application.properties`: schema
-validation and open-in-view (`:9-11`), JSON inclusion and unknown-member
-rejection (`:13-19`), the context path (`:23`), the admin session cookie
-(`:25-30`), the first-admin password (`:34`), session lifetime (`:37`), the
-demo gate (`:42-44`), checkout fees, free-shipping threshold, cash-on-delivery
-ceiling and terms version (`:46-54`), payment intents and idempotency
-retention (`:59-62`), readiness probes (`:70`), and the demo smoke flag (`:73`). `mibolt.catalog.path` has
+validation and open-in-view (`backend/services/commerce/src/main/resources/application.properties`, "spring.jpa.hibernate.ddl-auto"), JSON inclusion and unknown-member
+rejection (`backend/services/commerce/src/main/resources/application.properties`, "JSON: omit absent optional members"), the context path (`backend/services/commerce/src/main/resources/application.properties`, "server.servlet.context-path"), the admin session cookie
+(`backend/services/commerce/src/main/resources/application.properties`, "Admin session cookie"), the first-admin password (`backend/services/commerce/src/main/resources/application.properties`, "mibolt.admin.initial-password"), session lifetime (`backend/services/commerce/src/main/resources/application.properties`, "mibolt.session.lifetime"), the
+demo gate (`backend/services/commerce/src/main/resources/application.properties`, "Demo gate"), checkout fees, free-shipping threshold, cash-on-delivery
+ceiling and terms version (`backend/services/commerce/src/main/resources/application.properties`, "Checkout fees and thresholds"), payment intents and idempotency
+retention (`backend/services/commerce/src/main/resources/application.properties`, "Payment intents and orders"), readiness probes (`backend/services/commerce/src/main/resources/application.properties`, "management.endpoint.health.probes.enabled"), and the demo smoke flag (`backend/services/commerce/src/main/resources/application.properties`, "mibolt.smoke.enabled"). `mibolt.catalog.path` has
 no line there; its default is in the loader (see
 [references/data-and-migrations.md](references/data-and-migrations.md)).
 Name environment variables, never their values: several defaults are
@@ -168,7 +172,7 @@ passwords.
 |---|---|
 | A business rule | the rule in [references/invariants-index.md](references/invariants-index.md), then the service it names |
 | An endpoint | the operation in `contracts/commerce/openapi.yaml`, then the controller implementing its tag's interface |
-| A fee or threshold | `backend/services/commerce/src/main/resources/application.properties:46-54` and `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:59-85` |
+| A fee or threshold | `backend/services/commerce/src/main/resources/application.properties` ("Checkout fees and thresholds") and `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java` ("public CheckoutService(") |
 | An error code | `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java` and [references/error-model.md](references/error-model.md) |
 | A migration | `backend/services/commerce/src/main/resources/db/changelog/db.changelog-master.yaml` and the script in section 7 |
 | Sign-in, cookies, admin access | [references/security-and-sessions.md](references/security-and-sessions.md) |
@@ -179,7 +183,7 @@ passwords.
   a controller that only delegates, checks `If-Match` before each write and
   sets the `ETag`.
 - `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`
-  `addItem` (`:79-118`): validation, reconciliation and a version bump only
+  `addItem` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "CartData.CartView addItem("): validation, reconciliation and a version bump only
   when something changed.
 - `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/ProductVariantRepository.java`
   `decrementStock`: the atomic conditional update.
@@ -251,10 +255,10 @@ A stored value adds a migration.
 **A fee, threshold or other configuration value.**
 
 1. Change the key in
-   `backend/services/commerce/src/main/resources/application.properties:46-54`,
+   `backend/services/commerce/src/main/resources/application.properties` ("Checkout fees and thresholds"),
    or add one with a constructor `@Value` in
-   `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:59-85`.
-2. Use it in `buildOptions` (`:225-259`).
+   `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java` ("public CheckoutService(").
+2. Use it in `buildOptions` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java`, "CheckoutData.Options buildOptions").
 3. Update the tests that assert the old value, and add an API case whose
    outcome differs between the old and the new value where none does yet;
    "Done means" in section 7 covers a value the test catalogue cannot
@@ -266,20 +270,20 @@ A stored value adds a migration.
    total `300480` (299 990 plus the 490 cash-on-delivery fee) or a shipping
    fee of 0 above the free-shipping threshold; a search for the old value
    misses those, and `integrationTest` shows them as failures.
-   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutServiceTest.java:45-51`
+   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/checkout/CheckoutServiceTest.java` ("private static final long HOME_FEE")
    passes its own constants, so a new default leaves it unchanged. Pin a
    value in
    `backend/services/commerce/src/test/resources/application-test.properties`
    only when a test must not follow the default.
 4. Update the value table in
-   `backend/docs/decisions/0010-checkout-draft-options-and-fees.md:88-99`, or
+   `backend/docs/decisions/0010-checkout-draft-options-and-fees.md` ("The fees and thresholds are configuration under"), or
    record a new decision when the change is one (section 5).
 5. The value has copies outside the backend: the storefront's mock
-   (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:59-65`) and
+   (`frontend/projects/shop-mocks/src/checkout/checkout-store.ts`, "Demo defaults mirrored from the backend") and
    its spec, `frontend/projects/shop-mocks/src/checkout/checkout-mock.spec.ts`,
    which `mibolt-shop-frontend` keeps in step;
-   `frontend/docs/spec/screens.md:81`, `frontend/docs/spec/components.md:589`
-   and `frontend/docs/spec/test-scenarios.md:82-87`; and the Playwright plans under
+   `frontend/docs/spec/screens.md` ("S4.3 Delivery and simulated payment"), `frontend/docs/spec/components.md` ("PaymentMethodSelector — purchase/delivery")
+   and `frontend/docs/spec/test-scenarios.md` ("Choose home with valid HU address"); and the Playwright plans under
    `frontend/specs/` and specs under `frontend/e2e/`, which pick products
    against the cash-on-delivery ceiling, often through a literal such as
    `300_000`. Several copies carry only the number, so list them by name and
@@ -317,7 +321,7 @@ stock: the `admin.catalog` package, from
 to `AdminProductCommandService` (create, replace, archive, restore),
 `AdminProductValidator` (cross-field rules) and `AdminProductEtags` (428 or
 412 on `If-Match`). Validation runs in three stages, each answered whole
-(`backend/docs/decisions/0020-admin-catalogue-write-api.md:17-23`). The API
+(`backend/docs/decisions/0020-admin-catalogue-write-api.md`, "Validation in three stages, each answered whole"). The API
 tests sign in with `AdminLogin`.
 
 **An error code**: the contract's `ProblemCode` first, then `ErrorCode`,
@@ -340,27 +344,27 @@ Owned by this skill:
   `@Transactional` on order placement.
 - Follow the changeset pattern in section 4; the script warns on a departure.
 - **Record every decision** a later reader would ask "why this way?" about,
-  when it is made, not afterwards (`backend/docs/02-backend.md:408-432`):
+  when it is made, not afterwards (`backend/docs/02-backend.md`, "8. A fejlesztés alatti döntések dokumentálása"):
   - one numbered file under `backend/docs/decisions/`, the next being `0024`;
   - the five sections §8 names, in the English form the records use:
     Situation, Options, Decision, Consequences, Date and status, as in
     `backend/docs/decisions/0002-liquibase-changelog-and-portable-constraints.md`
     (several later records omit Options or Date and status);
   - a departure from a requirement document also corrects that document
-    (`backend/docs/02-backend.md:434-437`);
+    (`backend/docs/02-backend.md`, "Az eltérés külön hangsúlyos.");
   - a defect in the contract is not fixed from the implementation side on its
-    own initiative (`backend/docs/02-backend.md:439-441`): a contract change
+    own initiative (`backend/docs/02-backend.md`, "A szerződés külön eset."): a contract change
     reaches the frontends as well, so ask the user whether it changes, and the
     change itself goes to `mibolt-cross-package-changes`;
   - an earlier record is amended with a dated section, not rewritten, as in
-    `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md:143`.
+    `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md` ("Amendment 2026-09-20: per-class floor").
 
 Owned by `mibolt-backend-code-standards`, one line each:
 
 - No business rule and no database call in a controller
-  (`backend/docs/02-backend.md:52-53`).
+  (`backend/docs/02-backend.md`, "Itt nincs üzleti szabály, nincs adatbázis-hívás").
 - Error responses carry no user-facing Hungarian text
-  (`backend/docs/02-backend.md:450`); the Hungarian receipt notice and
+  (`backend/docs/02-backend.md`, "Felhasználónak szánt magyar szöveg hibaválaszban"); the Hungarian receipt notice and
   checkout option labels are non-error responses the rule does not cover.
 - Read the time from an injected `Clock`, which a unit test fixes with
   `Clock.fixed` ([references/testing.md](references/testing.md));
@@ -370,7 +374,7 @@ Owned by `mibolt-backend-code-standards`, one line each:
   `NoFullyQualifiedNames`).
 - No `System.out` or `System.err` (PMD `SystemPrintln`).
 - No test starts, reaches or depends on the Docker database
-  (`backend/docs/02-backend.md:301-302`).
+  (`backend/docs/02-backend.md`, "Egyetlen teszt sem indíthatja el").
 
 ## 6. What else a change touches
 
@@ -383,11 +387,11 @@ Owned by `mibolt-backend-code-standards`, one line each:
 - **Documents.** A departure from `backend/docs/02-backend.md` or
   `backend/docs/04-adatbazis.md` corrects the document and adds a decision
   record. A new environment variable goes in the table at
-  `backend/README.md:19-31`, and into compose and the chart through
+  `backend/README.md` ("Environment variables the service reads"), and into compose and the chart through
   `mibolt-workspace-ops`.
 - **Deployed databases.** The stable deployment keeps its database and
   applies new migrations to it, and a rollback must stay schema-compatible
-  (`deploy/candidate/README.md:80-94`); that is why forward-only binds.
+  (`deploy/candidate/README.md`, "Automatic stable releases"); that is why forward-only binds.
 - **`smoke.sh`.** When a flow it walks changes, or the demo gate or the admin
   sign-in does, update
   `backend/services/commerce/scripts/smoke.sh` in the same change
@@ -416,7 +420,7 @@ Commands, from the repository root unless one names another directory:
   and integration tests, PMD and coverage; when to run it and how to read it
   is `mibolt-verification` ("Gates before a commit").
 
-The Gradle tasks need the Java 21 that the root `mise.toml:13` pins, and write
+The Gradle tasks need the Java 21 that the root `mise.toml` ("temurin-21") pins, and write
 under the module's `build/` directory. `smoke.sh` starts no backend of its
 own: it runs against one that is already up.
 
@@ -467,9 +471,9 @@ Repository sources: `backend/docs/02-backend.md`, `backend/docs/04-adatbazis.md`
 Update this skill in the same change when any of these moves:
 
 - `backend/settings.gradle`, and in `backend/services/commerce/build.gradle`
-  the plugin and toolchain block (`:1-17`), the repositories and dependencies
-  blocks (`:19-37`), the generation block (`:39-139`) and the test tasks
-  (`:141-162`, `:247-268`);
+  the plugin and toolchain block (`backend/services/commerce/build.gradle`, "plugins {"), the repositories and dependencies
+  blocks (`backend/services/commerce/build.gradle`, "dependencies {"), the generation block (`backend/services/commerce/build.gradle`, "openApiGenerate {") and the test tasks
+  (`backend/services/commerce/build.gradle`, "tasks.register('integrationTest', Test)"; `backend/services/commerce/build.gradle`, "tasks.withType(Test).configureEach");
 - `backend/docs/02-backend.md` §4 or §8, or `backend/docs/04-adatbazis.md`;
 - a new record under `backend/docs/decisions/` (the next number, 0024, is
   stated in section 5);
@@ -484,16 +488,17 @@ Update this skill in the same change when any of these moves:
 - `backend/services/commerce/scripts/smoke.sh`;
 - the changelog layout, which makes the script exit 2 with `layout changed`.
 
-From the directory that holds the MiBolt skills, check every path, anchor and
+From the directory that holds the MiBolt skills, check every path, cited name and
 command here with:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs mibolt-commerce-backend
 ```
 
-Run it with `--show-anchors` after an edit to any file this skill or its
-references cite by line or section name, listed above or not, a MiBolt skill
-cited by section name included, and read each cited line and section there
-against the claim beside it: a shifted `path:N` passes while the file is that
-long, a bare `:N` after a path is neither checked nor printed, and a renamed
-section passes while its old name is still in the file.
+A citation here names its target (a heading, task, function, key or
+distinctive phrase) and never gives a line number. Run the check after an edit
+to any file this skill or its references cite, listed above or not, a MiBolt
+skill cited by section name included, and read each cited section there
+against the claim beside it: the check only confirms that the name still
+occurs somewhere in the target, so a renamed section passes while its old name
+is still in the file, and a name that is gone fails.
