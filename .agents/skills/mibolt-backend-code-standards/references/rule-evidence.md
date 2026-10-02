@@ -4,8 +4,7 @@ The evidence behind the rules in `SKILL.md`: for each one, the line that states
 it, what enforces it, an example in the code, and the exceptions that exist
 today. The §9 forbidden list, with each line's enforcement, is in `SKILL.md`
 and is not repeated here. `SKILL.md` is this skill's own; every other path is
-repository-relative. Counts were measured on 2026-09-26; section 7 gives the
-commands that reproduce them.
+repository-relative. Section 7 gives the commands that reproduce the counts.
 
 ## Contents
 
@@ -27,55 +26,68 @@ each. The quickstart leaves `SystemPrintln`, `AvoidReassigningParameters`,
 commented out, so those four are active here only because the ruleset names
 them (quickstart source, section 8).
 
-- **`NoFullyQualifiedNames`** (`backend/config/pmd/ruleset.xml:22-38`), a custom
+- **`NoFullyQualifiedNames`** (`backend/config/pmd/ruleset.xml`, "NoFullyQualifiedNames"),
+  a custom
   XPath rule, `//ClassType[@FullyQualified = true()]`. It rejects every fully
   qualified type reference in code: generic arguments, `new` expressions,
   qualified static access and annotations. Imports, the package line and
   javadoc `{@link}` are not type references in code and pass. The quickstart's
   `UnnecessaryFullyQualifiedName` flags a qualifier only when the type is
   already imported, which is why this rule exists
-  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:183-200`).
+  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "no inline FQNs").
   Compliant form: every type imported, as in
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java:3-13`.
-- **`SystemPrintln`** (`backend/config/pmd/ruleset.xml:39`) rejects
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java`
+  ("import org.springframework.http.ResponseEntity;").
+- **`SystemPrintln`** (`backend/config/pmd/ruleset.xml`, "SystemPrintln")
+  rejects
   `System.out` and `System.err` printing. Log through the class's SLF4J logger
   instead (section 5).
-- **`AvoidReassigningParameters`** (`backend/config/pmd/ruleset.xml:40`)
+- **`AvoidReassigningParameters`**
+  (`backend/config/pmd/ruleset.xml`, "AvoidReassigningParameters")
   rejects an assignment to a method or constructor parameter. Copy it to a
   local and change the local.
 - **`AvoidUncheckedExceptionsInSignatures`**
-  (`backend/config/pmd/ruleset.xml:41`) rejects an unchecked exception in a
+  (`backend/config/pmd/ruleset.xml`, "AvoidUncheckedExceptionsInSignatures")
+  rejects an unchecked exception in a
   `throws` clause. The fix 0009 records is deleting the clause
-  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:224-228`).
-- **`AvoidThrowingRawExceptionTypes`** (`backend/config/pmd/ruleset.xml:42`)
+  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "the clause was deleted").
+- **`AvoidThrowingRawExceptionTypes`**
+  (`backend/config/pmd/ruleset.xml`, "AvoidThrowingRawExceptionTypes")
   rejects throwing `RuntimeException`, `Exception`, `Throwable` or `Error`
   themselves. Throw `DomainException` for a business failure and a specific JDK
   type otherwise; 0009 replaced two raw throws with `UncheckedIOException` and
   `IllegalStateException`
-  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:229-236`).
-- **`MethodNamingConventions`, re-added** (`backend/config/pmd/ruleset.xml:17-21`)
+  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "throw new UncheckedIOException(e);").
+- **`MethodNamingConventions`, re-added**
+  (`backend/config/pmd/ruleset.xml`, "category/java/codestyle.xml/MethodNamingConventions")
   with `junit5TestPattern` `[a-z][a-zA-Z0-9]*|f[0-9]+_[a-zA-Z0-9]*`. The
   `f<N>_` form is the smoke-test marker; its only use is
   `SmokeF6Test.f6_imageServingWorks` in
-  `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/catalog/SmokeF6Test.java:27`.
+  `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/catalog/SmokeF6Test.java`
+  ("f6_imageServingWorks").
   Every other method keeps PMD's default camelCase pattern.
-- **`UseUtilityClass`, excluded** (`backend/config/pmd/ruleset.xml:11-15`),
+- **`UseUtilityClass`, excluded**
+  (`backend/config/pmd/ruleset.xml`, "UseUtilityClass"),
   project-wide because a ruleset `<exclude>` cannot target one class; its only
   hit was the `@SpringBootApplication` entry point.
 
-**Wiring** (`backend/services/commerce/build.gradle:220-245`): `toolVersion`
-7.24.0 (`:221`), the one ruleset file and no built-in rule sets (`:222-223`),
-violations printed to the console (`:224`), the build failing on any violation
-(`:225`), a `GradleException` when the ruleset file is missing, because PMD
-would otherwise analyse nothing and pass (`:228-238`), and the generated
+**Wiring** (`backend/services/commerce/build.gradle`, "pmd {"): `toolVersion`
+(`backend/services/commerce/build.gradle`, "toolVersion"), the one ruleset
+file and no built-in rule sets (`backend/services/commerce/build.gradle`, "ruleSets = [] ruleSetFiles"),
+violations printed to the console (`backend/services/commerce/build.gradle`, "consoleOutput = true"), the
+build failing on any violation (`backend/services/commerce/build.gradle`, "ignoreFailures = false"), a
+`GradleException` when the ruleset file is missing, because PMD
+would otherwise analyse nothing and pass (`backend/services/commerce/build.gradle`, "PMD ruleset not found"),
+and the generated
 `com.example.mi_bolt_backend.api` package skipped by `pmdMain` only, so a
-hand-written test in that package is still linted (`:240-245`). Gradle wires
+hand-written test in that package is still linted
+(`backend/services/commerce/build.gradle`, "tasks.named('pmdMain')"). Gradle wires
 `pmdMain` and `pmdTest` into `check` (Gradle PMD plugin, section 8).
 
 ## 2. PMD: quickstart rules that shape everyday code
 
-`rulesets/java/quickstart.xml` in PMD 7.24.0 has 124 active rules (section 8).
-Read a rule's page in the PMD 7.24.0 index rather than recalling it; the list
+`rulesets/java/quickstart.xml` in the pinned PMD has 124 active rules (section 8).
+Read a rule's page in the pinned PMD release's index rather than recalling it; the list
 below is the part a reviewer meets most, not the whole set.
 
 - **`ControlStatementBraces`**: braces on every `if`, `else`, `for`, `while`
@@ -100,7 +112,8 @@ below is the part a reviewer meets most, not the whole set.
   with a comment, because `allowCommentedBlocks` defaults to false.
 - **`AvoidCatchingGenericException`**, configured by the quickstart to reject
   only a `catch` of `Throwable` or `Error`; the one `catch (Exception e)` in
-  main code, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:96`,
+  main code, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java`
+  ("catch (Exception e)"),
   passes it.
 - **Not checked:** `FieldNamingConventions` is commented out in the
   quickstart, so field names are free; `ProperLogger` is active, but its
@@ -109,7 +122,8 @@ below is the part a reviewer meets most, not the whole set.
 
 The rules that fired when the gate was introduced, with the fix each needed,
 are the table at
-`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:75-88`.
+`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`
+("Findings fixed before the gate went green").
 
 ## 3. Written rules
 
@@ -117,18 +131,20 @@ are the table at
 Hungarian; the section titles are given so the lines can be found.
 
 - **Root package `com.example.mi_bolt_backend`**:
-  `backend/docs/02-backend.md:22`. Review-only. Every class sits under it, and
+  `backend/docs/02-backend.md` ("A gyökércsomag"). Review-only. Every class sits under it, and
   the generator writes under its `api` and `api.model` subpackages
-  (`backend/services/commerce/build.gradle:93-94`).
+  (`backend/services/commerce/build.gradle`, "apiPackage" and
+  `backend/services/commerce/build.gradle`, "modelPackage").
 - **Controllers implement the generated interfaces and declare no route, HTTP
   method or status code of their own** (§2 "Kódgenerálás",
-  `backend/docs/02-backend.md:28-35`). Review-only. 11 of the 12 `*Controller`
+  `backend/docs/02-backend.md`, "Elvárás: a szerződésből generált interfészek").
+  Review-only. 11 of the 12 `*Controller`
   classes implement a generated `*Api`; the twelfth, `ProblemErrorController`,
   implements Spring Boot's `ErrorController` and holds the only hand-written
   `@RequestMapping` in main code
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemErrorController.java:37`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemErrorController.java`, "@RequestMapping(ERROR_PATH)"),
   for the `/error` forward rather than a contract route.
-- **Layering** (§3 "Rétegzés", `backend/docs/02-backend.md:48-62`).
+- **Layering** (§3 "Rétegzés", `backend/docs/02-backend.md`, "3. Rétegzés").
   Review-only; no ArchUnit or other package-dependency check exists. The
   controller only converts, HTTP to a domain call and a domain result to a DTO,
   with no business rule and no database call. The service holds every business
@@ -136,55 +152,58 @@ Hungarian; the section titles are given so the lines can be found.
   throws domain exceptions. The repository queries and persists, with no rule.
   No controller builds an error body except `ProblemErrorController`, which
   renders the `/error` forward's `ProblemDetails` itself
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemErrorController.java:52`);
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemErrorController.java`, "ProblemDetails body = new ProblemDetails(");
   every other error body comes from the one `@RestControllerAdvice`,
   `ProblemAdvice`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:330`).
-  Reference shape: `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java:35-77`,
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "ProblemDetails body = new ProblemDetails(").
+  Reference shape: `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java`
+  ("public class CartController implements CartApi"),
   five methods that each delegate to `CartService`.
-- **English error text** (§9, `backend/docs/02-backend.md:447`: no
+- **English error text** (§9, `backend/docs/02-backend.md`, "Felhasználónak szánt magyar szöveg hibaválaszban": no
   user-facing Hungarian text in an error response). Review-only. Every
   `ErrorCode` title is English
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java:12-37`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java`, "public enum ErrorCode").
   Hungarian user-facing strings in main code appear only in non-error
   responses: the receipt notice `OrderService.NOTICE`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java:49-50`)
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderService.java`, "static final String NOTICE")
   and the checkout option labels
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:234-255`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java`, "private CheckoutData.Options buildOptions").
 - **Money is whole forints in an integer type; floating point is forbidden**
-  (`backend/docs/04-adatbazis.md:103`). Review-only on the Java side. Entities
+  (`backend/docs/04-adatbazis.md`, "Lebegőpontos típus pénzre tilos"). Review-only on the Java side. Entities
   hold `long` fields named `*Huf`, the mappers narrow to `int` with
   `Math.toIntExact` where they build the generated `Money`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderModels.java:57`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/order/OrderModels.java`, "Math.toIntExact(amount)"),
   `CartService` narrows the old and the new unit price of a price-change
   notice the same way
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:231`)
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "Math.toIntExact(oldPrice)")
   into the `Integer` `from` and `to` of `CartData.NoticeParams`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartData.java:42`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartData.java`, "record NoticeParams"),
   and main code has no `double`, `float` or `BigDecimal`.
 - **No test starts, reaches or depends on the Docker PostgreSQL container**
-  (§7.0, `backend/docs/02-backend.md:296-324`, repeated in §9). Review-only:
+  (§7.0, `backend/docs/02-backend.md`, "7.0 Kemény szabály: a tesztek nem használhatnak Docker-adatbázist", repeated in §9). Review-only:
   `@IntegrationTest` activates the `test` profile
-  (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java:27`),
+  (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java`, "@ActiveProfiles"),
   whose datasource is in-memory H2
-  (`backend/services/commerce/src/test/resources/application-test.properties:4`),
+  (`backend/services/commerce/src/test/resources/application-test.properties`, "spring.datasource.url=jdbc:h2:mem"),
   but nothing applies that profile to a test without the annotation: the
-  Gradle test tasks set none (`backend/services/commerce/build.gradle:141-158`
-  and `:247-269`) and `backend/services/commerce/src/test/resources` holds no
+  Gradle test tasks set none (`backend/services/commerce/build.gradle`, "tasks.named('test') { inputs.file",
+  `backend/services/commerce/build.gradle`, "tasks.register('integrationTest', Test)" and
+  `backend/services/commerce/build.gradle`, "tasks.withType(Test)") and `backend/services/commerce/src/test/resources` holds no
   other `application*.properties`. The annotation is the only
   `@SpringBootTest` in the tree today
-  (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java:24`),
+  (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java`, "@SpringBootTest"),
   on 48 test classes, so a reviewer checks that a new Spring-context test
   carries it. The CI `postgres-smoke` job is the documented exception and is
-  not a Gradle test (`backend/docs/02-backend.md:305-313`).
+  not a Gradle test (`backend/docs/02-backend.md`, "Egy kivétel van, és az nem teszt.").
 - **The local database is reached only through the mise tasks and
   `deploy/compose.sh`**, never a direct `docker`, `docker compose` or outside
-  `psql` (§1, `backend/docs/04-adatbazis.md:5-15`; §9 points there).
+  `psql` (§1, `backend/docs/04-adatbazis.md`, "A helyi adatbázist a git gyökeréből futó mise-taskok kezelik";
+  §9 points there).
   Review-only.
-- **Gradle build code** is Groovy DSL (`backend/docs/02-backend.md:15`).
+- **Gradle build code** is Groovy DSL (`backend/docs/02-backend.md`, "Groovy DSL").
   Observed, not written: the PMD block fails the build when the ruleset file
   is missing rather than let PMD analyse nothing and pass
-  (`backend/services/commerce/build.gradle:228-238`); keep that check when the
+  (`backend/services/commerce/build.gradle`, "PMD ruleset not found"); keep that check when the
   block changes.
 
 ## 4. Observed patterns: packages, classes, injection
@@ -208,13 +227,13 @@ No document states these; the code follows them consistently.
   them nested in the four `*Data` interfaces. JPA entities and the seven
   `*Dto` classes are ordinary classes with accessors, and so is the Spring
   Security principal `AdminPrincipal`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/security/AdminPrincipal.java:21`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/security/AdminPrincipal.java`, "public class AdminPrincipal"),
   whose `eraseCredentials()` clears its password hash.
 - **Injection.** Main classes use constructor injection with `final` fields
   and no annotation. The one `@Autowired` in main code picks which of
   `CatalogLoader`'s two constructors Spring uses; the second is package-private
   for tests
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:48`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java`, "@Autowired").
   The 48 `@IntegrationTest` classes, and no other test class, inject with
   `@Autowired private` fields (116). There is no Lombok.
 - **No suppression.** No `// NOPMD`, no `@SuppressWarnings` and no
@@ -234,38 +253,41 @@ No document states these; the code follows them consistently.
   in main ends a stream in `ProblemAdvice`). Inside a class, `null` means
   "absent": 14 `return null;`, mostly private lookup helpers such as
   `CartService.findLine`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java:199-206`);
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "private CartItem findLine");
   `SessionService.loadByCookieToken` returns `null` for a missing or expired
   cookie
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionService.java:46-54`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionService.java`, "loadByCookieToken").
   A business failure is thrown, never returned as `null`.
 - **JSON members.** A response omits a member whose value is `null`
-  (`backend/services/commerce/src/main/resources/application.properties:18`),
+  (`backend/services/commerce/src/main/resources/application.properties`, "spring.jackson.default-property-inclusion"),
   and a request with a member the contract does not declare is refused
-  (`:19`); the comment above them (`:13-17`) gives the reason, and
+  (`backend/services/commerce/src/main/resources/application.properties`, "spring.jackson.deserialization.fail-on-unknown-properties");
+  the comment above them (`backend/services/commerce/src/main/resources/application.properties`, "JSON: omit absent optional members") gives the
+  reason, and
   `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/JacksonNonNullTest.java`
   pins the first. The catalogue loader's DTOs opt out of the second with
   `@JsonIgnoreProperties(ignoreUnknown = true)`.
 - **Logging.** SLF4J, declared as
   `private static final Logger log = LoggerFactory.getLogger(X.class);` in the
   four classes that log: `ProblemAdvice`
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:57`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "LoggerFactory.getLogger(ProblemAdvice.class)"),
   `CatalogLoader`, `AdminBootstrap` and `DemoAccessBootstrap`. A 4xx response
   is logged at WARN without a stack trace
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:345-351`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "log at WARN without a stack trace"),
   an unhandled throwable at ERROR with the exception as the last argument, which
   SLF4J prints with its stack trace
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java:294-300`).
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "handleUnexpected").
   15 of the 16 log calls sit
   inside an `isXEnabled()` guard; the one that does not,
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:78`,
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java`
+  ("catalogue present, {} products, loader skipped"),
   passes a plain variable to a `{}` placeholder.
 - **Time.** Ten main classes take an injected `java.time.Clock`, whose bean is
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartClockConfig.java:12-15`,
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartClockConfig.java` ("cartClock"),
   and read the current time from it, so a test can fix the time.
   `SessionService` is the exception: it calls `OffsetDateTime.now()` directly
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionService.java:39`
-  and `:52`). A pattern with an exception, not a written rule.
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionService.java`, "OffsetDateTime now = OffsetDateTime.now()"
+  and `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/session/SessionService.java`, "isAfter(OffsetDateTime.now())"). A pattern with an exception, not a written rule.
 - **Money.** See the written rule in section 3.
 
 ## 6. Formatting
@@ -274,14 +296,15 @@ No document states these; the code follows them consistently.
   `backend/services/commerce/src` have tab-indented lines, and no Java file has
   a space-indented code line (the four others have no indented code at all).
   `backend/services/commerce/build.gradle` and
-  `backend/config/pmd/ruleset.xml` are tab-indented too. `.editorconfig:4-7`
-  sets `indent_style = space` and `indent_size = 2` for `[*]`, a section that
+  `backend/config/pmd/ruleset.xml` are tab-indented too. `.editorconfig`
+  ("indent_style = space") sets `indent_style = space` and `indent_size = 2` for `[*]`, a section that
   matches every file (EditorConfig specification, section 8). No Java formatter
   is configured. Match the surrounding file; neither source is declared to win.
 - **Braces.** `ControlStatementBraces` requires them (section 2). `else`,
   `catch` and `finally` start their own line after the closing brace (27, 30
   and 10 occurrences), apart from one `} catch` and one `} finally` in
-  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/catalog/ImageInspector.java:95-98`.
+  `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/catalog/ImageInspector.java`
+  ("} catch (IOException ex)").
 - **Imports.** No wildcard import anywhere; static imports appear only in test
   code.
 
@@ -325,33 +348,35 @@ The guard count is lower than the number of guarded calls because
 
 ## 8. Sources outside the repository
 
-Read on 2026-09-26.
-
-- PMD 7.24.0 quickstart ruleset, the 124 active rules and the commented-out
-  ones: https://github.com/pmd/pmd/blob/pmd_releases/7.24.0/pmd-java/src/main/resources/rulesets/java/quickstart.xml
-  (the count agrees with `backend/docs/decisions/0009-pmd-quickstart-lint-gate.md:20`).
-- PMD 7.24.0 Java rule index: https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java.html
+- PMD quickstart ruleset, the 124 active rules and the commented-out
+  ones (in every PMD URL below `<version>` is the release read from
+  `backend/services/commerce/build.gradle` ("toolVersion")):
+  https://github.com/pmd/pmd/blob/pmd_releases/<version>/pmd-java/src/main/resources/rulesets/java/quickstart.xml
+  (the count agrees with `backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`
+  ("(124 rules)")).
+- PMD Java rule index: https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java.html
 - `ControlStatementBraces`, `ClassNamingConventions`, `MethodNamingConventions`,
   `FieldNamingConventions` and `EmptyControlStatement` defaults:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_codestyle.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_codestyle.html
 - `GuardLogStatement`, `SystemPrintln`, `AvoidReassigningParameters`,
   `MissingOverride`, `PreserveStackTrace`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_bestpractices.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_bestpractices.html
 - `SystemPrintln`'s console message, `Usage of System.out/err`, in the rule's
-  source at the 7.24.0 release tag:
-  https://github.com/pmd/pmd/blob/pmd_releases/7.24.0/pmd-java/src/main/resources/category/java/bestpractices.xml
+  source at the pinned release tag:
+  https://github.com/pmd/pmd/blob/pmd_releases/<version>/pmd-java/src/main/resources/category/java/bestpractices.xml
 - `UncommentedEmptyConstructor`, `UncommentedEmptyMethodBody`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_documentation.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_documentation.html
 - `ProperLogger` (default `loggerClass`), `UseLocaleWithCaseConversions`,
   `AvoidCatchingGenericException`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_errorprone.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_errorprone.html
 - `AvoidUncheckedExceptionsInSignatures`, `AvoidThrowingRawExceptionTypes`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_design.html
-- Gradle 9.7.1 PMD plugin, `pmdMain` and `pmdTest` wired into `check`, PMD
-  versions supported up to 7.24.0:
-  https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html
-- Gradle 9.7.1 `PmdExtension` (`consoleOutput`, `ignoreFailures`,
-  `ruleSets`): https://docs.gradle.org/9.7.1/dsl/org.gradle.api.plugins.quality.PmdExtension.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_design.html
+- Gradle PMD plugin, `pmdMain` and `pmdTest` wired into `check`, the PMD
+  versions it supports (in every Gradle URL below `<version>` is read from
+  `backend/gradle/wrapper/gradle-wrapper.properties` ("distributionUrl")):
+  https://docs.gradle.org/<version>/userguide/pmd_plugin.html
+- Gradle `PmdExtension` (`consoleOutput`, `ignoreFailures`,
+  `ruleSets`): https://docs.gradle.org/<version>/dsl/org.gradle.api.plugins.quality.PmdExtension.html
 - SLF4J prints a throwable passed as the last argument with its stack trace:
   https://www.slf4j.org/faq.html#paramException
 - Spring Security's `UserDetailsService.loadUserByUsername` throws
@@ -360,7 +385,7 @@ Read on 2026-09-26.
 - `@Autowired` is needed on one constructor only when a bean has several:
   https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/autowired.html
 - `spring.jackson.default-property-inclusion` and
-  `spring.jackson.deserialization.*` (Spring Boot 4.1.1):
+  `spring.jackson.deserialization.*` (Spring Boot, at the version `backend/services/commerce/build.gradle` declares, "id 'org.springframework.boot'"):
   https://docs.spring.io/spring-boot/appendix/application-properties/index.html
 - EditorConfig: `*` matches any file name in any directory below the file:
   https://spec.editorconfig.org/

@@ -49,31 +49,29 @@ every tracked sub-area of the project.
 | `mise.toml`, `deploy/`, `.github/` | root tasks, compose stack, Helm chart, candidate release, CI | `mibolt-workspace-ops` |
 | `tools/` | the catalogue importer, the dev-server helper | per sub-directory; see the coverage register |
 
-**Stack.** Declared versions come from the manifests cited. The lockfile
-column is `frontend/package-lock.json`; the backend has no lockfile, and what
-`backend/services/commerce/build.gradle` leaves unpinned resolves through
-Spring Boot's dependency management. The local column is what one machine had
-on 2026-09-26: re-measure it before relying on it.
+**Stack.** Declared versions come from the manifests cited.
+What `backend/services/commerce/build.gradle` leaves unpinned resolves through
+Spring Boot's dependency management.
 
-| Part | Declared | Lockfile | Local |
-|---|---|---|---|
-| Node | 26.10.0 (`mise.toml:12`); engines `^22.22.3 \|\| ^24.15.0 \|\| ^26.0.0` (`frontend/package.json:39`) | — | 26.10.0 |
-| npm | `npm@11.17.0` (`frontend/package.json:37`) | — | 11.19.1 |
-| Java | `temurin-21.0.12+101.0.LTS` (`mise.toml:13`); toolchain 21 (`backend/services/commerce/build.gradle:15`) | — | Temurin 21.0.12.1 |
-| Angular core | `^22.1.0` (`frontend/package.json:45`) | 22.1.6 | 22.1.6 |
-| Angular CLI and build | `^22.1.8` (`frontend/package.json:56-57`) | 22.1.8 | 22.1.8 |
-| TypeScript | `~6.0.2` (`frontend/package.json:82`) | 6.0.3 | 6.0.3 |
-| Vitest | `^4.0.8` (`frontend/package.json:84`) | 4.1.11 | 4.1.11 |
-| MSW | `^2.15.0` (`frontend/package.json:76`) | 2.15.0 | 2.15.0 |
-| Playwright | `1.63.0` (`frontend/package.json:62`) | 1.63.0 | 1.63.0 |
-| ESLint | `^10.9.1` (`frontend/package.json:68`) | 10.10.0 | 10.10.0 |
-| ng-openapi-gen | `^1.0.5` (`frontend/package.json:77`) | 1.0.5 | 1.0.5 |
-| Spring Boot | 4.1.1 (`backend/services/commerce/build.gradle:3`) | — | — |
-| OpenAPI Generator (backend) | 7.25.0 (`backend/services/commerce/build.gradle:5`) | — | — |
-| PMD | 7.24.0 (`backend/services/commerce/build.gradle:221`) | — | — |
-| Gradle wrapper | 9.7.1 (`backend/gradle/wrapper/gradle-wrapper.properties:3`) | — | — |
-| PostgreSQL | `postgres:16.15-alpine3.24`, digest-pinned (`deploy/compose.yaml:10`) | — | — |
-| uv, for the contract tools | 0.12.17 (`contracts/mise.toml:6`) | — | 0.12.17 for the tasks in `contracts/`, which run with that directory's pin; 0.8.15 at the repository root, where `mise.toml:11-13` pins no uv |
+| Part | Read from |
+|---|---|
+| Node | `mise.toml`, "[tools]" and `frontend/package.json`, "engines" |
+| npm | `frontend/package.json`, "packageManager" |
+| Java | `mise.toml`, "[tools]" and `backend/services/commerce/build.gradle`, "languageVersion" |
+| Angular core | `frontend/package.json`, "@angular/core" |
+| Angular CLI and build | `frontend/package.json`, "@angular/build" and `frontend/package.json`, "@angular/cli" |
+| TypeScript | `frontend/package.json`, "typescript" |
+| Vitest | `frontend/package.json`, "vitest" |
+| MSW | `frontend/package.json`, "msw" |
+| Playwright | `frontend/package.json`, "@playwright/test" |
+| ESLint | `frontend/package.json`, "eslint" |
+| ng-openapi-gen | `frontend/package.json`, "ng-openapi-gen" |
+| Spring Boot | `backend/services/commerce/build.gradle`, "id 'org.springframework.boot'" |
+| OpenAPI Generator (backend) | `backend/services/commerce/build.gradle`, "id 'org.openapi.generator'" |
+| PMD | `backend/services/commerce/build.gradle`, "toolVersion" |
+| Gradle wrapper | `backend/gradle/wrapper/gradle-wrapper.properties`, "distributionUrl" |
+| PostgreSQL | `deploy/compose.yaml`, "image: postgres" |
+| uv, for the contract tools | `contracts/mise.toml`, "[tools]" |
 
 **How the parts connect.**
 
@@ -83,41 +81,41 @@ on 2026-09-26: re-measure it before relying on it.
   admin client into `frontend/projects/admin/src/app/api/generated/`
   (`frontend/ng-openapi-gen.admin.json`, which includes only those tags), and
   the backend's Spring interfaces into the service's gitignored `build/`
-  directory (`backend/services/commerce/build.gradle:89-114`).
+  directory (`backend/services/commerce/build.gradle`, "openApiGenerate {").
   `mise run api:generate` regenerates all three.
-- **Three path aliases** (`frontend/tsconfig.json:17-21`): `@mi-bolt/api/*` is
+- **Three path aliases** (`frontend/tsconfig.json`, "paths"): `@mi-bolt/api/*` is
   the shop SDK, `@mi-bolt/core-api/*` is `frontend/projects/core-api/src/`,
   and `@mi-bolt/mocks/*` is `frontend/projects/shop-mocks/src/`, which the
   storefront and the demo-payment app start in the browser
-  (`frontend/projects/storefront/src/core/bootstrap-demo.ts:22`,
-  `frontend/projects/demo-payment/src/main.ts:38`), which the storefront's
+  (`frontend/projects/storefront/src/core/bootstrap-demo.ts`, "@mi-bolt/mocks/browser",
+  `frontend/projects/demo-payment/src/main.ts`, "@mi-bolt/mocks/browser"), which the storefront's
   unit specs import, and whose handlers the Node contract suite imports by
   relative path
-  (`frontend/tests/contract/operation-matrix.spec.ts:36-56`). The admin app
+  (`frontend/tests/contract/operation-matrix.spec.ts`, "Side-effect imports"). The admin app
   uses its own client and mocks instead, the client in
   `frontend/projects/admin/src/app/api/generated/`
-  (`frontend/projects/admin/src/app/app.config.ts:12`) and the mocks in
+  (`frontend/projects/admin/src/app/app.config.ts`, "provideApiConfiguration(resolveApiRoot())") and the mocks in
   `frontend/projects/admin/src/mocks/`, which it starts in the browser
-  (`frontend/projects/admin/src/main.ts:18`); the lint rule that keeps it off
+  (`frontend/projects/admin/src/main.ts`, "await startAdminMocks()"); the lint rule that keeps it off
   the shop SDK and mocks is `mibolt-frontend-code-standards`'s.
 - **The catalogue feeds these places:** the backend's startup seeding, which
   loads only into an empty product table
-  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java:76-79`),
+  (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/CatalogLoader.java`, "productRepository.count()"),
   so a changed catalogue needs the database emptied first;
   `frontend/scripts/build-catalog-fixture.mjs`, which writes
   `frontend/docs/api/fixtures/catalog.json` for the shop mocks
-  (`frontend/projects/shop-mocks/src/browser.ts:32`); the contract suite,
+  (`frontend/projects/shop-mocks/src/browser.ts`, "import catalogFixture from"); the contract suite,
   which checks that fixture's product count against it
-  (`frontend/tests/contract/schema.spec.ts:27`); the admin mock seed
-  (`frontend/projects/admin/src/mocks/seed.ts:1`); both image builds
-  (`deploy/compose.yaml:35`, `deploy/compose.yaml:63`); the candidate
-  template fingerprint (`deploy/candidate/README.md:60`); and
+  (`frontend/tests/contract/schema.spec.ts`, "const CATALOG_SOURCE_PATH ="); the admin mock seed
+  (`frontend/projects/admin/src/mocks/seed.ts`, "import catalogSource from"); both image builds
+  (`deploy/compose.yaml`, "catalog: ../data/catalog"); the candidate
+  template fingerprint (`deploy/candidate/README.md`, "is SHA-256 over sorted tracked relative paths"); and
   `frontend/projects/storefront/public/media/`, a byte-identical tracked copy
   of `data/catalog/images/` that nothing in the repository regenerates, which
   the shop mocks fetch
-  (`frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts:355`) and the
-  admin development build also serves (`frontend/angular.json:314-315`).
-- **Ports** (`README.md:229-239`): 4200 storefront, 4210 demo payment, 4220
+  (`frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts`, "async function defaultMediaLoader(") and the
+  admin development build also serves (`frontend/angular.json`, "media/**").
+- **Ports** (`README.md`, "Ports"): 4200 storefront, 4210 demo payment, 4220
   admin, 8080 backend under `/api/v1`, 55433 PostgreSQL, 4400 and 4410 the
   Playwright web servers. The dev servers run the apps on in-page MSW;
   `mise run dev` puts them on the real backend; `mise run stack` serves all
@@ -172,17 +170,19 @@ A task that spans areas takes the skills in the order its change flows:
 
 **Example: the free-shipping threshold shown at checkout.** The value is
 backend configuration, `mibolt.checkout.free-shipping-threshold-huf` at
-`backend/services/commerce/src/main/resources/application.properties:50`,
+`backend/services/commerce/src/main/resources/application.properties`
+("mibolt.checkout.free-shipping-threshold-huf"),
 applied at
-`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java:228`
+`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java`
+("private CheckoutData.Options buildOptions(")
 to the delivery fees `GET /checkout/options` returns
-(`contracts/commerce/openapi.yaml:558`): that is `mibolt-commerce-backend`'s.
+(`contracts/commerce/openapi.yaml`, "getCheckoutOptions"): that is `mibolt-commerce-backend`'s.
 The response carries each option's resulting fee, never the threshold itself
-(`contracts/commerce/openapi.yaml:2641-2668`). The storefront shows whatever
+(`contracts/commerce/openapi.yaml`, "DeliveryOption:"). The storefront shows whatever
 options come back and never invents a free-shipping default
-(`frontend/projects/storefront/src/app/features/checkout/delivery-step.ts:58-61`),
+(`frontend/projects/storefront/src/app/features/checkout/delivery-step.ts`, "T21-AC05"),
 while the shop mocks keep their own copy of the value
-(`frontend/projects/shop-mocks/src/checkout/checkout-store.ts:64`): both are
+(`frontend/projects/shop-mocks/src/checkout/checkout-store.ts`, "export const FREE_SHIPPING_THRESHOLD_HUF"): both are
 `mibolt-shop-frontend`'s. Changing the value is `mibolt-commerce-backend`'s
 ("A fee, threshold or other configuration value"), which names the copies
 outside the backend, the shop mocks' among them, and gives the `git grep`
@@ -259,10 +259,10 @@ is also verified in a real browser before it is called done,
 - a MiBolt skill added, renamed or given a new description: the routing table;
 - a document added, moved or rewritten: the docs index;
 - `scripts/check-skill-references.mjs`: its header comment and
-  `references/citation-check.md`, with both runs quoted there re-measured.
+  `references/citation-check.md`.
 
 **Run the citation check after editing any MiBolt skill, and after moving or
-rewriting a file one cites**, because a cited path, anchor, section name or
+rewriting a file one cites**, because a cited path, section name or
 command goes stale silently when the repository moves. The skills cite one
 another by section name, so after editing any of them run the check with no
 skill argument, which covers every MiBolt skill. Its check (e) fails a section
@@ -280,14 +280,10 @@ command below is written as run from this skill's directory; from anywhere
 else, name the script by its path from there.
 
 ```bash
-node scripts/check-skill-references.mjs [--show-anchors] [--no-mise] [<skill name> ...]
+node scripts/check-skill-references.mjs [--no-mise] [<skill name> ...]
 ```
 
-A plain run passes an anchor whose line now holds other text, as long as the
-file still has that many lines. After an edit to any file this skill or its
-references cite by `path:line`, whether or not the list at the top of this
-section names it, run the check with `--show-anchors` on this skill,
-`mibolt-project-map`, and read each printed line against the sentence that
-cites it, opening the file for the rest of any range the output cuts short
-after ten lines. Its options, output format, exit codes, and the citation
-forms it can read are in `references/citation-check.md`.
+Its options, output format, exit codes, and the citation forms it can read
+are in `references/citation-check.md`. A citation in this skill and its
+references names its target, a heading, task, function, key or distinctive
+phrase, and never gives a line number.

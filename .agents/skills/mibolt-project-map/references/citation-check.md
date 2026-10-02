@@ -158,23 +158,16 @@ directory outside a git checkout, or mise missing or failing without
 `--no-mise`. Each of those is settled before the first line is printed, so an
 exit 2 comes with nothing on stdout; the message goes to stderr.
 
-Excerpts of two runs on this skill from its own directory, on 2026-09-26; the
-counts and line numbers move with every edit:
+An excerpt of a run on this skill from its own directory; `<line>` stands
+for a line number and `<n>` for a count:
 
 ```text
-$ node scripts/check-skill-references.mjs --show-anchors mibolt-project-map
-...
-ANCHOR SKILL.md:169 backend/services/commerce/src/main/resources/application.properties:50 -> backend/services/commerce/src/main/resources/application.properties
-  50: mibolt.checkout.free-shipping-threshold-huf=30000
-...
-mibolt-project-map: 484 checked, 0 FAIL, 0 UNVERIFIED
-
 $ node scripts/check-skill-references.mjs --no-mise mibolt-project-map
-UNVERIFIED SKILL.md:87 mise mise run api:generate — mise task check skipped (--no-mise)
+UNVERIFIED SKILL.md:<line> mise mise run api:generate — mise task check skipped (--no-mise)
 ...
-UNVERIFIED references/citation-check.md:36 mise backend:docker — mise task check skipped (--no-mise)
+UNVERIFIED references/citation-check.md:<line> mise backend:docker — mise task check skipped (--no-mise)
 ...
-mibolt-project-map: 484 checked, 0 FAIL, 12 UNVERIFIED
+mibolt-project-map: <n> checked, 0 FAIL, <n> UNVERIFIED
 ```
 
 ## Write citations the checker can read
@@ -200,24 +193,23 @@ mibolt-project-map: 484 checked, 0 FAIL, 12 UNVERIFIED
   section-citation template, which needs its backticks, keeps a placeholder in
   its target, as the template under the section-citation bullet below does.
   Cite a command that runs from another directory, such as a script in
-  `frontend/package.json`, by its `path:line` anchor rather than backticking
-  the command.
+  `frontend/package.json`, by its file and its name, in one of the two shapes
+  check (e) reads, rather than backticking the command.
 - Backtick only a path a fresh checkout holds: a tracked path, or a new file no
   ignore rule covers. A gitignored output backticked from the repository root,
   such as the service's build directory or a `node_modules` directory, fails
   the check on every machine whether or not it was built there. Name it
   relative to its area directory, as `build/` in `backend/services/commerce/`,
-  which the checker does not read as a repository path, or cite the
-  configuration line that defines it. A glob under a top-level entry must
+  which the checker does not read as a repository path, or cite by name the
+  configuration that defines it. A glob under a top-level entry must
   match such a file or a directory; a path under rule 1 or 2 cannot be a glob.
-- Cite a section of another file by its name, in one of the two shapes check
-  (e) reads, and copy the name verbatim, backticks included, from a heading, a
-  bold lead-in or a table cell of the target as it is now. Where the target is
-  rewritten section by section, as a long document or another MiBolt skill is,
-  cite it by name rather than by a line anchor: an anchor into it keeps
-  passing after its line has moved to other text, while a name that is gone
-  fails. The target is a file or a skill name, never a directory, which has no
-  text to search and is reported UNVERIFIED. A misspelt skill name or a
+- Cite every file by a name, in one of the two shapes check (e) reads, and
+  never by a line number: a heading, a bold lead-in or a table cell, a task or
+  script name, a function, class, method or key name, or a short distinctive
+  phrase, copied verbatim, backticks included, from the target as it is now.
+  An anchor keeps passing after its line has moved to other text, while a
+  name that is gone fails. The target is a file or a skill name, never a
+  directory, which has no text to search and is reported UNVERIFIED. A misspelt skill name or a
   missing path is caught only while it still has the form of a target,
   `mibolt-<name>` or a path with a `/` or a file extension; a target in
   neither form, such as a file with no extension named without its directory,
@@ -232,16 +224,6 @@ mibolt-project-map: 484 checked, 0 FAIL, 12 UNVERIFIED
   (`<file or mibolt-skill>`, "<section name>")
   ```
 
-- The checker cannot tell whether an anchored line still says what the skill
-  claims, and check (e) confirms only that a quoted name still occurs
-  somewhere in its target. Run it with `--show-anchors` after a change to a
-  cited file, read the printed lines against the sentences that cite them,
-  opening the file for the rest of any range the output cuts short after ten
-  lines, which it marks with `... (+N more lines)`, and reread each cited
-  section the same way.
-- Write every anchor as `path:line` wherever it should be checked. An anchor
-  written without its path, as `:N`, `(line N)` or `(lines N-M)` after a path
-  the sentence already names, is neither checked nor printed by
-  `--show-anchors`, because an anchor is read only inside a backticked token
-  that one of the three path rules above resolves; reread each such anchor in
-  its file by hand.
+- Check (e) confirms only that a quoted name still occurs somewhere in its
+  target. After a change to a cited file, reread each cited section against
+  the sentences that cite it.

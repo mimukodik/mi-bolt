@@ -51,17 +51,20 @@ Everything else goes elsewhere:
 
 - **Unit suite.** Vitest through the `@angular/build:unit-test` builder, for
   the five projects with a `test` target: storefront, demo-payment, admin,
-  core-api and shop-mocks (`frontend/angular.json:110-127`,
-  `frontend/angular.json:209-225`, `frontend/angular.json:359-383`,
-  `frontend/angular.json:411-428`, `frontend/angular.json:471-490`). The
+  core-api and shop-mocks (`frontend/angular.json`,
+  "projects/storefront/vitest.config.ts"; `frontend/angular.json`,
+  "projects/demo-payment/vitest.config.ts"; `frontend/angular.json`,
+  "projects/admin/vitest.config.ts"; `frontend/angular.json`,
+  "projects/core-api/vitest.config.ts"; `frontend/angular.json`,
+  "projects/shop-mocks/vitest.config.ts"). The
   generated `shop-api` library has none. Every target sets `coverage: true`
   and the same aggregate floor: statements 80, branches 75, functions 80,
   lines 80, `perFile: false`. Each project writes its own report inside
   `frontend/`: `coverage/unit/` for the storefront
-  (`frontend/projects/storefront/vitest.config.ts:9`), `coverage/<project>/`
+  (`frontend/projects/storefront/vitest.config.ts`, "reportsDirectory"), `coverage/<project>/`
   for the other four. Each target's `coverageInclude` names every `.ts` file
   under the project's `src/`, and its `coverageExclude` takes some back out
-  (`frontend/angular.json:116-117` for the storefront); no project's
+  (`frontend/angular.json`, "coverageInclude", for the storefront); no project's
   `vitest.config.ts` sets either. The builder hands both to Vitest's
   `coverage.include` and `coverage.exclude`
   (`src/builders/unit-test/runners/vitest/plugins.js` of `@angular/build`),
@@ -70,44 +73,49 @@ Everything else goes elsewhere:
   such as a new file with no spec that no tested file imports, lowers its
   project's aggregate.
 - **Contract suite.** `test:contract` runs Vitest in Node over
-  `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts:18-25`) and
+  `tests/**/*.spec.ts` (`frontend/vitest.contract.config.ts`,
+  "include: ['tests/**/*.spec.ts']") and
   collects no coverage. `ng test` discovers no spec under `frontend/tests/`
-  (`frontend/vitest.contract.config.ts:8-9`), so a spec there runs under this
+  (`frontend/vitest.contract.config.ts`,
+  "because its discovery globs run"), so a spec there runs under this
   suite alone. Two helpers there run under `ng test` as well:
   `frontend/tests/setup-msw.ts` is a setup file of the storefront and
-  shop-mocks targets (`frontend/angular.json:114`, `frontend/angular.json:477`),
+  shop-mocks targets (`frontend/angular.json`, "tests/setup-msw.ts"),
   and `frontend/tests/msw-server.ts` is imported by storefront, demo-payment
   and shop-mocks specs (for one,
-  `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts:21`),
+  `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts`,
+  "tests/msw-server"),
   so a change to either needs the unit suite too.
 - **Lint and format.** `lint` is `ng lint`, which runs each project's
   `lintFilePatterns`; the storefront's also take in `tests/**/*.ts`,
-  `e2e/**/*.ts` and `playwright.config.ts` (`frontend/angular.json:132-138`).
+  `e2e/**/*.ts` and `playwright.config.ts` (`frontend/angular.json`, "e2e/**/*.ts").
   `format:check` is `prettier --check .`. Both check every file their
   configuration reaches in `frontend/`, not only the changed ones, and are
-  what CI's `lint` job runs (`.github/workflows/frontend.yml:34`,
-  `.github/workflows/frontend.yml:37`), as `npm --prefix frontend run lint`
+  what CI's `lint` job runs (`.github/workflows/frontend.yml`, "npm run lint";
+  `.github/workflows/frontend.yml`, "npm run format:check"), as `npm --prefix frontend run lint`
   and `npm --prefix frontend run format:check` locally. Before a commit the
   gate ("Gates before a commit" below) checks only the changed files, with
   `npx eslint` and `npx prettier --check` run from `frontend/` on the lists
   step 1 prints.
-- **Builds.** `build` builds the storefront alone (`frontend/package.json:12`);
+- **Builds.** `build` builds the storefront alone
+  (`frontend/package.json`, "ng build storefront");
   `build:payment` and `build:admin` build the other two apps. `build:check`
   builds the storefront for production and exits 1 on any output line
   matching `WARNING`, `▲ [WARNING]` or an `NGnnnn` code
-  (`frontend/scripts/build-check.mjs:28`, `frontend/scripts/build-check.mjs:41`).
+  (`frontend/scripts/build-check.mjs`, "const BUILD_ARGS";
+  `frontend/scripts/build-check.mjs`, "const WARNING_PATTERNS").
 - **Dist and boot checks.** The three `check:*-dist` scripts fail when a
   production `dist` holds `setupWorker` or `mockServiceWorker`, which proves no
   MSW code ships. `check:payment-boot` and `check:admin-boot` serve the app with
   `ng serve` on port 4299 and assert that the MSW worker is served at the app's
-  base path (`frontend/scripts/check-app-boot.mjs:49`).
+  base path (`frontend/scripts/check-app-boot.mjs`, "const PORT = 4299").
 - **API client drift.** `api:drift` regenerates both generated clients, then
   fails on any difference or untracked file in their directories
-  (`frontend/package.json:32`).
+  (`frontend/package.json`, "api:drift").
 - **End-to-end.** Playwright, with its own floor in
   `frontend/e2e/coverage-thresholds.json` (statements 80, branches 68,
   functions 80, lines 80), armed only when `E2E_COVERAGE_GATE=1`
-  (`frontend/playwright.config.ts:90-94`). Its specs are outside this skill
+  (`frontend/playwright.config.ts`, "const gated"). Its specs are outside this skill
   (see "Scope and hand-offs").
 
 ### Backend (`backend/`)
@@ -116,30 +124,37 @@ One Gradle project, `:services:commerce`. `backend/README.md` ("Tests and
 quality gates") says why each gate exists.
 
 - `test` excludes the JUnit tag `integration`, and `integrationTest` runs only
-  that tag (`backend/services/commerce/build.gradle:141-158`). A class
+  that tag (`backend/services/commerce/build.gradle`, "excludeTags 'integration'";
+  `backend/services/commerce/build.gradle`, "includeTags 'integration'"). A class
   annotated `@IntegrationTest` carries the tag
-  (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java:25`).
+  (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/test/IntegrationTest.java`,
+  "@Tag").
   The integration tests run on H2 in PostgreSQL mode
-  (`backend/services/commerce/src/test/resources/application-test.properties:4`)
+  (`backend/services/commerce/src/test/resources/application-test.properties`,
+  "MODE=PostgreSQL")
   and the unit tests start no Spring context, so no test needs the database.
 - `check` depends on `integrationTest` and `jacocoTestCoverageVerification`
-  (`backend/services/commerce/build.gradle:160-162`,
-  `backend/services/commerce/build.gradle:216-218`); the verification joins
+  (`backend/services/commerce/build.gradle`,
+  "dependsOn tasks.named('integrationTest')";
+  `backend/services/commerce/build.gradle`,
+  "dependsOn tasks.named('jacocoTestCoverageVerification')"); the verification joins
   `check` only because it is wired there
-  (https://docs.gradle.org/9.7.1/userguide/jacoco_plugin.html). The PMD
+  (https://docs.gradle.org/<version>/userguide/jacoco_plugin.html, where `<version>` is read from
+  `backend/gradle/wrapper/gradle-wrapper.properties` ("distributionUrl")). The PMD
   plugin makes `check` depend on `pmdMain` and `pmdTest`
-  (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html), and `build`
-  depends on `check` (https://docs.gradle.org/9.7.1/userguide/java_plugin.html).
+  (https://docs.gradle.org/<version>/userguide/pmd_plugin.html), and `build`
+  depends on `check` (https://docs.gradle.org/<version>/userguide/java_plugin.html).
   So `build` runs the unit and integration tests, PMD and the coverage gate,
   then assembles the jar.
 - The coverage floor is a JaCoCo line ratio of 0.90 over the bundle and 0.80
   per class, with the generated `com/example/mi_bolt_backend/api/**` package
   and `MiBoltBackendApplication` excluded
-  (`backend/services/commerce/build.gradle:167-170`,
-  `backend/services/commerce/build.gradle:186-205`).
-- PMD 7.24.0 runs `backend/config/pmd/ruleset.xml`; a missing ruleset fails
+  (`backend/services/commerce/build.gradle`, "def coverageExclusions";
+  `backend/services/commerce/build.gradle`, "violationRules").
+- PMD runs `backend/config/pmd/ruleset.xml`; a missing ruleset fails
   the task instead of passing silently
-  (`backend/services/commerce/build.gradle:220-238`).
+  (`backend/services/commerce/build.gradle`,
+  "PMD reports an unloadable ruleset").
 - `backend/services/commerce/scripts/smoke.sh` is a curl pass against a
   running backend, not a Gradle test.
 
@@ -147,17 +162,19 @@ quality gates") says why each gate exists.
 
 These exist and work by hand; nothing runs them automatically.
 
-- `fixtures:catalog:check` (`frontend/package.json:34`) exits 1 when
+- `fixtures:catalog:check` (`frontend/package.json`, "fixtures:catalog:check") exits 1 when
   `frontend/docs/api/fixtures/catalog.json` no longer matches
   `data/catalog/catalog.json`. No workflow and no `mise` task runs it, while
-  `frontend/README.md:63` and `frontend/scripts/build-catalog-fixture.mjs:13-16`
-  describe it as what CI runs. It is manual-only.
+  `frontend/README.md` ("Proving the committed fixture matches the source
+  catalogue, as CI does") and `frontend/scripts/build-catalog-fixture.mjs`
+  ("is the CI entry point") describe it as what CI runs. It is manual-only.
 - `frontend/scripts/check-budgets.mjs` checks gzip budgets of 300 KiB initial
   JS, 1 MiB total and 150 KiB per lazy chunk
-  (`frontend/scripts/check-budgets.mjs:6-14`) against a production storefront
+  (`frontend/scripts/check-budgets.mjs`,
+  "T28-AC04 design budgets") against a production storefront
   build. No npm script, workflow or `mise` task runs it. The budgets every
   production build does enforce are the different ones in
-  `frontend/angular.json:37-48` (initial: 500kB warning, 1MB error). It is
+  `frontend/angular.json` ("budgets"; initial: 500kB warning, 1MB error). It is
   manual-only.
 
 ## Where to start
@@ -167,9 +184,11 @@ Start from the changed-paths script in step 1 below; it reads
 workflows live. `mise tasks --all` lists every root and area task except hidden ones, and
 `frontend/README.md` ("npm scripts") describes every frontend script. The
 canonical examples are the gate list under "Gates before a commit" below,
-`frontend/mise.toml:8-21` (exactly what `//frontend:test` and
-`//frontend:build` run), and `backend/services/commerce/build.gradle:141-245`
-(every backend gate).
+`frontend/mise.toml` ("[tasks.test]"; `frontend/mise.toml`, "[tasks.build]":
+exactly what `//frontend:test` and `//frontend:build` run), and
+`backend/services/commerce/build.gradle` ("tasks.named('test') { inputs.file" through
+`backend/services/commerce/build.gradle`, "tasks.named('pmdMain')": every
+backend gate).
 
 ## From a diff to green checks
 
@@ -227,7 +246,7 @@ canonical examples are the gate list under "Gates before a commit" below,
      anything, and exits 0 even when it prints none, so read the list rather
      than the exit status. angular.dev calls `include` relative to the
      project root (https://angular.dev/cli/test), but the installed builder
-     (22.1.8) resolves it against the project's source root after stripping a
+     resolves it against the project's source root after stripping a
      leading `projects/<name>/src/`, so the project-root-relative form
      (`src/app/…`) selects nothing. A directory takes every spec inside it. A
      source file `<name>.ts` takes the `<name>.spec.ts` or `<name>.test.ts`
@@ -251,7 +270,7 @@ canonical examples are the gate list under "Gates before a commit" below,
      `backend/gradlew -p backend :services:commerce:test --tests CartServiceTest`.
      A class annotated `@IntegrationTest` runs only under `integrationTest`:
      `backend/gradlew -p backend :services:commerce:integrationTest --tests CartApiTest`
-     (https://docs.gradle.org/9.7.1/userguide/java_testing.html). A focused
+     (https://docs.gradle.org/<version>/userguide/java_testing.html). A focused
      Gradle run does not check the coverage floor; only `check` does.
 
 4. **Run the gates before the commit.** Run each command under "Gates before
@@ -259,7 +278,7 @@ canonical examples are the gate list under "Gates before a commit" below,
    terminal, run the unit suite as
    `npm --prefix frontend run test -- --no-watch` or through
    `mise run //frontend:test`, which passes `--watch=false`
-   (`frontend/mise.toml:9`).
+   (`frontend/mise.toml`, "npm run test -- --watch=false").
 
 5. **A check is red.** Settle whether the failure is this branch's before
    fixing or dismissing it ("Pre-existing failures"), and give a bug fix a
@@ -278,8 +297,9 @@ How Vitest, Playwright and the other tools that
 from their documentation, with the URL beside the claim, and not found out by
 a throwaway experiment. The backend's build tools are read the same way:
 Gradle and its JaCoCo and PMD plugins at
-https://docs.gradle.org/9.7.1/userguide/, the release the Gradle wrapper pins;
-PMD at https://docs.pmd-code.org/pmd-doc-7.24.0/, the release the build pins;
+https://docs.gradle.org/<version>/userguide/, the release the Gradle wrapper pins;
+PMD at https://docs.pmd-code.org/pmd-doc-<version>/, the release the build pins (`<version>` is read from
+`backend/services/commerce/build.gradle` ("toolVersion"));
 and JaCoCo at https://www.jacoco.org/jacoco/trunk/doc/, which documents
 JaCoCo's development build rather than the version Gradle applies here. An
 experiment answers one narrow question at the cost of a build and leaves a
@@ -446,7 +466,7 @@ in one checkout, and when a report or `git status` looks like another run's.
   local mirror, says how closely it mirrors it, and names what CI keeps when
   the job fails.
 - In the repository: `frontend/README.md` ("npm scripts"),
-  `frontend/README.md` ("Tests") and `frontend/README.md` ("CI");
+  `frontend/README.md` ("Tests") and `frontend/README.md` ("🧪 CI");
   `backend/README.md` ("Tests and quality gates"); and the decisions behind
   the backend gates:
   `backend/docs/decisions/0003-h2-postgresql-mode-for-tests.md`,
@@ -457,8 +477,8 @@ in one checkout, and when a report or `git status` looks like another run's.
 ## Keep this skill current
 
 Edit this skill in the same change as any change that alters a command, a
-side-effect class, a floor, a port, or a line this skill or its references
-cite by `path:line`. The files most often behind one are: the scripts block of
+side-effect class, a floor, a port, or a name this skill or its references
+cite. The files most often behind one are: the scripts block of
 `frontend/package.json` or `tools/package.json`; any of the five `mise.toml`
 files; the `test` targets of `frontend/angular.json`, a project's
 `vitest.config.ts` or `frontend/vitest.contract.config.ts`;
@@ -475,17 +495,17 @@ test file cited for side effects, `tools/dev-server/dev-server.test.ts`. A
 workflow or `mise` task that starts running `fixtures:catalog:check` or
 `check-budgets.mjs` ends their "Not wired to anything" entry.
 
-A line added or removed above a cited line alters that citation too, because
-it moves the anchor, and the checker below fails a moved anchor only once it
-falls past the end of its file. So after an edit to any file this skill or its
-references cite by `path:line`, whether or not the list above names it, run
-the checker below with `--show-anchors` and read each line it prints against
-the claim beside it; a range longer than ten lines ends in
-`... (+N more lines)`, so read its rest in the file. Whether a file you edited
-is cited by line is one search, run from this skill's directory:
+A citation here names its target, a heading, task, function, key or
+distinctive phrase, and never gives a line number. So after an edit to any
+file this skill or its references cite, whether or not the list above names
+it, run the checker below and reread each section cited in that file against
+the claim beside it, since check (e) confirms only that a quoted name still
+occurs somewhere in its target, and fails only a name or a target that is gone
+(`mibolt-project-map/references/citation-check.md`). Whether a file you edited
+is cited is one search, run from this skill's directory:
 
 ```bash
-grep -rn '<path>:[0-9]' SKILL.md references
+grep -rn '<path>' SKILL.md references
 ```
 
 The changed-paths script reads the CI files live and needs no edit when a
@@ -497,21 +517,9 @@ After an upgrade of Vitest, `@angular/build`, `@angular-eslint/builder`, ESLint
 or Gradle, or an edit to a file the gate-output summarizer reads, re-check it
 as `references/commands.md` ("Keeping the summarizer current") says.
 
-An edit to a file this skill cites a section of by name (today
-`frontend/README.md`, `backend/README.md`, the skills
-`mibolt-frontend-code-standards` and `mibolt-workspace-ops`, and this skill's
-own `SKILL.md`, which its references cite) means re-running the checker below
-and rereading each section cited in that file, since check (e) confirms only
-that a quoted name still occurs somewhere in its target
-(`mibolt-project-map/references/citation-check.md`).
-
-Check every path, anchor and command cited here, from the directory that
+Check every path, section name and command cited here, from the directory that
 holds the MiBolt skills, with:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs mibolt-verification
 ```
-
-Add `--show-anchors` to print the current text of each cited line, up to ten
-per range; whether that text still says what this skill claims is for you to
-judge, since the script cannot.
