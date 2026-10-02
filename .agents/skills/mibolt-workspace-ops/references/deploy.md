@@ -138,7 +138,7 @@ Ingress that sends every path, `/api/v1` included, to `web`.
 
 ## The deploy checks
 
-`deploy/tests/` holds six Python checks. CI runs all six, and its commands are
+`deploy/tests/` holds four Python checks. CI runs all four, and its commands are
 at `.github/workflows/candidate.yml` ("Check candidate provenance and app chart") and
 `.github/workflows/candidate.yml` ("Test the worktree stack script"); `check-chart.py`,
 `test-candidate.py` and `test-stack.py` also state theirs in their docstring.
@@ -150,9 +150,8 @@ at `.github/workflows/candidate.yml` ("Check candidate provenance and app chart"
   (`deploy/tests/check-chart.py`, "unexpected chart resources"), published-version labels, and six
   rejection cases (`deploy/tests/check-chart.py`, "chart accepted {description}"). It writes only to a
   temporary directory.
-- `test-candidate.py`, `test-stable-release.py`, `test-preview-smoke.py` and
-  `test-github-deployment.py` import `inputs.py`, `publish.py`,
-  `stable_smoke.py`, `preview_smoke.py` and `github_deployment.py` from
+- `test-candidate.py` and `test-stable-release.py` import `inputs.py`,
+  `publish.py` and `stable_smoke.py` from
   `deploy/candidate/`; `deploy/candidate/build_metadata.py` has no test.
 - `test-stack.py` covers `deploy/stack.sh` in a throwaway git repository with a
   fake Compose wrapper, and never runs Docker

@@ -106,8 +106,8 @@ by hand; `.editorconfig`, `.gitattributes`, `.gitignore`,
   `.github/components.yml` and calls up to five reusable workflows, then
   `ci-ok`. On the same pull-request and `main` push events, beside CI rather
   than after it, `.github/workflows/candidate.yml` builds the images
-  (`.github/workflows/candidate.yml`, "pull_request:"); the publish, preview-smoke,
-  stable-smoke and close-preview workflows run from the default branch. Only
+  (`.github/workflows/candidate.yml`, "pull_request:"); the publish and stable-smoke
+  workflows run from the default branch. Only
   `.github/workflows/contracts.yml` goes through mise; the other workflows call
   npm, Gradle, `deploy/compose.sh`, uv, Docker and Python directly, and none
   runs a root task.
@@ -307,7 +307,7 @@ The deploy checks run through uv with no uv pinned at the root:
 (`mise.toml`, "Lint and inspect the MiBolt Helm app chart"), and
 `.github/workflows/candidate.yml` ("Check candidate provenance and app chart";
 `.github/workflows/candidate.yml`, "Test the worktree stack script") runs all
-six `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
+four `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
 
 ### Naming
 

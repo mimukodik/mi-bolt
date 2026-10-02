@@ -94,21 +94,17 @@ promoted; this is only the wiring.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm v4.2.2, computes the image input hashes (`deploy/candidate/inputs.py`), runs the six `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
+| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm v4.2.2, computes the image input hashes (`deploy/candidate/inputs.py`), runs the four `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
 | `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml`, "Verify inputs, publish immutable images and chart, write receipt") |
-| `.github/workflows/preview-smoke.yml` ("Preview Smoke") | `workflow_run` of `Publish Candidate`, a daily `schedule`, `workflow_dispatch` | waits for the deployed preview and runs `npm run e2e:smoke` against it, then reports the deployment to GitHub (`.github/workflows/preview-smoke.yml`, "Existing smoke tests against the public preview") |
-| `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | the same against the stable demo (`.github/workflows/stable-smoke.yml`, "Existing smoke tests against the stable demo") |
-| `.github/workflows/close-bolt-preview.yml` ("Deactivate Bolt Preview Deployment") | `pull_request_target`, `closed` or `unlabeled` | for a same-repository pull request that closed or lost the `bolt-preview` label, marks its preview deployment inactive (`.github/workflows/close-bolt-preview.yml`, "Mark preview inactive in GitHub") |
+| `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | waits for the stable demo and runs both purchase flows against it (`.github/workflows/stable-smoke.yml`, "Existing smoke tests against the stable demo") |
 
 **Everything after `.github/workflows/candidate.yml` runs the default branch's
 copy.** A `workflow_run` workflow triggers only when its file exists on the
-default branch and runs in that branch's context; `pull_request_target` runs in
-the context of the base repository's default branch; a `schedule` runs on its
-latest commit
+default branch and runs in that branch's context
 (https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 These workflows also check out `ref: ${{ github.sha }}` for the code they run
 (`.github/workflows/publish-candidate.yml`, "Checkout trusted publisher and chart";
-`.github/workflows/preview-smoke.yml`, "Trusted receipt and fencing wrapper"). An edit to any of them, or to the
+`.github/workflows/stable-smoke.yml`, "Trusted receipt and fencing wrapper"). An edit to any of them, or to the
 `deploy/candidate/*.py` scripts they call, takes effect only once it is on
 `main`.
 
@@ -197,8 +193,8 @@ files; `deploy/candidate/README.md` ("Run local checks with:") runs `actionlint`
 | `Candidate Build` failed at "Compute tracked build inputs" | `.github/components.yml` and `deploy/candidate/inputs.py` disagree | "Changing a path filter" above |
 | an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The candidate and deployment chain" above |
 | `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md` ("deliberate no-op") |
-| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md` ("The coordinator admits only labeled PRs"), `deploy/candidate/README.md` ("fork PRs have no automatic candidate receipt") |
+| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md` ("label on the PR to enable its preview"), `deploy/candidate/README.md` ("fork PRs have no automatic candidate receipt") |
 
-Re-running the preview smoke by hand dispatches a workflow on GitHub
-(`deploy/candidate/README.md`, "retry the successful publisher run explicitly"): that is an action outside this
-repository, and the user decides on it.
+PR previews are available at `https://bolt-pr-<PR-number>.mimukodik.hu` once
+the `bolt-preview` label is on and the published candidate is ready. Optional
+manual purchase checks and their retry command are in `deploy/candidate/README.md`.
