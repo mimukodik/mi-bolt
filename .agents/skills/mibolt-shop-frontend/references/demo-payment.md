@@ -23,7 +23,8 @@ returns to the shop with another full page load and a GET.
   bootstrapping: it hydrates the snapshot of the scenario the shop's tab
   remembered and writes the outcome back under that name, while its own
   handlers run the scenario its own URL names
-  (`frontend/projects/demo-payment/src/main.ts:16-34` explains why).
+  (`frontend/projects/demo-payment/src/main.ts` ("Boot MSW before Angular so the
+  page's first read is already intercepted") explains why).
 - `frontend/projects/demo-payment/src/app/app.config.ts` provides zoneless
   change detection, `HttpClient` with `demoSessionInterceptor` only, the
   router with `withComponentInputBinding()`, and the shop SDK's
@@ -38,7 +39,8 @@ returns to the shop with another full page load and a GET.
 - The app styles itself with its own `--pay-*` custom properties, declared in
   `frontend/projects/demo-payment/src/styles.css`, not with
   `frontend/projects/storefront/src/styles/tokens.css`. The header of that
-  file (`frontend/projects/demo-payment/src/styles.css:9-18`) takes the
+  file (`frontend/projects/demo-payment/src/styles.css`, "The numeric scales below
+  are the shop's reference scales") takes the
   shop's numeric scales and a few of its colours (white, the error red, the
   demo banner's warning pair) from `frontend/docs/design/yettel.md` §2 and
   §9, and keeps the palette and the typeface deliberately its own.
@@ -49,7 +51,7 @@ returns to the shop with another full page load and a GET.
 ## 2. `PaymentPage` states
 
 `PageState`
-(`frontend/projects/demo-payment/src/app/payment-page.ts:68-77`) is one
+(`frontend/projects/demo-payment/src/app/payment-page.ts`, "type PageState") is one
 discriminated union in one signal; everything else is `computed`.
 
 | State | Reached when |
@@ -93,13 +95,15 @@ discriminated union in one signal; everything else is `computed`.
   an idempotency key and stores its id in `sessionStorage`. `ReviewPage`
   sends the browser to the intent's `redirectUrl` through the storefront's
   own `LOCATION_ASSIGN`
-  (`frontend/projects/storefront/src/app/features/checkout/review-page.ts:59`).
+  (`frontend/projects/storefront/src/app/features/checkout/review-page.ts`, "export const LOCATION_ASSIGN").
   The two apps keep separate tokens because lint forbids one app importing
   another.
 - **URLs.** The mock issues `redirectUrl` `/demo-fizetes/<id>` and
   `returnUrl` `/penztar?paymentIntentId=<id>`, with `&mi-scenario=<name>`
   appended under a named scenario
-  (`frontend/projects/shop-mocks/src/orders/order-store.ts:274-275`).
+  (`frontend/projects/shop-mocks/src/orders/order-store.ts`, "/demo-fizetes/${id}";
+  `frontend/projects/shop-mocks/src/orders/order-store.ts`,
+  "/penztar?paymentIntentId=${id}${scenarioQuery}").
 - **Returning.** `/penztar` with no child path loads `PaymentReturnPage`
   (`frontend/projects/storefront/src/app/features/checkout/payment-return-page.ts`).
   It has no guard, because the SPA starts cold; it hydrates the cart and the
@@ -131,12 +135,13 @@ discriminated union in one signal; everything else is `computed`.
   because the payment app's test target has no `setupFiles`, registers each
   intent answer with `server.use(...)`, and overrides `LOCATION_ASSIGN`.
 - `npm --prefix frontend run build:payment` writes the production build to
-  `dist/demo-payment/` in `frontend/` (`frontend/angular.json:157`);
+  `dist/demo-payment/` in `frontend/` (`frontend/angular.json`, "dist/demo-payment");
   `npm --prefix frontend run check:payment-dist` then fails if MSW reached
   that output.
 - `npm --prefix frontend run check:payment-boot` serves the app with
   `ng serve` on port 4299 and checks that the mock worker script is served
-  under `/demo-fizetes/` (`frontend/scripts/check-app-boot.mjs:1-20`), then
+  under `/demo-fizetes/` (`frontend/scripts/check-app-boot.mjs`, "service-worker script is served at
+  the app's own base path"), then
   stops that server. `npm --prefix frontend run check:admin-boot` uses the
   same port, so the two run one after the other, never at once.
 - End-to-end coverage of the round trip is

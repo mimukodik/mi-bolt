@@ -2,8 +2,9 @@
 
 Bootstrap, routes and guards, layouts, the root services, interceptors and
 storage keys of `frontend/projects/storefront/`. Paths are relative to the
-repository root. Where a line number is given, re-read the line before relying
-on it.
+repository root. A citation names its target (a heading, function, constant
+or distinctive phrase) and never gives a line number; re-read the named part
+before relying on it.
 
 ## Contents
 
@@ -18,13 +19,14 @@ on it.
 
 ## 1. Bootstrap and environments
 
-- `frontend/projects/storefront/src/main.ts:40-65` bootstraps directly when
+- `frontend/projects/storefront/src/main.ts` ("const start = async") bootstraps directly when
   `environment.production` is true. Otherwise it loads
   `frontend/projects/storefront/src/core/bootstrap-demo.ts` through a dynamic
   `import()`, awaits `startMocks()`, and only then calls
   `bootstrapApplication`. A failed start renders the `#mi-bolt-fatal`
   template instead of a half-booted app.
-- `startMocks()` (`frontend/projects/storefront/src/core/bootstrap-demo.ts:58-89`)
+- `startMocks()` (`frontend/projects/storefront/src/core/bootstrap-demo.ts`,
+  "export async function startMocks")
   resolves the scenario (`?mi-scenario=` or the one the tab remembered),
   hydrates the `sessionStorage` snapshot, and starts the worker. It returns
   without starting anything when `environment.demo` is false, and throws in
@@ -35,7 +37,8 @@ on it.
   reads the tokens instead of importing the bootstrap module, and imports
   `@mi-bolt/mocks/*` only as `import type`, so the MSW graph stays out of the
   eager bundle.
-- `frontend/projects/storefront/src/app/app.config.ts:19-31` provides zoneless
+- `frontend/projects/storefront/src/app/app.config.ts`
+  ("Local production / development build providers") provides zoneless
   change detection, `provideHttpClient` with the two interceptors (section 6),
   `provideRouter` with `withComponentInputBinding()` and in-memory scrolling,
   and `provideApiConfiguration(resolveApiRoot())`. Each is a named top-level
@@ -74,7 +77,7 @@ wanted URL in `vissza`. A new gated route carries it.
 
 ## 3. Checkout routes and guards
 
-`frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts:81-174`
+`frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts` ("checkoutRoutes")
 mounts each step under its own `CheckoutLayout`, with the step name in route
 `data`, which the layout reads as its required `step` input.
 
@@ -95,10 +98,10 @@ which is `frontend/projects/storefront/src/app/features/cart/cart-page.ts`.
   `reviewGuard` inject everything before their first `await`, await
   `CartFacade.ensureCart()` and `CheckoutFacade.ensureSession()`, then return
   `true` or a `UrlTree` to the earliest unsatisfied step, carrying a
-  `navigationReason` query parameter (`NavigationReason`,
-  `frontend/projects/storefront/src/app/features/checkout/checkout.guards.ts:67`).
+  `navigationReason` query parameter (`frontend/projects/storefront/src/app/features/checkout/checkout.guards.ts`,
+  "export type NavigationReason").
   The header of that file
-  (`frontend/projects/storefront/src/app/features/checkout/checkout.guards.ts:1-47`)
+  (`frontend/projects/storefront/src/app/features/checkout/checkout.guards.ts`, "Checkout wizard route guards.")
   explains why hydration sits inside each guard rather than in a separate
   guard in front of it. `successGuard` stays synchronous.
 - **Pages decide, steps render.** `ContactPage`, `DeliveryPage` and
@@ -108,7 +111,7 @@ which is `frontend/projects/storefront/src/app/features/cart/cart-page.ts`.
   it.
 - `NavigationReasonBanner` reads `navigationReason` on the cart, contact and
   delivery pages and shows the sentence `navigationReasonMessage`
-  (`frontend/projects/storefront/src/app/features/checkout/navigation-reason.ts:24`)
+  (`frontend/projects/storefront/src/app/features/checkout/navigation-reason.ts`, "navigationReasonMessage")
   maps it to. A new reason extends the union and that function.
 
 ## 4. Layouts and the shell
@@ -122,7 +125,7 @@ which is `frontend/projects/storefront/src/app/features/cart/cart-page.ts`.
 renders the header, the footer and `DemoNotice`.
 `frontend/projects/storefront/src/app/core/navigation/` holds the header,
 footer and mobile drawer. `BREADCRUMB_VISIBLE`
-(`frontend/projects/storefront/src/app/core/navigation/breadcrumb-visibility.ts:9`)
+(`frontend/projects/storefront/src/app/core/navigation/breadcrumb-visibility.ts`, "BREADCRUMB_VISIBLE")
 is `false`, which keeps the breadcrumb switched off.
 
 ## 5. Root services
@@ -131,14 +134,14 @@ All six are `@Service()` classes that use `inject()`.
 
 | Service | File | `Api` built by | Owns |
 |---|---|---|---|
-| `CatalogFacade` | `frontend/projects/storefront/src/app/features/catalog/catalog.facade.ts:195` | `inject(Api)` | the URL-driven query, results, facets, `vm` |
-| `ProductFacade` | `frontend/projects/storefront/src/app/features/product/product.facade.ts:117` | `inject(Api)` | product, variant selection, gallery, related, `vm` |
-| `CartFacade` | `frontend/projects/storefront/src/app/features/cart/cart.facade.ts:80` | `new Api(...)` | the cart snapshot, its version, `error`, `conflict`, `cartExpired` |
-| `CheckoutFacade` | `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:158` | `new Api(...)` | session, options, payment intent, order, `priceChange` |
-| `OrderSubmission` | `frontend/projects/storefront/src/app/features/checkout/order-submission.ts:129` | none (calls `CheckoutFacade`) | eight `SubmitOutcome` kinds |
-| `DemoAccess` | `frontend/projects/storefront/src/app/core/demo-access/demo-access.ts:60` | `inject(Api)` | the demo gate's answer for this page load |
+| `CatalogFacade` | `frontend/projects/storefront/src/app/features/catalog/catalog.facade.ts` ("export class CatalogFacade") | `inject(Api)` | the URL-driven query, results, facets, `vm` |
+| `ProductFacade` | `frontend/projects/storefront/src/app/features/product/product.facade.ts` ("export class ProductFacade") | `inject(Api)` | product, variant selection, gallery, related, `vm` |
+| `CartFacade` | `frontend/projects/storefront/src/app/features/cart/cart.facade.ts` ("export class CartFacade") | `new Api(...)` | the cart snapshot, its version, `error`, `conflict`, `cartExpired` |
+| `CheckoutFacade` | `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts` ("export class CheckoutFacade") | `new Api(...)` | session, options, payment intent, order, `priceChange` |
+| `OrderSubmission` | `frontend/projects/storefront/src/app/features/checkout/order-submission.ts` ("export class OrderSubmission") | none (calls `CheckoutFacade`) | eight `SubmitOutcome` kinds |
+| `DemoAccess` | `frontend/projects/storefront/src/app/core/demo-access/demo-access.ts` ("export class DemoAccess") | `inject(Api)` | the demo gate's answer for this page load |
 
-`HomePage` (`frontend/projects/storefront/src/app/features/home/home-page.ts:38`)
+`HomePage` (`frontend/projects/storefront/src/app/features/home/home-page.ts`, "inject(Api)")
 also calls `inject(Api)`. Which construction a new unit takes is not
 settled; entry C2 of the conflict register in
 `mibolt-frontend-code-standards` records both.
@@ -150,7 +153,7 @@ settled; entry C2 of the conflict register in
 - `CheckoutFacade` never owns a version. It reads `cart.cart().version` for
   `If-Match` and writes each answer back through
   `CartFacade.acceptServerVersion`
-  (`frontend/projects/storefront/src/app/features/cart/cart.facade.ts:371`).
+  (`frontend/projects/storefront/src/app/features/cart/cart.facade.ts`, "acceptServerVersion(version: number)").
 - Failure routing is one private function per facade (`recordFailure`), so
   412, 410 and other problems always land in the same signal. A 404 on an
   intent or order read is returned to the caller and never becomes a banner.
@@ -191,12 +194,12 @@ request, any other failure rotates it, and a placed order clears every key
 ## 8. Security-relevant helpers
 
 - `resolveAssetUrl`
-  (`frontend/projects/storefront/src/app/shared/media/resolve-asset-url.ts:18`)
+  (`frontend/projects/storefront/src/app/shared/media/resolve-asset-url.ts`, "export function resolveAssetUrl")
   is the only producer of an `<img src>`. It accepts an absolute `http(s)`
   URL or a root-relative path, and refuses protocol-relative, relative,
   encoded and dot-segment paths and every other scheme.
 - `isSafeReturnUrl`
-  (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts:49`)
+  (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts`, "export function isSafeReturnUrl")
   admits a post-sign-in `vissza` only as a same-origin absolute path with no
   backslash that is not the sign-in route itself.
 

@@ -39,12 +39,12 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    its `.html`) carry the control. The drawer edits a draft that only Apply
    emits.
 5. **Chips.** `FilterIdentity`
-   (`frontend/projects/storefront/src/app/shared/types/filter-identity.ts:14-17`)
+   (`frontend/projects/storefront/src/app/shared/types/filter-identity.ts`, "export interface FilterIdentity")
    names a chip by `keyof CatalogFilters` plus `'q'` and `'featured'`, so a
    field step 2 put on `CatalogFilters` is already a chip name, and only a
    filter kept off `CatalogFilters` adds its literal there. Add a `case` to
    `CatalogPage.onChipRemoved`
-   (`frontend/projects/storefront/src/app/features/catalog/catalog-page.ts:286`).
+   (`frontend/projects/storefront/src/app/features/catalog/catalog-page.ts`, "onChipRemoved").
    `AppliedFilters` only renders what it is given.
 6. **Mock.** Parse and apply the parameter in
    `frontend/projects/shop-mocks/src/catalog/catalog-filter.ts`, which lists
@@ -94,16 +94,16 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    the result.
 3. **Facade.** The four section writes, `updateContact`, `updateBilling`,
    `updateDelivery` and `updatePayment`, all go through the private `patch()`
-   (`frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:319-362`).
+   (`frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts`, "private patch(").
    A new section needs `UpdateCheckoutRequest` to carry it, which is a
    contract change.
 4. **Server errors.** A 422 carries `fieldErrors` addressed by JSON pointer.
    The contact step maps them with `pointerToFieldKey`
-   (`frontend/projects/storefront/src/app/features/checkout/contact.schema.ts:70`)
+   (`frontend/projects/storefront/src/app/features/checkout/contact.schema.ts`, "export function pointerToFieldKey")
    and `toContactFieldErrors`
-   (`frontend/projects/storefront/src/app/features/checkout/contact-server-errors.ts:68`).
+   (`frontend/projects/storefront/src/app/features/checkout/contact-server-errors.ts`, "export function toContactFieldErrors").
 5. **Guards.** A section the review step requires is checked in `reviewGuard`
-   (`frontend/projects/storefront/src/app/features/checkout/checkout.guards.ts:222-239`).
+   (`frontend/projects/storefront/src/app/features/checkout/checkout.guards.ts`, "export const reviewGuard").
 6. **A new step** also needs a route entry in
    `frontend/projects/storefront/src/app/features/checkout/checkout.routes.ts`
    with `CheckoutLayout`, its `data.step` and a `canMatch` guard; a member in
@@ -116,7 +116,7 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    stored in `frontend/projects/shop-mocks/src/checkout/checkout-store.ts`. A
    new draft field that must survive a reload also changes
    `PersistedCheckoutDraft`
-   (`frontend/projects/shop-mocks/src/persistence.ts:70`), and with it the
+   (`frontend/projects/shop-mocks/src/persistence.ts`, "export interface PersistedCheckoutDraft"), and with it the
    snapshot schema.
 8. **Specs**: the co-located specs of the step, the page, the facade and the
    guards, the wizard-level
@@ -168,8 +168,8 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
 
 1. **Mapping.** Each mutating facade turns an `HttpErrorResponse` into a typed
    error in a module-level `mapError`
-   (`frontend/projects/storefront/src/app/features/cart/cart.facade.ts:569`,
-   `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:795`),
+   (`frontend/projects/storefront/src/app/features/cart/cart.facade.ts`, "function mapError(err: unknown): DispatchResult";
+   `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts`, "function mapError(err: unknown): CheckoutError"),
    narrowing the body with `isRecord` and never with a cast.
 2. **Routing.** The private `recordFailure` of each facade sends a 412 to
    `conflict`, a 410 to `cartExpired` and anything else to `error`. It keeps
@@ -183,22 +183,22 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
    shared primitives such as `StatusMessage` and `ErrorState`.
 5. **Reproduce.** In a unit spec, override one route with
    `server.use(http.<method>(...))` returning the Problem, as
-   `frontend/projects/storefront/src/app/features/checkout/checkout-facade.spec.ts:558`
-   does for a 412 on `PATCH /checkout` and
-   `frontend/projects/storefront/src/app/features/checkout/checkout-facade.spec.ts:717`
-   for a 410. In the browser, `?mi-scenario=fail-<operation>` and its sibling
+   `frontend/projects/storefront/src/app/features/checkout/checkout-facade.spec.ts`
+   ("F-12: a 412 surfaces conflict, refetches both, and does not replay") does for a 412 on `PATCH /checkout` and
+   `frontend/projects/storefront/src/app/features/checkout/checkout-facade.spec.ts`
+   ("F-15: a 410 sets cartExpired and drops the session") for a 410. In the browser, `?mi-scenario=fail-<operation>` and its sibling
    fault scenarios fail one endpoint on demand; `FAULT_OPERATIONS`
-   (`frontend/projects/shop-mocks/src/faults.ts:64`) lists the operations.
+   (`frontend/projects/shop-mocks/src/faults.ts`, "export const FAULT_OPERATIONS") lists the operations.
 
 ## 7. User-facing copy and prices
 
 - **Copy** is Hungarian, written as string literals in the page or component
   that shows it; there is no i18n pipeline. The add-to-cart refusal sentences,
   the quantity-limit one included, are built in `describeAddFailure`
-  (`frontend/projects/storefront/src/app/features/product/product-page.ts:59`)
+  (`frontend/projects/storefront/src/app/features/product/product-page.ts`, "function describeAddFailure")
   from the error's `code` and `params`. A cart line shows its quantity as text
   and has no quantity control
-  (`frontend/projects/storefront/src/app/features/cart/cart-line.ts:11-13`),
+  (`frontend/projects/storefront/src/app/features/cart/cart-line.ts`, "The quantity as read-only text"),
   so the product page is the only place a shopper meets the quantity limit.
   The cart page builds its sentences in
   `frontend/projects/storefront/src/app/features/cart/cart-page.ts`:
@@ -210,14 +210,15 @@ boolean, `storageGb` for a fixed set of values, and `brands` for a free list.
   Problem's `title` and `detail` are English developer text and are never
   shown (`contracts/commerce/kommunikacio.md` §6).
 - **Prices.** `PriceBlock.formatHuf`
-  (`frontend/projects/storefront/src/app/shared/ui/price-block/price-block.ts:68`)
+  (`frontend/projects/storefront/src/app/shared/ui/price-block/price-block.ts`, "static formatHuf")
   is the storefront's price formatter: it groups whole forints with a
   non-breaking space, `PriceBlock` renders every price through it, and
   `ReviewStep` calls it directly. The catalogue's minimum and maximum price
   chips are the exception, formatted with `toLocaleString('hu-HU')` in
   `buildChips`. The payment app formats with `CurrencyPipe` under the
   `hu-HU` locale registered in
-  `frontend/projects/demo-payment/src/main.ts:14`.
+  `frontend/projects/demo-payment/src/main.ts`
+  ("registerLocaleData(localeHu, 'hu-HU')").
 - Changing a visible sentence or a `data-testid` can break end-to-end specs:
   every spec under `frontend/e2e/integration/` locates elements by test id,
   and most also by text or role.

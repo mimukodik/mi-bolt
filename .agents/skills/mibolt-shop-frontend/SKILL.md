@@ -72,7 +72,7 @@ Consult these when their condition holds, and not otherwise:
   `mise run storefront` but these mocks.
 
 The two apps reach the backend only through the generated shop SDK
-(`@mi-bolt/api/*`, which `frontend/tsconfig.json:17-21` maps to
+(`@mi-bolt/api/*`, which `frontend/tsconfig.json` ("@mi-bolt/api/*") maps to
 `frontend/projects/shop-api/src/generated/`), as
 `api.invoke(fn, params, context)`. The mocks answer with the same generated
 models, so a contract change that renames or drops a field breaks them at
@@ -101,8 +101,8 @@ compile time as well.
   colour, radius and font names resolve to those theme variables.
   `frontend/projects/storefront/src/styles/primitives.css` holds the font
   faces, the page reset and the shared focus ring. The three are the build's
-  global `styles` (`frontend/angular.json:29-33`). The payment app imports no
-  Tailwind (`frontend/projects/demo-payment/src/styles.css:4-7`).
+  global `styles` (`frontend/angular.json`, "projects/storefront/src/styles/tokens.css"). The payment app imports no
+  Tailwind (`frontend/projects/demo-payment/src/styles.css`, "Plain CSS on purpose").
 - `frontend/projects/storefront/public/` holds the files the build copies as
   they are: the fonts, `favicon.ico`, the images under
   `frontend/projects/storefront/public/assets/` (the placeholder and the
@@ -124,8 +124,8 @@ pipeline, a `Subject` into `switchMap` onto the SDK and back into signals, so
 a late answer never overwrites a newer query. There is no state library.
 
 **The rules the shop keeps.** The header of
-`frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts:1-26`
-states most of them in one place:
+`frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts`
+("checkout application facade on the 2.0.0 contract") states most of them in one place:
 
 - The server is authoritative. The checkout summary, `complete` and the cart
   version come from its answer, and the checkout never recomputes them. A
@@ -202,14 +202,15 @@ Copy these when you need a pattern:
    (see the docs index in `mibolt-project-map`), and some of its per-screen
    lines record a decision a change can collide with, such as the cart's
    read-only quantity and "No free shipping promise or discounts"
-   (`frontend/docs/spec/screens.md:73`). Not every such decision shows in the
+   (`frontend/docs/spec/screens.md`, "S4.1 Cart"). Not every such decision shows in the
    code, so read the section of the screen you are changing. Raise a
    collision before building rather than settling it either way, because
    whether the recorded decision or the new request stands is the product
    owner's call. Take no colour, type, radius, spacing or recipe value from
    the spec: those come from `frontend/docs/design/yettel.md` (Design
    authority, under Local conventions), which
-   `frontend/docs/spec/screens.md:7` names too.
+   `frontend/docs/spec/screens.md` ("as the design reference at execution AND
+   verification") names too.
 3. **Check the SDK.** If the field, parameter, operation or error code is not
    in `frontend/projects/shop-api/src/generated/`, the contract changes first
    in `mibolt-cross-package-changes`.
@@ -256,9 +257,9 @@ because they are easy to break in this area.
   Lint enforces the assertion ban only in the admin and two contract files
   (register entry C1), and the written rule binds the shop all the same.
   Narrow `unknown` with the storefront's own `isRecord`
-  (`frontend/projects/storefront/src/app/shared/utils/is-record.ts:5`) or a
+  (`frontend/projects/storefront/src/app/shared/utils/is-record.ts`, "isRecord") or a
   new guard, as both `mapError` functions do.
-- **One app never imports another** (`frontend/eslint.config.mjs:410-437`),
+- **One app never imports another** (`frontend/eslint.config.mjs`, "CROSS_APP_IMPORT_MESSAGE"),
   which is why the storefront and the payment app each keep their own
   `LOCATION_ASSIGN` token. Code both need goes into a library, which is
   `mibolt-cross-package-changes` work.
@@ -281,19 +282,22 @@ because they are easy to break in this area.
   Introducing any other Sass feature, such as `@use`, a mixin or a `$`
   variable, is a decision to raise, not a style choice (register entry C5).
 - **Zoneless change detection is provided explicitly**
-  (`frontend/projects/storefront/src/app/app.config.ts:19`,
-  `frontend/projects/demo-payment/src/app/app.config.ts:16`), and
-  `frontend/projects/storefront/src/app/app.spec.ts:107` asserts it (register
+  (`frontend/projects/storefront/src/app/app.config.ts`, "provideZonelessChangeDetection()";
+  `frontend/projects/demo-payment/src/app/app.config.ts`,
+  "provideZonelessChangeDetection()"), and
+  `frontend/projects/storefront/src/app/app.spec.ts`
+  ("T01-AC02: provideZonelessChangeDetection in appConfig") asserts it (register
   entry C4). Do not add or remove it as a side change.
 - **Shopper-facing copy is Hungarian, everything else English**
-  (`frontend/docs/spec/execution-rules.md:9`). The copy is hard-coded in the
+  (`frontend/docs/spec/execution-rules.md`, "Public demo UI stays Hungarian;
+  everything else committed to this repository is English"). The copy is hard-coded in the
   component or page that shows it; there is no i18n pipeline (observed).
 - **Storage is `sessionStorage` only**, and every access sits in `try`/`catch`
   and falls back to page-local state when storage is denied (observed).
 - **Two helpers are security-relevant.** Every `<img src>` comes from
   `resolveAssetUrl`, and every post-sign-in return target passes
   `isSafeReturnUrl`
-  (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts:49`).
+  (`frontend/projects/storefront/src/app/core/demo-access/demo-access.ts`, "isSafeReturnUrl").
   Do not route around either.
 - **Accessibility.** No work goes into AXE checks, WCAG minimums, keyboard
   handling or ARIA, and focus handling stays at what a native element gives,
@@ -316,7 +320,7 @@ because they are easy to break in this area.
 **Unit specs.** Specs sit beside their source as `*.spec.ts`.
 
 - A component with inputs is tested through a host component in `TestBed`, as
-  `frontend/projects/storefront/src/app/features/product/variant-selector.spec.ts:60-81`
+  `frontend/projects/storefront/src/app/features/product/variant-selector.spec.ts` ("TestHostComponent")
   does.
 - A spec reaches HTTP one of two ways. It drives real requests over MSW,
   calling `useMswServer()` from `frontend/tests/msw-server.ts` at module
@@ -324,7 +328,7 @@ because they are easy to break in this area.
   as `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts`
   does; an unhandled request then fails the test. Or it provides a stub
   `Api`, as
-  `frontend/projects/storefront/src/app/features/catalog/catalog.facade.spec.ts:391`
+  `frontend/projects/storefront/src/app/features/catalog/catalog.facade.spec.ts` ("{ provide: Api, useValue: api }")
   does. Extend a unit's spec the way it is already written.
 - Some specs carry a `// @vitest-environment jsdom` comment and some do not
   (31 of the 74 storefront specs, counted 2026-09-26). Start a new spec from
@@ -335,12 +339,13 @@ because they are easy to break in this area.
 ### Design authority
 
 `frontend/docs/design/yettel.md` is the design reference for every rendered
-surface (`frontend/docs/spec/execution-rules.md:7`): colour tokens, typography,
+surface (`frontend/docs/spec/execution-rules.md`, "is the design reference for
+every implementation and every verification or review of a rendered surface"): colour tokens, typography,
 radii, spacing, the component recipes with the yettel.hu selectors they came
 from, the list- and device-page feature inventories, and in §9 the
 storefront's token mapping. Take every colour, type, radius, spacing and
 recipe value from it and name its section beside the value in a comment, as
-`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss:5-6`
+`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss` ("docs/design/yettel.md §5")
 does; most component stylesheets do not (15 of 53 cite it, counted 2026-09-26).
 A value it lacks is measured on `frontend/docs/design/yettel/css/portal.css`,
 the captured yettel.hu stylesheet, and added to the document, with its
@@ -350,7 +355,8 @@ project's own, marked as such: the skeleton loaders (§5), and the three
 
 The payment app takes the shop's numeric scales and a few colours from the
 document but keeps its own palette and typeface
-(`frontend/projects/demo-payment/src/styles.css:9-18`). The document names
+(`frontend/projects/demo-payment/src/styles.css`, "The palette and the typeface are
+deliberately NOT the shop's"). The document names
 neither that app nor the admin, and how far it reaches them is open (entry C6
 of the conflict register in `mibolt-frontend-code-standards`); the admin's
 styling belongs to `mibolt-admin-frontend`.
@@ -360,16 +366,17 @@ styling belongs to `mibolt-admin-frontend`.
 - **Mocks.** A storefront call that changes needs its handler under
   `frontend/projects/shop-mocks/src/` to change with it. A persisted shape
   that changes incompatibly needs `SNAPSHOT_SCHEMA_VERSION`
-  (`frontend/projects/shop-mocks/src/persistence.ts:49`) bumped. A new fault
+  (`frontend/projects/shop-mocks/src/persistence.ts`, "SNAPSHOT_SCHEMA_VERSION") bumped. A new fault
   operation joins `FAULT_OPERATIONS`
-  (`frontend/projects/shop-mocks/src/faults.ts:64`).
+  (`frontend/projects/shop-mocks/src/faults.ts`, "FAULT_OPERATIONS").
 - **The production build.** Both apps' production configurations replace
   `frontend/projects/shop-mocks/src/browser.ts` with
   `frontend/projects/shop-mocks/src/browser.production.ts`, which exports
   only `startMockWorker`. Anything an app imports from
   `@mi-bolt/mocks/browser` (today `startMockWorker`, at
-  `frontend/projects/storefront/src/core/bootstrap-demo.ts:22` and
-  `frontend/projects/demo-payment/src/main.ts:37-38`) has to be exported by
+  `frontend/projects/storefront/src/core/bootstrap-demo.ts`
+  ("from '@mi-bolt/mocks/browser'") and
+  `frontend/projects/demo-payment/src/main.ts` ("import('@mi-bolt/mocks/browser')")) has to be exported by
   the production file too, with the same signature. The production budget
   warns at 4 kB and fails at 8 kB per component stylesheet
   (`frontend/angular.json`).
@@ -418,15 +425,16 @@ most often:
   under `coverage/` in `frontend/`, so a second run in the same checkout
   overwrites the first one's.
 - `npm --prefix frontend run lint` runs ESLint over every project, templates
-  included, as CI's `lint` job does (`.github/workflows/frontend.yml:34`);
+  included, as CI's `lint` job does (`.github/workflows/frontend.yml`, "run: npm run lint");
   the template accessibility rules above report there (register entry C7).
 - `npm --prefix frontend run build` and `npm --prefix frontend run build:payment`
   write `dist/storefront/` and `dist/demo-payment/` in `frontend/`;
   `npm --prefix frontend run check:storefront-dist` and
   `npm --prefix frontend run check:payment-dist` then read those directories
-  (`frontend/package.json:18-19`) and fail if MSW reached a production build.
+  (`frontend/package.json`, "check:storefront-dist";
+  `frontend/package.json`, "check:payment-dist") and fail if MSW reached a production build.
 - `npm --prefix frontend run check:payment-boot` starts `ng serve` on port
-  4299 (`frontend/scripts/check-app-boot.mjs:17`).
+  4299 (`frontend/scripts/check-app-boot.mjs`, "Port 4299 is this script's alone").
 
 Every change a shopper can see is verified in a real browser, as
 `mibolt-verification` ("Browser pass") sets out. This area is served by
@@ -476,26 +484,21 @@ references that describes it, in the same change:
   decides the `--include` form above;
 - `frontend/docs/design/yettel.md`, whose sections this skill and its
   references cite by number (§2, §5, §9);
-- any file this skill or its references cite by line (`path:N` or
-  `path:N-M`), since an edit above a cited line moves it; `--show-anchors`
-  below prints each anchor beside its target file, so search that output for
-  the files the change touched.
+- any file this skill or its references cite: a citation names its target
+  (a heading, function, constant, key or distinctive phrase) and never gives
+  a line number, so a change that renames or rewrites the named part can
+  leave the citation stale.
 
-Then, from the directory that holds the MiBolt skills, check that every path, anchor and command here still resolves:
+Then, from the directory that holds the MiBolt skills, check that every path, cited name and command here still resolves:
 
 ```bash
 node mibolt-project-map/scripts/check-skill-references.mjs mibolt-shop-frontend
 ```
 
-It exits 0 when nothing fails, and an anchor whose line has moved still
-passes while its line number stays inside the file. Add `--show-anchors` to
-print each anchored line, and read whether it still says what this skill
-claims; the script cannot judge that. A range longer than ten lines ends in
-`... (+N more lines)`, so read its rest in the file. Run it also after any
-edit to a file this skill or its references cite a section of by name:
-`frontend/README.md`, or a file of the `mibolt-verification`,
-`mibolt-frontend-code-standards` or `mibolt-workspace-ops` skill. The script
-fails a cited name only once it occurs nowhere in the file or skill cited. It
-cannot tell whether a section that kept its name still says what this skill
-uses it for, so re-read each section this skill or its references cite from
-the edited file.
+It exits 0 when nothing fails. Run it also after any edit to a file this
+skill or its references cite by name, such as `frontend/README.md`, or a file
+of the `mibolt-verification`, `mibolt-frontend-code-standards` or
+`mibolt-workspace-ops` skill. The script fails a cited name only once it
+occurs nowhere in the file or skill cited. It cannot tell whether a part that
+kept its name still says what this skill uses it for, so re-read each part
+this skill or its references cite from the edited file.

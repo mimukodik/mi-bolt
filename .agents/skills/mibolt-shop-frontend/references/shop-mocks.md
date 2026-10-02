@@ -42,7 +42,8 @@ they work only beside it. The mocks import the generated models from
 
 - Each domain file calls `registerBusinessHandlers(entry)` once at module
   load (for example
-  `frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts:387`). An
+  `frontend/projects/shop-mocks/src/catalog/catalog.handlers.ts`,
+  "registerBusinessHandlers(buildCatalogHandlers)"). An
   entry is a function of `CreateHandlersOptions` (repository, clock, ids,
   scenario, `apiRoot`, and in the browser `persist`, `snapshot` and
   `demoAccessStorage`).
@@ -52,7 +53,7 @@ they work only beside it. The mocks import the generated models from
   without the shell, for a spec that must prove an unknown route fails.
 - A module that is never imported never registers. The browser worker
   imports each domain file for that side effect
-  (`frontend/projects/shop-mocks/src/browser.ts:54-59`), and a spec imports
+  (`frontend/projects/shop-mocks/src/browser.ts`, "Force-load the slice handler modules"), and a spec imports
   the domain files it needs.
 
 ## 3. Stores, stock and idempotency
@@ -64,7 +65,8 @@ they work only beside it. The mocks import the generated models from
 - The catalogue store is module-level and is loaded from
   `frontend/docs/api/fixtures/catalog.json` by `loadCatalogFixture`; the
   browser imports the fixture in
-  `frontend/projects/shop-mocks/src/browser.ts:32`, and a spec loads its own
+  `frontend/projects/shop-mocks/src/browser.ts`
+  ("../../../docs/api/fixtures/catalog.json"), and a spec loads its own
   copy. The fixture is generated from catalogue data, which belongs to
   `mibolt-cross-package-changes`.
 - `stockLedger` (`frontend/projects/shop-mocks/src/stock/stock-ledger.ts`)
@@ -84,10 +86,10 @@ they work only beside it. The mocks import the generated models from
 
 A scenario is chosen with `?mi-scenario=<name>` on the page URL and
 remembered for the tab under `mi-bolt.scenario` in `sessionStorage`
-(`frontend/projects/shop-mocks/src/scenarios.ts:161`). The built-in names are
+(`frontend/projects/shop-mocks/src/scenarios.ts`, "export const ACTIVE_SCENARIO_KEY"). The built-in names are
 `default`, `happy-path`, `out-of-stock`, `payment-declined`,
-`cart-mutation-fails` and `demo-signed-out` (`BUILT_IN_SCENARIOS`,
-`frontend/projects/shop-mocks/src/scenarios.ts:65`). Any other name runs with
+`cart-mutation-fails` and `demo-signed-out` (`frontend/projects/shop-mocks/src/scenarios.ts`,
+"export const BUILT_IN_SCENARIOS"). Any other name runs with
 the default seed and keeps its own name, which is how the fault families
 below need no registry entry.
 
@@ -103,7 +105,7 @@ Fault families, defined in `frontend/projects/shop-mocks/src/faults.ts`:
 | `stock-lost-once-cart-add`, `stock-lost-once-order` | the first matching request takes the variant's whole demo stock |
 
 `<operation>` is one of `FAULT_OPERATIONS`
-(`frontend/projects/shop-mocks/src/faults.ts:64`), the storefront endpoints a
+(`frontend/projects/shop-mocks/src/faults.ts`, "export const FAULT_OPERATIONS"), the storefront endpoints a
 fault can break. "Once" means once per handler list, and the browser builds
 one list per page load. The handler of each of those operations calls
 `faultResponse(options, '<operation>')` and then `slowOnce` before it touches
@@ -125,7 +127,8 @@ snapshot, kept in `sessionStorage` under `mi-bolt.snapshot.<scenario>`.
   `frontend/projects/shop-mocks/src/snapshot.ts`).
 - `hydrate()` discards a snapshot that is malformed, older than `MAX_AGE_MS`
   (seven days), or of another `SNAPSHOT_SCHEMA_VERSION`
-  (`frontend/projects/shop-mocks/src/persistence.ts:49`, currently 4), and
+  (`frontend/projects/shop-mocks/src/persistence.ts`,
+  "export const SNAPSHOT_SCHEMA_VERSION", currently 4), and
   records why, which the storefront shows through `SNAPSHOT_DISCARD`.
 - Bump `SNAPSHOT_SCHEMA_VERSION` when the persisted shape changes
   incompatibly, as the comment above it records for versions 3 and 4.
@@ -142,13 +145,14 @@ snapshot, kept in `sessionStorage` under `mi-bolt.snapshot.<scenario>`.
   cross-origin block (403), then the same-origin non-API passthrough, then
   `buildBrowserHandlers`, whose last element, the demo-access gate, is
   consulted first. The comments at
-  `frontend/projects/shop-mocks/src/browser.ts:169-197` carry the measured
+  `frontend/projects/shop-mocks/src/browser.ts`
+  ("installUnclaimedApiRouteNetworkError") carry the measured
   ordering.
 - The service-worker script is resolved against `document.baseURI`, so it
   works under the payment app's `/demo-fizetes/` base. The script itself is
   `frontend/projects/storefront/public/mockServiceWorker.js`; the development
   builds of the payment app and of the admin both copy it from there
-  (`frontend/angular.json:186-187`, `frontend/angular.json:310-311`), so
+  (`frontend/angular.json`, "mockServiceWorker.js"), so
   moving or replacing it reaches the admin too.
 - The production configurations of both apps replace
   `frontend/projects/shop-mocks/src/browser.ts` with
@@ -176,8 +180,8 @@ because `server.use(...)` keeps array order:
   header of that file explains why each spec calls it rather than relying on
   `frontend/tests/setup-msw.ts` alone.
 - The handler list starts empty. A spec that wants the whole mock builds it,
-  as `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts:114-133`
-  does: load the catalogue fixture, import the domain handler modules it
+  as `frontend/projects/storefront/src/app/features/cart/cart.facade.spec.ts`
+  ("loadCatalogFixture(catalogFixture)") does: load the catalogue fixture, import the domain handler modules it
   needs for their registration side effect (the checkout module as well,
   whenever payment or orders are involved), build a `Repository` with
   `createFixedClock` and `createDeterministicIds`, and call
