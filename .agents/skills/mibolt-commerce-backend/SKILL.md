@@ -60,7 +60,7 @@ to read a row"). Outside, and where each case goes:
 
 ## 2. The service
 
-**Stack.** Spring Boot 4.1.1, a Java 21 toolchain and OpenAPI Generator 7.25.0
+**Stack.** Spring Boot, a Java 21 toolchain and OpenAPI Generator, at the versions the plugins block declares
 (`backend/services/commerce/build.gradle`, "plugins {"); the webmvc, JPA, Liquibase,
 validation, security and actuator starters, PostgreSQL at run time and H2 in
 tests, all from Maven Central (`backend/services/commerce/build.gradle`, "mavenCentral()"). Jackson is version 3, package `tools.jackson`

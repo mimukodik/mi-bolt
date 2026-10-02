@@ -75,7 +75,7 @@ skill.
 ## How the shared artefacts connect
 
 - **The contract is the source of truth.** `contracts/commerce/openapi.yaml`
-  is OpenAPI 3.1.0 at `info.version` 2.3.0, with eleven tags
+  is the OpenAPI document, whose `openapi` and `info.version` keys carry its versions, with eleven tags
   (`contracts/commerce/openapi.yaml`, "- name: Catalog") and 34 operations, 19 for the shop
   and 15 for the admin. Where a document and the spec disagree the spec wins,
   and neither side may add an endpoint, field or status code the spec lacks

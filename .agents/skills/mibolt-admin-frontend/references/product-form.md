@@ -45,7 +45,7 @@ a new list filter and a new list column. Paths resolve as `SKILL.md` says.
   slugLocked").
 - The form's `dirty()` is set only when a bound control writes a value or `markAsDirty()` is
   called (https://angular.dev/api/forms/signals/FieldState; in the installed `@angular/forms`
-  22.1.6 a bound control writes `controlValue`, which marks the field dirty, and a write to
+  a bound control writes `controlValue`, which marks the field dirty, and a write to
   `value` does not), and every `form().reset(...)` clears it. The cards with rows (highlights,
   colours, variants and spec groups) add and remove rows, and all but the variants card also move
   them, through `value.update(...)`, for example

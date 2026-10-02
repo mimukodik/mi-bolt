@@ -160,7 +160,7 @@ at `.github/workflows/candidate.yml` ("Check candidate provenance and app chart"
 **`mise run deploy:check` needs `helm` and `uv` on the PATH.** The root
 `mise.toml` pins only Node and Java (`mise.toml`, "[tools]"), and `check-chart.py`
 calls `helm` as a subprocess (`deploy/tests/check-chart.py`, "def helm"). CI installs
-Helm v4.2.2 and uv with setup actions (`.github/workflows/candidate.yml`, "astral-sh/setup-uv";
+Helm and uv with setup actions (`.github/workflows/candidate.yml`, "astral-sh/setup-uv";
 `.github/workflows/candidate.yml`, "azure/setup-helm"). The root task
 `mise run deploy:check` is in neither command table, `README.md` ("Command reference") nor
 `docs/monorepo.md` ("Root commands").

@@ -23,8 +23,9 @@ tag `integration`, so an `@IntegrationTest` class runs only under
 `integrationTest`; the task wiring and when to run which is
 `mibolt-verification`'s. Focus a run with Gradle's `--tests` filter, a text
 pattern over class and method names
-(https://docs.gradle.org/9.7.1/userguide/java_testing.html, "Test
-filtering"):
+(https://docs.gradle.org/<version>/userguide/java_testing.html, "Test
+filtering"; `<version>` is read from
+`backend/gradle/wrapper/gradle-wrapper.properties` ("distributionUrl")):
 
 ```bash
 backend/gradlew -p backend :services:commerce:test --tests 'CartServiceTest'

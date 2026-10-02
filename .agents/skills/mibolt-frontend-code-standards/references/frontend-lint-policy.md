@@ -125,7 +125,7 @@ The rules switched off in this block (`frontend/eslint.config.mjs`, "no-magic-nu
 | `inject()` (`SKILL.md`, "Angular") | `prefer-inject` |
 | lazy feature routes (`SKILL.md`, "Angular") | written only |
 
-The installed angular-eslint 22.5.0 ships rules that would check several of
+The installed angular-eslint ships rules that would check several of
 the written-only rows, and the config enables none of them (`--print-config`
 on `frontend/projects/storefront/src/app/features/cart/cart-page.ts` and its
 `.html`): `prefer-host-metadata-property` (`@HostBinding`,

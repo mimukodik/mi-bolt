@@ -65,7 +65,7 @@ and the caller names it as `uses: ./.github/workflows/<file>`
   `backend/services/commerce/scripts/smoke.sh`
   (`.github/workflows/backend.yml`, "PostgreSQL boot and smoke").
 - **`.github/workflows/contracts.yml`** is the only workflow that runs through
-  mise: `jdx/mise-action` (pinned by SHA, mise 2026.9.12), then
+  mise: `jdx/mise-action` (pinned by SHA, its mise version set in the workflow), then
   `mise -C contracts install` and `mise -C contracts run check`
   (`.github/workflows/contracts.yml`, "Contract checks").
 - **`.github/workflows/tools.yml`** runs `npm ci`, `npm run typecheck` and
@@ -94,7 +94,7 @@ promoted; this is only the wiring.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm v4.2.2, computes the image input hashes (`deploy/candidate/inputs.py`), runs the four `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
+| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm, computes the image input hashes (`deploy/candidate/inputs.py`), runs the four `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
 | `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml`, "Verify inputs, publish immutable images and chart, write receipt") |
 | `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | waits for the stable demo and runs both purchase flows against it (`.github/workflows/stable-smoke.yml`, "Existing smoke tests against the stable demo") |
 

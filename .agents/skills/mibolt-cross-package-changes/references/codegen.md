@@ -15,8 +15,7 @@ opening paragraph of `SKILL.md` says.
 
 ## 1. The two frontend generator configurations
 
-Both run ng-openapi-gen (`frontend/package.json` declares `^1.0.5`, and
-1.0.5 is installed) against the same input,
+Both run ng-openapi-gen (its version is read from `frontend/package.json`, "ng-openapi-gen") against the same input,
 `../contracts/commerce/openapi.yaml`, relative to `frontend/`. They differ in
 three keys only:
 
@@ -117,7 +116,7 @@ regenerates the backend output, which git ignores (section 4).
 ## 4. The backend generator and its discriminator guard
 
 `backend/services/commerce/build.gradle` wires the OpenAPI Generator Gradle
-plugin, version 7.25.0 (`backend/services/commerce/build.gradle`, "org.openapi.generator"), with the `spring` generator:
+plugin, at the version declared beside its id (`backend/services/commerce/build.gradle`, "org.openapi.generator"), with the `spring` generator:
 
 - `prepareOpenApiSpec` (`backend/services/commerce/build.gradle`, "tasks.register('prepareOpenApiSpec')") reads the contract (`backend/services/commerce/build.gradle`, "def sourceSpec") and writes a
   derived copy to the build directory's `openapi/openapi.yaml`, flattening four

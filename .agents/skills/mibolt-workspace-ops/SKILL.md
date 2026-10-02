@@ -382,7 +382,7 @@ machine fails on every other, CI included.
 - **A task change:** `mise tasks` lists a root task with its description, and
   `mise tasks --all` lists an area task. Both are read-only.
 - **A chart change:** `mise run deploy:check`. It needs `helm` and `uv` on the
-  PATH, and the root `mise.toml` pins neither; CI installs Helm v4.2.2
+  PATH, and the root `mise.toml` pins neither; CI installs Helm
   (`.github/workflows/candidate.yml`, "azure/setup-helm").
 - **An NGINX or static-server change:**
   `npm --prefix frontend run test:contract`, which collects

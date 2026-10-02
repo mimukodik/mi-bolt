@@ -139,10 +139,11 @@ quality gates") says why each gate exists.
   `backend/services/commerce/build.gradle`,
   "dependsOn tasks.named('jacocoTestCoverageVerification')"); the verification joins
   `check` only because it is wired there
-  (https://docs.gradle.org/9.7.1/userguide/jacoco_plugin.html). The PMD
+  (https://docs.gradle.org/<version>/userguide/jacoco_plugin.html, where `<version>` is read from
+  `backend/gradle/wrapper/gradle-wrapper.properties` ("distributionUrl")). The PMD
   plugin makes `check` depend on `pmdMain` and `pmdTest`
-  (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html), and `build`
-  depends on `check` (https://docs.gradle.org/9.7.1/userguide/java_plugin.html).
+  (https://docs.gradle.org/<version>/userguide/pmd_plugin.html), and `build`
+  depends on `check` (https://docs.gradle.org/<version>/userguide/java_plugin.html).
   So `build` runs the unit and integration tests, PMD and the coverage gate,
   then assembles the jar.
 - The coverage floor is a JaCoCo line ratio of 0.90 over the bundle and 0.80
@@ -150,7 +151,7 @@ quality gates") says why each gate exists.
   and `MiBoltBackendApplication` excluded
   (`backend/services/commerce/build.gradle`, "def coverageExclusions";
   `backend/services/commerce/build.gradle`, "violationRules").
-- PMD 7.24.0 runs `backend/config/pmd/ruleset.xml`; a missing ruleset fails
+- PMD runs `backend/config/pmd/ruleset.xml`; a missing ruleset fails
   the task instead of passing silently
   (`backend/services/commerce/build.gradle`,
   "PMD reports an unloadable ruleset").
@@ -245,7 +246,7 @@ backend gate).
      anything, and exits 0 even when it prints none, so read the list rather
      than the exit status. angular.dev calls `include` relative to the
      project root (https://angular.dev/cli/test), but the installed builder
-     (22.1.8) resolves it against the project's source root after stripping a
+     resolves it against the project's source root after stripping a
      leading `projects/<name>/src/`, so the project-root-relative form
      (`src/app/…`) selects nothing. A directory takes every spec inside it. A
      source file `<name>.ts` takes the `<name>.spec.ts` or `<name>.test.ts`
@@ -269,7 +270,7 @@ backend gate).
      `backend/gradlew -p backend :services:commerce:test --tests CartServiceTest`.
      A class annotated `@IntegrationTest` runs only under `integrationTest`:
      `backend/gradlew -p backend :services:commerce:integrationTest --tests CartApiTest`
-     (https://docs.gradle.org/9.7.1/userguide/java_testing.html). A focused
+     (https://docs.gradle.org/<version>/userguide/java_testing.html). A focused
      Gradle run does not check the coverage floor; only `check` does.
 
 4. **Run the gates before the commit.** Run each command under "Gates before
@@ -296,8 +297,9 @@ How Vitest, Playwright and the other tools that
 from their documentation, with the URL beside the claim, and not found out by
 a throwaway experiment. The backend's build tools are read the same way:
 Gradle and its JaCoCo and PMD plugins at
-https://docs.gradle.org/9.7.1/userguide/, the release the Gradle wrapper pins;
-PMD at https://docs.pmd-code.org/pmd-doc-7.24.0/, the release the build pins;
+https://docs.gradle.org/<version>/userguide/, the release the Gradle wrapper pins;
+PMD at https://docs.pmd-code.org/pmd-doc-<version>/, the release the build pins (`<version>` is read from
+`backend/services/commerce/build.gradle` ("toolVersion"));
 and JaCoCo at https://www.jacoco.org/jacoco/trunk/doc/, which documents
 JaCoCo's development build rather than the version Gradle applies here. An
 experiment answers one narrow question at the cost of a build and leaves a

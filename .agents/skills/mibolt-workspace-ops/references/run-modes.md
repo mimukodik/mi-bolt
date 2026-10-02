@@ -55,8 +55,7 @@ npm runs a script from its package's root, so that `node_modules` is the one
 under `frontend/`
 (https://docs.npmjs.com/cli/v11/using-npm/scripts, "Working Directory for
 Scripts"). The six `start*` scripts at `frontend/package.json` ("--no-turbo-fast-api-calls") all carry
-that Node flag; `frontend/README.md` ("the dev server aborted under e2e load") records why (a V8 abort on Node
-26.10.0 under load, and `NODE_OPTIONS` refuses the flag). Start a dev server
+that Node flag; `frontend/README.md` ("the dev server aborted under e2e load") records why (a V8 abort on the Node that `mise.toml` pins (`mise.toml`, "[tools]") under load, and `NODE_OPTIONS` refuses the flag). Start a dev server
 through those scripts, never `npx ng serve`.
 
 **Ports and base paths come from `frontend/angular.json`.** `demo-payment`

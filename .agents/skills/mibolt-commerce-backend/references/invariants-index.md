@@ -22,7 +22,7 @@ disagree, the spec file wins (`contracts/commerce/kommunikacio.md`, "Source of t
 
 | § | Hungarian title | Where | What it settles |
 |---|---|---|---|
-| 1 | Technológiai keret | `backend/docs/02-backend.md` ("1. Technológiai keret") | Spring Boot 4.1.1, Gradle 9.7.1 Groovy DSL, Java 21, `spring-boot-starter-webmvc`, JPA, PostgreSQL 16, root package. |
+| 1 | Technológiai keret | `backend/docs/02-backend.md` ("1. Technológiai keret") | Spring Boot, Gradle Groovy DSL, Java 21, `spring-boot-starter-webmvc`, JPA, PostgreSQL 16, root package. |
 | 2 | Kódgenerálás | `backend/docs/02-backend.md` ("2. Kódgenerálás") | Interfaces and DTOs come from the contract; controllers implement them and declare no route, method or status of their own; single-value `enum` discriminators stay, never rewritten to `const`. |
 | 3 | Rétegzés | `backend/docs/02-backend.md` ("3. Rétegzés") | Controller, service, repository split. The rule and its review-only enforcement belong to `mibolt-backend-code-standards`. |
 | 4 | Domain-invariánsok | `backend/docs/02-backend.md` ("4. Domain-invariánsok") | Rules 1-47, indexed below. |

@@ -72,7 +72,7 @@ them (quickstart source, section 8).
   hit was the `@SpringBootApplication` entry point.
 
 **Wiring** (`backend/services/commerce/build.gradle`, "pmd {"): `toolVersion`
-7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion"), the one ruleset
+(`backend/services/commerce/build.gradle`, "toolVersion"), the one ruleset
 file and no built-in rule sets (`backend/services/commerce/build.gradle`, "ruleSets = [] ruleSetFiles"),
 violations printed to the console (`backend/services/commerce/build.gradle`, "consoleOutput = true"), the
 build failing on any violation (`backend/services/commerce/build.gradle`, "ignoreFailures = false"), a
@@ -86,8 +86,8 @@ hand-written test in that package is still linted
 
 ## 2. PMD: quickstart rules that shape everyday code
 
-`rulesets/java/quickstart.xml` in PMD 7.24.0 has 124 active rules (section 8).
-Read a rule's page in the PMD 7.24.0 index rather than recalling it; the list
+`rulesets/java/quickstart.xml` in the pinned PMD has 124 active rules (section 8).
+Read a rule's page in the pinned PMD release's index rather than recalling it; the list
 below is the part a reviewer meets most, not the whole set.
 
 - **`ControlStatementBraces`**: braces on every `if`, `else`, `for`, `while`
@@ -348,32 +348,35 @@ The guard count is lower than the number of guarded calls because
 
 ## 8. Sources outside the repository
 
-- PMD 7.24.0 quickstart ruleset, the 124 active rules and the commented-out
-  ones: https://github.com/pmd/pmd/blob/pmd_releases/7.24.0/pmd-java/src/main/resources/rulesets/java/quickstart.xml
+- PMD quickstart ruleset, the 124 active rules and the commented-out
+  ones (in every PMD URL below `<version>` is the release read from
+  `backend/services/commerce/build.gradle` ("toolVersion")):
+  https://github.com/pmd/pmd/blob/pmd_releases/<version>/pmd-java/src/main/resources/rulesets/java/quickstart.xml
   (the count agrees with `backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`
   ("(124 rules)")).
-- PMD 7.24.0 Java rule index: https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java.html
+- PMD Java rule index: https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java.html
 - `ControlStatementBraces`, `ClassNamingConventions`, `MethodNamingConventions`,
   `FieldNamingConventions` and `EmptyControlStatement` defaults:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_codestyle.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_codestyle.html
 - `GuardLogStatement`, `SystemPrintln`, `AvoidReassigningParameters`,
   `MissingOverride`, `PreserveStackTrace`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_bestpractices.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_bestpractices.html
 - `SystemPrintln`'s console message, `Usage of System.out/err`, in the rule's
-  source at the 7.24.0 release tag:
-  https://github.com/pmd/pmd/blob/pmd_releases/7.24.0/pmd-java/src/main/resources/category/java/bestpractices.xml
+  source at the pinned release tag:
+  https://github.com/pmd/pmd/blob/pmd_releases/<version>/pmd-java/src/main/resources/category/java/bestpractices.xml
 - `UncommentedEmptyConstructor`, `UncommentedEmptyMethodBody`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_documentation.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_documentation.html
 - `ProperLogger` (default `loggerClass`), `UseLocaleWithCaseConversions`,
   `AvoidCatchingGenericException`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_errorprone.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_errorprone.html
 - `AvoidUncheckedExceptionsInSignatures`, `AvoidThrowingRawExceptionTypes`:
-  https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java_design.html
-- Gradle 9.7.1 PMD plugin, `pmdMain` and `pmdTest` wired into `check`, PMD
-  versions supported up to 7.24.0:
-  https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html
-- Gradle 9.7.1 `PmdExtension` (`consoleOutput`, `ignoreFailures`,
-  `ruleSets`): https://docs.gradle.org/9.7.1/dsl/org.gradle.api.plugins.quality.PmdExtension.html
+  https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java_design.html
+- Gradle PMD plugin, `pmdMain` and `pmdTest` wired into `check`, the PMD
+  versions it supports (in every Gradle URL below `<version>` is read from
+  `backend/gradle/wrapper/gradle-wrapper.properties` ("distributionUrl")):
+  https://docs.gradle.org/<version>/userguide/pmd_plugin.html
+- Gradle `PmdExtension` (`consoleOutput`, `ignoreFailures`,
+  `ruleSets`): https://docs.gradle.org/<version>/dsl/org.gradle.api.plugins.quality.PmdExtension.html
 - SLF4J prints a throwable passed as the last argument with its stack trace:
   https://www.slf4j.org/faq.html#paramException
 - Spring Security's `UserDetailsService.loadUserByUsername` throws
@@ -382,7 +385,7 @@ The guard count is lower than the number of guarded calls because
 - `@Autowired` is needed on one constructor only when a bean has several:
   https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/autowired.html
 - `spring.jackson.default-property-inclusion` and
-  `spring.jackson.deserialization.*` (Spring Boot 4.1.1):
+  `spring.jackson.deserialization.*` (Spring Boot, at the version `backend/services/commerce/build.gradle` declares, "id 'org.springframework.boot'"):
   https://docs.spring.io/spring-boot/appendix/application-properties/index.html
 - EditorConfig: `*` matches any file name in any directory below the file:
   https://spec.editorconfig.org/

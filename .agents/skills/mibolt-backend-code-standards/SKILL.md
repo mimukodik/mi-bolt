@@ -102,7 +102,8 @@ google-java-format, Error Prone, NullAway, JSpecify or Lombok appears in any
    of [the reference](references/rule-evidence.md)).
 2. Identify the rule. The project's own rules are the first six rules of
    section 5. Any other name is a quickstart rule: read its page in the PMD
-   7.24.0 rule index, https://docs.pmd-code.org/pmd-doc-7.24.0/pmd_rules_java.html,
+   rule index, https://docs.pmd-code.org/pmd-doc-<version>/pmd_rules_java.html
+   (`<version>` is read from `backend/services/commerce/build.gradle` ("toolVersion")),
    rather than recalling it, because the ruleset is pinned to that version.
 3. Fix the code, and add no `// NOPMD` and no `@SuppressWarnings`: the
    backend has neither (observed; no document forbids them), and a rule that
@@ -161,7 +162,7 @@ section 5.
 - **Name a test method in lowerCamelCase, or `f<N>_name` for a smoke-test
   marker.** PMD, `MethodNamingConventions` with a `junit5TestPattern`
   (`backend/config/pmd/ruleset.xml`, "category/java/codestyle.xml/MethodNamingConventions").
-- **Everything else in PMD 7.24.0's quickstart ruleset, minus
+- **Everything else in PMD's quickstart ruleset, minus
   `UseUtilityClass`** (`backend/config/pmd/ruleset.xml`, "rulesets/java/quickstart.xml"). The quickstart rules met most often: braces
   on every `if`, `else` and loop body; PascalCase type names without
   underscores, and a name ending in `Test` or `Tests` for a class that holds
@@ -171,7 +172,7 @@ section 5.
   `toLowerCase` and `toUpperCase`, which here is always `Locale.ROOT`; no
   unused import, local, private field, private method or parameter;
   `@Override` on every override. This list is not the full set: that is the
-  7.24.0 quickstart the reference links, minus `UseUtilityClass`.
+  full quickstart ruleset the reference links, minus `UseUtilityClass`.
 
 **Written, and checked only by review:**
 
@@ -324,8 +325,9 @@ line, with its enforcement:
   `Lint (PMD)` job (`.github/workflows/backend.yml`, "Lint (PMD)") do; or a command
   runs `check`, which `build` depends on, as the full build and CI's
   `Coverage gate and build` job (`.github/workflows/backend.yml`, "./gradlew build jacocoTestReport") do
-  (https://docs.gradle.org/9.7.1/userguide/pmd_plugin.html,
-  https://docs.gradle.org/9.7.1/userguide/java_plugin.html). Compiling,
+  (https://docs.gradle.org/<version>/userguide/pmd_plugin.html, where `<version>` is read from
+  `backend/gradle/wrapper/gradle-wrapper.properties` ("distributionUrl");
+  https://docs.gradle.org/<version>/userguide/java_plugin.html). Compiling,
   `mise run //backend:test` and `bootRun` do neither, so a violation still
   compiles and runs locally and first fails at this lint, the full build or
   CI.
