@@ -357,7 +357,7 @@ Owned by this skill:
     reaches the frontends as well, so ask the user whether it changes, and the
     change itself goes to `mibolt-cross-package-changes`;
   - an earlier record is amended with a dated section, not rewritten, as in
-    `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md` ("Amendment 2026-09-20: per-class floor").
+    `backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md` ("per-class floor").
 
 Owned by `mibolt-backend-code-standards`, one line each:
 
@@ -420,7 +420,7 @@ Commands, from the repository root unless one names another directory:
   and integration tests, PMD and coverage; when to run it and how to read it
   is `mibolt-verification` ("Gates before a commit").
 
-The Gradle tasks need the Java 21 that the root `mise.toml` ("temurin-21") pins, and write
+The Gradle tasks need the Java 21 that the root `mise.toml` ("java") pins, and write
 under the module's `build/` directory. `smoke.sh` starts no backend of its
 own: it runs against one that is already up.
 

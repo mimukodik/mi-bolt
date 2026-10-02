@@ -34,7 +34,7 @@ them (quickstart source, section 8).
   javadoc `{@link}` are not type references in code and pass. The quickstart's
   `UnnecessaryFullyQualifiedName` flags a qualifier only when the type is
   already imported, which is why this rule exists
-  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "Amendment 2026-09-20: no inline FQNs, four more rules").
+  (`backend/docs/decisions/0009-pmd-quickstart-lint-gate.md`, "no inline FQNs").
   Compliant form: every type imported, as in
   `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java`
   ("import org.springframework.http.ResponseEntity;").
@@ -72,7 +72,7 @@ them (quickstart source, section 8).
   hit was the `@SpringBootApplication` entry point.
 
 **Wiring** (`backend/services/commerce/build.gradle`, "pmd {"): `toolVersion`
-7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion = '7.24.0'"), the one ruleset
+7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion"), the one ruleset
 file and no built-in rule sets (`backend/services/commerce/build.gradle`, "ruleSets = [] ruleSetFiles"),
 violations printed to the console (`backend/services/commerce/build.gradle`, "consoleOutput = true"), the
 build failing on any violation (`backend/services/commerce/build.gradle`, "ignoreFailures = false"), a

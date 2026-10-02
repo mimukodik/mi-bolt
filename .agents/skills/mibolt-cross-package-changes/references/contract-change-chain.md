@@ -99,12 +99,12 @@ no consumer, and an error code is searched with the `enum` kind.
    skipped", lists.
 3. **Contract suite**, each of which fails until updated:
    - `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts`, "REQUIRED_OPERATION_COUNT"),
-     read by `frontend/tests/contract/operation-matrix.spec.ts` ("declares exactly 19 operationIds in the spec"),
+     read by `frontend/tests/contract/operation-matrix.spec.ts` ("T26-AC01 operation inventory parity"),
      `frontend/tests/contract/operation-matrix.spec.ts` ("spec drift check") and
      `frontend/tests/contract/shop-bad-request.spec.ts` ("it('every shop operation declares 400'");
    - `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "const EXPECTED_OPERATION_IDS = [");
-   - the "19 others" count in `frontend/tests/contract/sdk-split.spec.ts` ("it('declares exactly 15 admin operations and 19 others'");
-   - the round trip in `frontend/tests/contract/sdk-transport.spec.ts` ("exercises all 19 operations end-to-end through the real HttpClient"),
+   - the "19 others" count in `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage");
+   - the round trip in `frontend/tests/contract/sdk-transport.spec.ts` ("T04-AC04 every generated operation reaches MSW"),
      which needs a handler in that file's own list (`frontend/tests/contract/sdk-transport.spec.ts`, "const handlers = [") and a
      `callOperation` call, or it reports the operation "not exercised by the
      SDK";
@@ -139,9 +139,9 @@ no consumer, and an error code is searched with the `enum` kind.
    functions module missing it, besides what `SKILL.md`, "What fails when a step
    is skipped", lists.
 3. **Counts.** 15 admin operations are pinned at
-   `frontend/tests/contract/sdk-split.spec.ts` ("it('declares exactly 15 admin operations and 19 others'") and
+   `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage") and
    `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"), and stated in
-   `frontend/tests/contract/admin-tags.ts` ("plus 15 admin operations").
+   `frontend/tests/contract/admin-tags.ts` ("shared list of admin-tagged operations").
 4. **Admin mocks handler and the admin caller**: `mibolt-admin-frontend`.
    Skipped: see `SKILL.md`, "What fails when a step is skipped".
 5. **Backend** controller method on the tag's interface, for example

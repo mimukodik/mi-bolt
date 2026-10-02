@@ -45,7 +45,7 @@ image by hand; the candidate pipeline builds only from `deploy/compose.yaml`
   `backend/services/commerce/Dockerfile`, "COPY --from=contracts"). The builder runs `bootJar` and
   splits the jar into Spring Boot's layers; the runtime stage copies the four
   layers, the `catalog` context, and sets `MIBOLT_CATALOG_PATH`
-  (`backend/services/commerce/Dockerfile`, "FROM eclipse-temurin:21-jre").
+  (`backend/services/commerce/Dockerfile`, "Runtime stage: the four Spring Boot layers").
 
 Every base image is pinned by digest, and so is PostgreSQL in
 `deploy/compose.yaml` ("image: postgres:").

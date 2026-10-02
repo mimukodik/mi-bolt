@@ -119,7 +119,7 @@ another file is named:
     `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/checkout/CheckoutService.java`, "session.extend(at, at.plus(lifetime))"),
     and the cookie keeps the `Max-Age` it was issued with;
     `backend/docs/decisions/0011-cart-version-etag-and-reconciliation.md` ("Every successful mutation bumps the version once")
-    and `backend/docs/decisions/0011-cart-version-etag-and-reconciliation.md` ("is static (30 days from issue)") record both. The lifetime is `mibolt.session.lifetime` in
+    and `backend/docs/decisions/0011-cart-version-etag-and-reconciliation.md` ("The session cookie's `Max-Age` is static") record both. The lifetime is `mibolt.session.lifetime` in
     `backend/services/commerce/src/main/resources/application.properties` ("mibolt.session.lifetime").
 20. Deleting a line is idempotent: a variant unknown to the catalogue is 404,
     a known variant not in the cart is 200 with the current cart.

@@ -124,7 +124,7 @@ a late answer never overwrites a newer query. There is no state library.
 
 **The rules the shop keeps.** The header of
 `frontend/projects/storefront/src/app/features/checkout/checkout.facade.ts`
-("checkout application facade on the 2.0.0 contract") states most of them in one place:
+("checkout application facade") states most of them in one place:
 
 - The server is authoritative. The checkout summary, `complete` and the cart
   version come from its answer, and the checkout never recomputes them. A

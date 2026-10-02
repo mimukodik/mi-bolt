@@ -165,7 +165,7 @@ The code is a contract value first, so the change starts in
 3. Add the constant to `ErrorCode` with its status and an English default
    title, keeping the contract's order, which the enum follows today.
 4. Raise the pinned count in `ErrorCodeTest`
-   (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "errorCodeValuesLengthIs26"),
+   (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "pins {@link ErrorCode#values()} length to"),
    and give the new code a row in its parameterised status test (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "static Stream<Arguments> newCodeStatus()").
 5. Throw it from the owning service with the `params` the contract documents.
 6. Add an API test that asserts the status, `$.code`, the `params` and

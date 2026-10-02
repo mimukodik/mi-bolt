@@ -211,7 +211,7 @@ initial bundle. Keep them out:
   route"), and the password-change dialog on first use
   (`frontend/projects/admin/src/app/layout/shell.component.ts`, "async openPasswordChange()").
 - The production budget for the initial bundle is 500 kB warning and 1 MB error
-  (`frontend/angular.json`, "500kB").
+  (`frontend/angular.json`, "budgets").
 
 ## 8. Styling
 

@@ -287,7 +287,7 @@ Each line names a rule and where it is written or enforced; the owner carries th
 - **The production build.** No mock code may reach it: the `production` configuration swaps the
   mock's entry for a stub (`frontend/angular.json`,
   "projects/admin/src/mocks/browser.production.ts"), and `check:admin-dist` proves it. The initial
-  bundle is budgeted at 500 kB warning and 1 MB error (`frontend/angular.json`, "500kB").
+  bundle is budgeted at 500 kB warning and 1 MB error (`frontend/angular.json`, "budgets").
 - **`@mi-bolt/core-api`.** A new interceptor there reaches the admin only if
   `frontend/projects/admin/src/app/app.config.ts` adds it.
 
