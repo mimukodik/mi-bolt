@@ -49,30 +49,29 @@ every tracked sub-area of the project.
 | `mise.toml`, `deploy/`, `.github/` | root tasks, compose stack, Helm chart, candidate release, CI | `mibolt-workspace-ops` |
 | `tools/` | the catalogue importer, the dev-server helper | per sub-directory; see the coverage register |
 
-**Stack.** Declared versions come from the manifests cited. The lockfile
-column is `frontend/package-lock.json`; the backend has no lockfile, and what
-`backend/services/commerce/build.gradle` leaves unpinned resolves through
+**Stack.** Declared versions come from the manifests cited.
+What `backend/services/commerce/build.gradle` leaves unpinned resolves through
 Spring Boot's dependency management.
 
-| Part | Declared | Lockfile |
-|---|---|---|
-| Node | 26.10.0 (`mise.toml`, "[tools]"); engines `^22.22.3 \|\| ^24.15.0 \|\| ^26.0.0` (`frontend/package.json`, "engines") | — |
-| npm | `npm@11.17.0` (`frontend/package.json`, "packageManager") | — |
-| Java | `temurin-21.0.12+101.0.LTS` (`mise.toml`, "[tools]"); toolchain 21 (`backend/services/commerce/build.gradle`, "languageVersion") | — |
-| Angular core | `^22.1.0` (`frontend/package.json`, "@angular/core") | 22.1.6 |
-| Angular CLI and build | `^22.1.8` (`frontend/package.json`, "@angular/build"; `frontend/package.json`, "@angular/cli") | 22.1.8 |
-| TypeScript | `~6.0.2` (`frontend/package.json`, "~6.0.2") | 6.0.3 |
-| Vitest | `^4.0.8` (`frontend/package.json`, "^4.0.8") | 4.1.11 |
-| MSW | `^2.15.0` (`frontend/package.json`, "msw") | 2.15.0 |
-| Playwright | `1.63.0` (`frontend/package.json`, "@playwright/test") | 1.63.0 |
-| ESLint | `^10.9.1` (`frontend/package.json`, "^10.9.1") | 10.10.0 |
-| ng-openapi-gen | `^1.0.5` (`frontend/package.json`, "^1.0.5") | 1.0.5 |
-| Spring Boot | 4.1.1 (`backend/services/commerce/build.gradle`, "id 'org.springframework.boot'") | — |
-| OpenAPI Generator (backend) | 7.25.0 (`backend/services/commerce/build.gradle`, "id 'org.openapi.generator'") | — |
-| PMD | 7.24.0 (`backend/services/commerce/build.gradle`, "toolVersion") | — |
-| Gradle wrapper | 9.7.1 (`backend/gradle/wrapper/gradle-wrapper.properties`, "distributionUrl") | — |
-| PostgreSQL | `postgres:16.15-alpine3.24`, digest-pinned (`deploy/compose.yaml`, "image: postgres") | — |
-| uv, for the contract tools | 0.12.17 (`contracts/mise.toml`, "[tools]") | — |
+| Part | Read from |
+|---|---|
+| Node | `mise.toml`, "[tools]" and `frontend/package.json`, "engines" |
+| npm | `frontend/package.json`, "packageManager" |
+| Java | `mise.toml`, "[tools]" and `backend/services/commerce/build.gradle`, "languageVersion" |
+| Angular core | `frontend/package.json`, "@angular/core" |
+| Angular CLI and build | `frontend/package.json`, "@angular/build" and `frontend/package.json`, "@angular/cli" |
+| TypeScript | `frontend/package.json`, "typescript" |
+| Vitest | `frontend/package.json`, "vitest" |
+| MSW | `frontend/package.json`, "msw" |
+| Playwright | `frontend/package.json`, "@playwright/test" |
+| ESLint | `frontend/package.json`, "eslint" |
+| ng-openapi-gen | `frontend/package.json`, "ng-openapi-gen" |
+| Spring Boot | `backend/services/commerce/build.gradle`, "id 'org.springframework.boot'" |
+| OpenAPI Generator (backend) | `backend/services/commerce/build.gradle`, "id 'org.openapi.generator'" |
+| PMD | `backend/services/commerce/build.gradle`, "toolVersion" |
+| Gradle wrapper | `backend/gradle/wrapper/gradle-wrapper.properties`, "distributionUrl" |
+| PostgreSQL | `deploy/compose.yaml`, "image: postgres" |
+| uv, for the contract tools | `contracts/mise.toml`, "[tools]" |
 
 **How the parts connect.**
 
