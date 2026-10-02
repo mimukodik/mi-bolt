@@ -41,13 +41,20 @@ run = "mise run //backend:run"
 description = "The backend in its container (the mi-bolt-commerce image) on 8080, PostgreSQL in its container"
 run = "deploy/compose.sh up -d --build --wait postgres commerce"
 
+[tasks."docker:check"]
+description = "Fail with what to use instead when no Docker answers"
+hide = true
+run = "deploy/compose.sh check"
+
 [tasks.dev]
 description = "The three apps against the native backend, PostgreSQL in its container"
-depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment:local-backend", "backend"]
+depends = ["docker:check"]
+run = [{ tasks = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment:local-backend", "backend"] }]
 
 [tasks."dev:docker"]
 description = "The three apps against the backend container, PostgreSQL in its container"
-depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment:local-backend", "backend:docker"]
+depends = ["docker:check"]
+run = [{ tasks = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment:local-backend", "backend:docker"] }]
 
 [tasks.stack]
 description = "The whole system in containers: web on 4200, backend on 8080, PostgreSQL on 55433"
@@ -67,7 +74,7 @@ depends = ["//frontend:setup", "//backend:setup", "//tools:setup"]
 description = "Lint, test and build every workspace, and check the contract"
 # One check at a time: `api:drift` rewrites the generated clients the frontend
 # checks read, and started together the checks leave little headroom in a
-# memory-capped environment such as an agent sandbox. `contracts:check` stays
+# memory-capped environment. `contracts:check` stays
 # a dependency so that mise installs its own tools before it runs.
 depends = ["contracts:check"]
 run = [
