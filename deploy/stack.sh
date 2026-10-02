@@ -501,6 +501,9 @@ cmd_status() {
 
 cmd_health() {
   load_state
+  # Without Docker the wrapper says what to use instead; show that rather
+  # than a missing container.
+  "${COMPOSE_SH}" check
   local cid
   if ! cid="$("${COMPOSE_SH}" ps -q postgres 2>/dev/null)"; then
     cid=""

@@ -330,6 +330,27 @@ class StackScriptTests(unittest.TestCase):
         self.assertIn(f"COMPOSE_PROJECT_NAME={project_b}", log_text)
         self.assertNotIn(f"COMPOSE_PROJECT_NAME={project_a}", log_text)
 
+    # (j) without Docker, health shows the wrapper's own message and exit
+    # code (compose.sh check), not "no running container".
+    def test_health_without_docker_shows_the_wrapper_message(self) -> None:
+        worktree, _compose_log, _slots_dir, env = self._sandbox()
+        self.assertEqual(_run(worktree, env, "claim").returncode, 0)
+        compose_sh = worktree / "deploy" / "compose.sh"
+        compose_sh.write_text(
+            "#!/usr/bin/env bash\n"
+            "if [ \"${1:-}\" = check ]; then\n"
+            "  echo 'compose.sh: no Docker answers here, test' >&2\n"
+            "  exit 127\n"
+            "fi\n"
+            "exit 0\n")
+        compose_sh.chmod(0o755)
+
+        result = _run(worktree, env, "health")
+
+        self.assertEqual(result.returncode, 127, result.stderr)
+        self.assertIn("compose.sh: no Docker answers here, test", result.stderr)
+        self.assertNotIn("has no running container", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
