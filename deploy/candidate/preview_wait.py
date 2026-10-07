@@ -45,7 +45,13 @@ class GitHubError(Exception):
 
 
 def api(path):
-    result = subprocess.run(['gh', 'api', f'repos/{REPO}/{path}'], capture_output=True, text=True)
+    try:
+        result = subprocess.run(['gh', 'api', f'repos/{REPO}/{path}'],
+                                capture_output=True, text=True, timeout=60)
+    except FileNotFoundError:
+        raise Stop(4, 'gh is not installed; it reads the PR and its runs') from None
+    except subprocess.TimeoutExpired:
+        raise GitHubError(f'gh api {path}: no answer in 60 s') from None
     if result.returncode != 0:
         raise GitHubError(f"gh api {path}: {result.stderr.strip() or result.returncode}")
     return json.loads(result.stdout)
@@ -140,8 +146,7 @@ def timeout_causes(number, green):
     if not green:
         return 'CI did not finish in time.'
     causes = [f'the preview expired: a generation lives {TTL_HOURS} h after admission and '
-              'is not recreated for the same head, so push a commit or remove and re-add '
-              f'the {LABEL} label']
+              'is never recreated for the same head, so push a commit']
     try:
         others = [f"#{pr['number']}" for pr in api('pulls?state=open&per_page=100')
                   if labelled(pr) and pr['number'] != number]
@@ -183,7 +188,6 @@ def wait(number, timeout_minutes, interval=20):
                     else:
                         say(f'head moved to {value[:12]}; following it')
                     head, green, last = value, None, None
-                    continue
                 if kind == 'green':
                     green = head
                     say(value)
@@ -193,7 +197,7 @@ def wait(number, timeout_minutes, interval=20):
             last = detail
         if time.monotonic() >= deadline:
             raise Stop(3, f'timed out after {timeout_minutes} min; last state: {last}. '
-                          + timeout_causes(number, green == head))
+                          + timeout_causes(number, head is not None and green == head))
         time.sleep(interval)
 
 

@@ -136,9 +136,10 @@ followed to its head.
 
 A timeout names the likely cause. Capacity is three previews, and a fourth
 labelled PR waits for a slot; remove the label from a PR whose preview is no
-longer needed. A preview expires 48 hours after admission and is not
-recreated for the same head; push a commit, or remove and re-add the label,
-to get a fresh one. Otherwise only the coordinator's log says why a PR waits.
+longer needed. A preview expires 48 hours after admission and is never
+recreated for the same head, not even by removing and re-adding the label;
+push a commit to get a fresh one. Otherwise only the coordinator's log says
+why a PR waits.
 
 ## First deployment and troubleshooting
 

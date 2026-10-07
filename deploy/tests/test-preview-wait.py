@@ -95,6 +95,7 @@ class PreviewWaitTests(unittest.TestCase):
     def test_ready_after_ci_publication_and_rollout(self):
         Fake(self, [
             {'pr': pr()},
+            {'pr': pr()},
             {'pr': pr(), 'runs': {'ci.yml': [run(1, status='in_progress', conclusion=None)],
                                   'candidate.yml': [run(2, status='queued', conclusion=None)]}},
             {'pr': pr(), 'runs': green()},
@@ -160,15 +161,13 @@ class PreviewWaitTests(unittest.TestCase):
     def test_a_push_is_followed_and_its_cancelled_runs_are_not_a_failure(self):
         cancelled = {'ci.yml': [run(1, OLD, conclusion='cancelled')], 'candidate.yml': [run(2, OLD)]}
         fake = Fake(self, [
-            {'pr': pr(OLD), 'runs': {'ci.yml': [run(1, OLD, status='in_progress', conclusion=None)],
-                                     'candidate.yml': [run(2, OLD)]}},
+            {'pr': pr(OLD)},
             {'pr': pr(OLD), 'runs': cancelled},
             {'pr': pr(HEAD), 'runs': {**cancelled, **green()}, 'served': HEAD},
         ])
-        # Reads: first sight of the head, its runs in progress, the second
-        # poll's head read; the push lands before the re-read after the
-        # cancelled run.
-        reads = iter([pr(OLD), pr(OLD), pr(OLD), pr(HEAD)])
+        # Reads: first sight of the head, the second poll's head read; the
+        # push lands before the re-read after the cancelled run.
+        reads = iter([pr(OLD), pr(OLD), pr(HEAD)])
         original = fake.api
         fake_api = lambda path: next(reads, pr(HEAD)) if path == 'pulls/7' else original(path)
         with patch.object(preview_wait, 'api', side_effect=fake_api):
@@ -217,6 +216,18 @@ class PreviewWaitTests(unittest.TestCase):
         self.assertEqual(code, 4)
         self.assertIn('GitHub could not be read 6 times in a row', out)
         self.assertIn('HTTP 502', out)
+
+    def test_heads_that_keep_moving_still_sleep_and_time_out(self):
+        fake = Fake(self, [{'pr': pr(OLD)}, {'pr': pr(HEAD)}] * 10)
+        code, out = self.wait(timeout=1)
+        self.assertEqual(code, 3)
+        self.assertLessEqual(fake.step, 4)
+
+    def test_missing_gh_is_not_reported_as_red_ci(self):
+        with patch.object(preview_wait.subprocess, 'run', side_effect=FileNotFoundError('gh')):
+            code, out = self.wait()
+        self.assertEqual(code, 4)
+        self.assertIn('gh is not installed', out)
 
     def test_commerce_without_release_info_is_not_ready(self):
         Fake(self, [{'pr': pr(), 'runs': green(), 'served': HEAD, 'commerce': None}])
