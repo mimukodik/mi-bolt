@@ -23,9 +23,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           LABELS: repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels
         run: |
-          # A 404 means someone already removed it; the check below decides.
+          # A 404 means someone already removed it; the check below decides,
+          # and a failed read fails the step instead of passing it.
           gh api -X DELETE "$LABELS/bolt-preview" --silent || true
-          if gh api "$LABELS" --jq '.[].name' | grep -qx bolt-preview; then
+          names=$(gh api --paginate "$LABELS?per_page=100" --jq '.[].name')
+          if grep -qx bolt-preview <<<"$names"; then
             echo "bolt-preview is still on the PR" >&2
             exit 1
           fi
