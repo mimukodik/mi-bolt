@@ -190,11 +190,12 @@ class PreviewWaitTests(unittest.TestCase):
         self.assertNotIn('Likely cause', out)
 
     def test_timeout_names_full_capacity(self):
-        others = [{**pr(), 'number': number} for number in (3, 4, 5)]
+        others = [{**pr(), 'number': number} for number in range(10, 18)]
         Fake(self, [{'pr': pr(), 'runs': green(), 'others': others}])
         code, out = self.wait(timeout=1)
         self.assertEqual(code, 3)
-        self.assertIn('all 3 preview slots are taken (#3, #4, #5 also carry the label)', out)
+        self.assertIn('all 8 preview slots are taken (#10, #11, #12, #13, #14, #15, '
+                      '#16, #17 also carry the label)', out)
 
     def test_timeout_during_ci_does_not_blame_the_platform(self):
         Fake(self, [{'pr': pr(), 'runs': {'ci.yml': [run(1, status='in_progress', conclusion=None)],

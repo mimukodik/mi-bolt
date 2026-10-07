@@ -134,8 +134,8 @@ closed, from a fork or not labelled; 3 after `--timeout-minutes` (default 45);
 and 4 when GitHub stays unreadable for about two minutes. A new push is
 followed to its head.
 
-A timeout names a cause GitHub shows, such as all three preview slots being
-taken; a fourth labelled PR waits for a slot, so remove the label from a PR
+A timeout names a cause GitHub shows, such as all eight preview slots being
+taken; a ninth labelled PR waits for a slot, so remove the label from a PR
 whose preview is no longer needed. Otherwise only the coordinator's log says
 why a PR waits.
 
@@ -151,7 +151,7 @@ Label on means a preview, label off means none:
   The Berek coordinator drops a closed PR's preview either way.
 
 Nothing expires: a preview stays until its label goes, so remove the label
-when the preview is no longer needed; three run at a time. A push replaces the
+when the preview is no longer needed; eight run at a time. A push replaces the
 preview with one for the new head, on a fresh database. Adding the label again
 starts a fresh preview, for the same head too, including after a close and
 reopen, as long as the head's candidate is recent: the coordinator looks

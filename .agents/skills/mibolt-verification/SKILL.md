@@ -360,7 +360,7 @@ push deploys a new preview on an empty database; run the command again after
 one. Nothing expires: the preview stays until the label goes, and merging or
 closing the pull request removes it (`deploy/candidate/README.md`, "The label
 is the only switch"). Remove the label yourself when the preview is no longer
-needed, since the platform runs three at a time. A
+needed, since the platform runs eight at a time. A
 recording of what `main` already does needs no preview: the stable demo,
 `https://bolt.mimukodik.hu`, runs `main`.
 

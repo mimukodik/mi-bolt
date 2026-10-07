@@ -24,7 +24,7 @@ from urllib.request import Request, urlopen
 REPO = 'mimukodik/mi-bolt'
 LABEL = 'bolt-preview'
 # Berek apps/bolt-preview-coordinator/config.json, "capacity".
-CAPACITY = 3
+CAPACITY = 8
 WORKFLOWS = {'ci.yml': 'CI', 'candidate.yml': 'Candidate Build'}
 # Cloudflare refuses Python's default user agent on mimukodik.hu hosts.
 HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltPreviewWait/1.0)',
