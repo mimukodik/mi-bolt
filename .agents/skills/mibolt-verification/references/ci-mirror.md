@@ -79,8 +79,8 @@ The changed-paths script does not list these.
   to `mibolt-workspace-ops`.
 - **Publish Candidate, Stable Smoke and Preview Label**
   (`.github/workflows/publish-candidate.yml`, `.github/workflows/stable-smoke.yml`,
-  `.github/workflows/preview-label.yml`) run after other workflows, on a
-  schedule or by hand (`workflow_dispatch`). None has a local mirror;
+  `.github/workflows/preview-label.yml`) run after other workflows, when a
+  pull request closes, or by hand (`workflow_dispatch`). None has a local mirror;
   `mibolt-workspace-ops` owns them. PR previews become available at
   `https://bolt-pr-<PR-number>.mimukodik.hu` when the `bolt-preview` label is on
   and the published candidate is ready;

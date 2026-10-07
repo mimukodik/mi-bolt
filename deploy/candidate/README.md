@@ -141,25 +141,22 @@ why a PR waits.
 
 ## The label is the only switch
 
-A preview exists while its PR is open and carries `bolt-preview`; the Berek
-coordinator never retires one on its own. The `Preview Label` workflow
-(`.github/workflows/preview-label.yml`, running
-`deploy/candidate/preview_label.py`) keeps the label honest:
+Label on means a preview, label off means none:
 
-- When a PR closes, it removes the label.
-- Every six hours it removes the label from each open PR with no push and no
-  fresh label for 48 hours, and comments that adding the label again brings
-  the preview back on a fresh database. A push is dated by the head's first
-  `Candidate Build` run. This is commit inactivity, not browser traffic:
-  visiting the preview does not extend it.
+- Adding `bolt-preview` deploys the PR's preview once its candidate is
+  published.
+- Removing it drops the preview and its database.
+- Merging or closing the PR removes the label: the `Preview Label` workflow
+  (`.github/workflows/preview-label.yml`) does it from the default branch.
+  The Berek coordinator drops a closed PR's preview either way.
 
-Adding the label again starts a fresh preview, for the same head too,
-including after a close and reopen, as long as the head's candidate is recent:
-the coordinator looks through the latest 100 successful `Publish Candidate`
-runs, roughly ten days. For an older head, push a commit. Run the sweep by hand with
-`gh workflow run preview-label.yml` (dry run by default; pass
-`-f dry_run=false` to retire). Both commands run from the default branch, so
-an edit to the workflow or the script takes effect once it is on `main`.
+Nothing expires: a preview stays until its label goes, so remove the label
+when the preview is no longer needed; three run at a time. A push replaces the
+preview with one for the new head, on a fresh database. Adding the label again
+starts a fresh preview, for the same head too, including after a close and
+reopen, as long as the head's candidate is recent: the coordinator looks
+through the latest 100 successful `Publish Candidate` runs, roughly ten days.
+For an older head, push a commit.
 
 ## First deployment and troubleshooting
 
