@@ -77,10 +77,10 @@ The changed-paths script does not list these.
   CI installs (`.github/workflows/candidate.yml`, "azure/setup-helm") and no `mise.toml`
   does. The other test lines, and everything else about this workflow, belong
   to `mibolt-workspace-ops`.
-- **Publish Candidate and Stable Smoke**
-  (`.github/workflows/publish-candidate.yml`, `.github/workflows/stable-smoke.yml`)
-  run after other workflows or by hand (`workflow_dispatch`). Neither has
-  a local mirror;
+- **Publish Candidate, Stable Smoke and Preview Label**
+  (`.github/workflows/publish-candidate.yml`, `.github/workflows/stable-smoke.yml`,
+  `.github/workflows/preview-label.yml`) run after other workflows, on a
+  schedule or by hand (`workflow_dispatch`). None has a local mirror;
   `mibolt-workspace-ops` owns them. PR previews become available at
   `https://bolt-pr-<PR-number>.mimukodik.hu` when the `bolt-preview` label is on
   and the published candidate is ready;

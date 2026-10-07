@@ -357,9 +357,11 @@ or `Candidate Build` run is red; 2 when the pull request is closed, from a
 fork or not labelled; 3 on timeout, naming the likely cause; 4 when GitHub
 cannot be read (`deploy/candidate/README.md`, "Waiting for a preview"). Each
 push deploys a new preview on an empty database; run the command again after
-one. A preview expires 48 hours after admission and only a new push brings
-it back; remove the label when the preview is no longer needed, since the
-platform runs three at a time. A
+one. After 48 hours with no push and no fresh label the label is removed,
+which retires the preview, and adding it again brings it back
+(`deploy/candidate/README.md`, "The label is the only switch"); remove the
+label yourself when the preview is no longer needed, since the platform runs
+three at a time. A
 recording of what `main` already does needs no preview: the stable demo,
 `https://bolt.mimukodik.hu`, runs `main`.
 

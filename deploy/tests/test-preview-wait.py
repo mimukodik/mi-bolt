@@ -181,13 +181,13 @@ class PreviewWaitTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn('has no bolt-preview label', out)
 
-    def test_timeout_reports_the_last_state_and_likely_causes(self):
+    def test_timeout_reports_the_last_state_and_where_to_look(self):
         Fake(self, [{'pr': pr(), 'runs': green()}])
         code, out = self.wait(timeout=1)
         self.assertEqual(code, 3)
         self.assertIn(f'timed out after 1 min; last state: {URL} answers 404', out)
-        self.assertIn('the preview expired', out)
-        self.assertNotIn('slots are taken', out)
+        self.assertIn('The Berek coordinator log says why', out)
+        self.assertNotIn('Likely cause', out)
 
     def test_timeout_names_full_capacity(self):
         others = [{**pr(), 'number': number} for number in (3, 4, 5)]
@@ -202,7 +202,7 @@ class PreviewWaitTests(unittest.TestCase):
         code, out = self.wait(timeout=1)
         self.assertEqual(code, 3)
         self.assertIn('CI did not finish in time', out)
-        self.assertNotIn('expired', out)
+        self.assertNotIn('coordinator', out)
 
     def test_a_github_blip_is_retried(self):
         Fake(self, [{'pr': pr(), 'runs': green()}, {'gh_error': True}, {'gh_error': True},

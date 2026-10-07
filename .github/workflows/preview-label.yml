@@ -1,0 +1,60 @@
+name: Preview Label
+
+# The bolt-preview label is the only switch for a PR preview (MIM-487): the
+# Berek coordinator deploys while an open PR carries it and never retires a
+# preview on its own. This removes the label from a closed PR and from PRs with
+# no push and no fresh label for 48 hours (deploy/candidate/preview_label.py).
+# pull_request_target and schedule run the default branch's copy; nothing here
+# checks out or runs pull request code.
+on:
+  pull_request_target:
+    types: [closed]
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report which previews would be retired, change nothing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+# One group per closed PR, so a batch of merges cannot cancel each other's
+# pending runs. Sweeps share one group; a pending sweep replaced by a newer
+# one loses nothing.
+concurrency:
+  group: preview-label-${{ github.event.pull_request.number || 'sweep' }}
+  cancel-in-progress: false
+
+jobs:
+  label:
+    if: >-
+      github.event_name != 'pull_request_target'
+      || contains(github.event.pull_request.labels.*.name, 'bolt-preview')
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    steps:
+      - name: Checkout the default branch's label script
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: deploy/candidate
+      - name: Remove the label from the closed pull request
+        if: github.event_name == 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 deploy/candidate/preview_label.py closed "$PR_NUMBER"
+      - name: Retire previews idle for 48 hours
+        if: github.event_name != 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then set -- --dry-run; fi
+          python3 deploy/candidate/preview_label.py sweep "$@"

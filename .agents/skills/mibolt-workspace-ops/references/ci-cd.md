@@ -94,15 +94,18 @@ promoted; this is only the wiring.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm, computes the image input hashes (`deploy/candidate/inputs.py`), runs the four `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
+| `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm, computes the image input hashes (`deploy/candidate/inputs.py`), runs the six `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
 | `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml`, "Verify inputs, publish immutable images and chart, write receipt") |
 | `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | waits for the stable demo and runs both purchase flows against it (`.github/workflows/stable-smoke.yml`, "Existing smoke tests against the stable demo") |
+| `.github/workflows/preview-label.yml` ("Preview Label") | `pull_request_target` closed, every six hours, `workflow_dispatch` | removes the `bolt-preview` label from a closed PR and from PRs idle for 48 hours; the coordinator retires a preview when its label goes, its PR closes or its head changes, never on a timer (`deploy/candidate/README.md`, "The label is the only switch") |
 
 **Everything after `.github/workflows/candidate.yml` runs the default branch's
 copy.** A `workflow_run` workflow triggers only when its file exists on the
 default branch and runs in that branch's context
 (https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
-These workflows also check out `ref: ${{ github.sha }}` for the code they run
+`.github/workflows/preview-label.yml` runs on `pull_request_target` and `schedule`,
+which also use the default branch's copy. These workflows also check out
+`ref: ${{ github.sha }}` or the default branch for the code they run
 (`.github/workflows/publish-candidate.yml`, "Checkout trusted publisher and chart";
 `.github/workflows/stable-smoke.yml`, "Trusted receipt and fencing wrapper"). An edit to any of them, or to the
 `deploy/candidate/*.py` scripts they call, takes effect only once it is on

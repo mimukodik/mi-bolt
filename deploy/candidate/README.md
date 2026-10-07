@@ -134,12 +134,32 @@ closed, from a fork or not labelled; 3 after `--timeout-minutes` (default 45);
 and 4 when GitHub stays unreadable for about two minutes. A new push is
 followed to its head.
 
-A timeout names the likely cause. Capacity is three previews, and a fourth
-labelled PR waits for a slot; remove the label from a PR whose preview is no
-longer needed. A preview expires 48 hours after admission and is never
-recreated for the same head, not even by removing and re-adding the label;
-push a commit to get a fresh one. Otherwise only the coordinator's log says
+A timeout names a cause GitHub shows, such as all three preview slots being
+taken; a fourth labelled PR waits for a slot, so remove the label from a PR
+whose preview is no longer needed. Otherwise only the coordinator's log says
 why a PR waits.
+
+## The label is the only switch
+
+A preview exists while its PR is open and carries `bolt-preview`; the Berek
+coordinator never retires one on its own. The `Preview Label` workflow
+(`.github/workflows/preview-label.yml`, running
+`deploy/candidate/preview_label.py`) keeps the label honest:
+
+- When a PR closes, it removes the label.
+- Every six hours it removes the label from each open PR with no push and no
+  fresh label for 48 hours, and comments that adding the label again brings
+  the preview back on a fresh database. A push is dated by the head's first
+  `Candidate Build` run. This is commit inactivity, not browser traffic:
+  visiting the preview does not extend it.
+
+Adding the label again starts a fresh preview, for the same head too,
+including after a close and reopen, as long as the head's candidate is recent:
+the coordinator looks through the latest 100 successful `Publish Candidate`
+runs, roughly ten days. For an older head, push a commit. Run the sweep by hand with
+`gh workflow run preview-label.yml` (dry run by default; pass
+`-f dry_run=false` to retire). Both commands run from the default branch, so
+an edit to the workflow or the script takes effect once it is on `main`.
 
 ## First deployment and troubleshooting
 
@@ -150,7 +170,7 @@ while checking its preview. Add the
 `bolt-preview` label on the PR to enable its preview at
 `https://bolt-pr-<PR-number>.mimukodik.hu`. Remove the label to clean up the
 release and its database; adding it again creates a fresh empty database.
-Closing the PR also requests cleanup.
+Closing the PR also requests cleanup and removes the label.
 Build and publication still run for unlabeled PRs so the candidate receipt is
 ready when deployment is enabled.
 
