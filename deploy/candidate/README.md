@@ -113,6 +113,33 @@ Stable acceptance continues through `Stable Smoke` after merge.
 PR-controlled npm lifecycle hooks and modified tests never execute in the
 receipt-producing publisher workflow.
 
+## Waiting for a preview
+
+Adding the label is what deploys the preview; nothing reports the rollout back
+to the PR, because the Berek coordinator holds only a read-only GitHub token.
+To wait for it:
+
+```sh
+gh pr edit <PR-number> --add-label bolt-preview
+python3 deploy/candidate/preview_wait.py <PR-number>
+```
+
+It needs `gh` with read access to the repository's pull requests and Actions
+runs, and Python 3 with no packages. It prints one line per state change: the
+head's `CI` and `Candidate Build` runs, then what the preview host serves. It
+exits 0 and prints the URL once `/__candidate.json` names the PR head,
+readiness is `UP` and commerce reports the same publisher run. It exits 1 when
+either run on the head failed, naming the failed jobs; 2 when the PR is
+closed, from a fork or not labelled; 3 after `--timeout-minutes` (default 45);
+and 4 when GitHub stays unreadable for about two minutes. A new push is
+followed to its head.
+
+A timeout names the likely cause. Capacity is three previews, and a fourth
+labelled PR waits for a slot; remove the label from a PR whose preview is no
+longer needed. A preview expires 48 hours after admission and is not
+recreated for the same head; push a commit, or remove and re-add the label,
+to get a fresh one. Otherwise only the coordinator's log says why a PR waits.
+
 ## First deployment and troubleshooting
 
 The first rollout needs an open same-repository PR after the publisher workflow

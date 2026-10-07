@@ -196,5 +196,8 @@ files; `deploy/candidate/README.md` ("Run local checks with:") runs `actionlint`
 | no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md` ("label on the PR to enable its preview"), `deploy/candidate/README.md` ("fork PRs have no automatic candidate receipt") |
 
 PR previews are available at `https://bolt-pr-<PR-number>.mimukodik.hu` once
-the `bolt-preview` label is on and the published candidate is ready. Optional
-manual purchase checks and their retry command are in `deploy/candidate/README.md`.
+the `bolt-preview` label is on and the published candidate is ready.
+`python3 deploy/candidate/preview_wait.py <PR-number>` follows the head's runs
+and the preview host until then (`deploy/candidate/README.md`, "Waiting for a
+preview"). Optional manual purchase checks and their retry command are in
+`deploy/candidate/README.md`.

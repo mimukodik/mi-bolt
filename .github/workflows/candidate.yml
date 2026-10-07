@@ -36,6 +36,8 @@ jobs:
           uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py
       - name: Test the worktree stack script
         run: uv run --no-project python deploy/tests/test-stack.py
+      - name: Test the preview wait command
+        run: uv run --no-project python deploy/tests/test-preview-wait.py
       - uses: docker/setup-buildx-action@v3
       - name: Build both images from the Compose definition
         working-directory: deploy

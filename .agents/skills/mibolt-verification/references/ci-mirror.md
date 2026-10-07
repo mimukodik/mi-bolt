@@ -83,7 +83,9 @@ The changed-paths script does not list these.
   a local mirror;
   `mibolt-workspace-ops` owns them. PR previews become available at
   `https://bolt-pr-<PR-number>.mimukodik.hu` when the `bolt-preview` label is on
-  and the published candidate is ready; optional browser checks run manually.
+  and the published candidate is ready;
+  `python3 deploy/candidate/preview_wait.py <PR-number>` waits for that
+  (`SKILL.md`, "A running preview"). Optional browser checks run manually.
 
 ## Checks CI never runs
 

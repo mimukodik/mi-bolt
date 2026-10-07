@@ -339,6 +339,29 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
 7. Stop every server the pass started before a check or a test run, so
    nothing runs beside one.
 
+**A running preview.** When the task needs the deployed app rather than a
+local server, such as a demo recording, a browser check a reviewer will
+repeat, or screenshots for a recap, deploy the pull request's preview yourself
+as soon as the pull request exists: adding the `bolt-preview` label is what
+deploys it (`deploy/candidate/README.md`, "label on the PR to enable its
+preview"). Then wait with the command, never with a fixed sleep:
+
+```sh
+gh pr edit <PR-number> --add-label bolt-preview
+python3 deploy/candidate/preview_wait.py <PR-number>
+```
+
+It exits 0 with `https://bolt-pr-<PR-number>.mimukodik.hu` once that host
+serves the pull request's head; 1, naming the failed jobs, when the head's `CI`
+or `Candidate Build` run is red; 2 when the pull request is closed, from a
+fork or not labelled; 3 on timeout, naming the likely cause; 4 when GitHub
+cannot be read (`deploy/candidate/README.md`, "Waiting for a preview"). Each
+push deploys a new preview on an empty database; run the command again after
+one. A preview expires 48 hours after admission; remove the label when the
+preview is no longer needed, since the platform runs three at a time. A
+recording of what `main` already does needs no preview: the stable demo,
+`https://bolt.mimukodik.hu`, runs `main`.
+
 **What does not count**, for any change: a file's existence or size on disk,
 or reading the diff back; a green typecheck, unit or Vitest run; an HTTP 200
 from `curl` or any other request made outside the browser; a grep of a

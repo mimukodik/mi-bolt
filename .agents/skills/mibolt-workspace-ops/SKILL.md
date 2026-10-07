@@ -306,8 +306,10 @@ The deploy checks run through uv with no uv pinned at the root:
 `uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py`
 (`mise.toml`, "Lint and inspect the MiBolt Helm app chart"), and
 `.github/workflows/candidate.yml` ("Check candidate provenance and app chart";
-`.github/workflows/candidate.yml`, "Test the worktree stack script") runs all
-four `deploy/tests/*.py` checks the same way, `test-stack.py` without PyYAML.
+`.github/workflows/candidate.yml`, "Test the worktree stack script";
+`.github/workflows/candidate.yml`, "Test the preview wait command") runs all
+five `deploy/tests/*.py` checks the same way, `test-stack.py` and
+`test-preview-wait.py` without PyYAML.
 
 ### Naming
 
