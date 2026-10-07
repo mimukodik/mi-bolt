@@ -23,9 +23,8 @@ from urllib.request import Request, urlopen
 
 REPO = 'mimukodik/mi-bolt'
 LABEL = 'bolt-preview'
-# Berek apps/bolt-preview-coordinator/config.json, "capacity" and "ttlSeconds".
-CAPACITY = 3
-TTL_HOURS = 48
+# Berek apps/bolt-preview-coordinator/config.json, "capacity".
+CAPACITY = 8
 WORKFLOWS = {'ci.yml': 'CI', 'candidate.yml': 'Candidate Build'}
 # Cloudflare refuses Python's default user agent on mimukodik.hu hosts.
 HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltPreviewWait/1.0)',
@@ -145,8 +144,7 @@ def preview_state(number, head):
 def timeout_causes(number, green):
     if not green:
         return 'CI did not finish in time.'
-    causes = [f'the preview expired: a generation lives {TTL_HOURS} h after admission and '
-              'is never recreated for the same head, so push a commit']
+    causes = []
     try:
         others = [f"#{pr['number']}" for pr in api('pulls?state=open&per_page=100')
                   if labelled(pr) and pr['number'] != number]
@@ -158,8 +156,9 @@ def timeout_causes(number, green):
             causes.append(f"Publish Candidate failed: {runs[0]['html_url']}")
     except GitHubError:
         pass
-    return ('Likely causes: ' + '; '.join(causes) + '. Otherwise the Berek coordinator log '
-            'says why the PR waits; ask a developer with cluster access.')
+    found = ('Likely cause: ' + '; '.join(causes) + '. ') if causes else ''
+    return (found + 'The Berek coordinator log says why a labelled PR waits; ask a '
+            'developer with cluster access.')
 
 
 def wait(number, timeout_minutes, interval=20):
