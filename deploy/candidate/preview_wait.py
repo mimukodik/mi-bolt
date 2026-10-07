@@ -187,6 +187,7 @@ def wait(number, timeout_minutes, interval=20):
                     else:
                         say(f'head moved to {value[:12]}; following it')
                     head, green, last = value, None, None
+                    detail = None
                 if kind == 'green':
                     green = head
                     say(value)

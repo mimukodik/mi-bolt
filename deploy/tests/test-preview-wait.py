@@ -112,8 +112,9 @@ class PreviewWaitTests(unittest.TestCase):
                      f'{URL} still serves {OLD[:12]}', 'commerce is still starting',
                      f'ready: {URL} serves {HEAD[:12]} (publisher run 99)'):
             self.assertIn(line, out)
-        # One line per state change, not per poll.
+        # One line per state change, not per poll, and no internal event values.
         self.assertEqual(out.count('answers 404'), 1, out)
+        self.assertNotIn("('head'", out)
 
     def test_unlabelled_pr_stops_with_the_command_that_labels_it(self):
         Fake(self, [{'pr': pr(labels=())}])
