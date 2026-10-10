@@ -967,7 +967,7 @@ ground carrying lime. The same exception applies to the two hero CTAs, which
 are a lime pill and a lime outline on the navy hero and take the white ring
 too.
 
-## Halloween előnézet (BOLT-6)
+## Halloween megjelenés (BOLT-6)
 
 A jóváhagyott lila–narancs kampány a meglévő navy/lime arculatot és
 oldalgeometriát egészíti ki: lila keret `#8b5cf6`, narancs díszítés `#ff7a1a`,
@@ -976,6 +976,6 @@ akadálymentesítésből kizárt rétegek; nem fogadnak pointer eseményt.
 Mobilon a fejléc külső díszei és a nagy hold elmaradnak a kereső és a szöveg
 szabadon tartásához. A csökkentett mozgás azonnali statikus állapotot ad.
 
-Az előnézet `/primitives/halloween` címen a valódi főoldali komponensekkel
-érhető el. Nem kapcsolja be hallgatólagosan a kampányt: az árak és az
-ajánlatszűrés külön integrációt, a díszítés időzítése üzleti választ igényel.
+A megjelenést az adminban mentett, külön engedélyezett és időzített
+dekoráció vezérli. Az akciós árak és a promósáv a ténylegesen aktív
+termékpromóciókhoz kötődnek; nincs látvány-előnézeti felülbírálás.

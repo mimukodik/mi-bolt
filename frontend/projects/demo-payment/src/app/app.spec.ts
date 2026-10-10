@@ -127,7 +127,7 @@ describe('demo-payment Halloween appearance', () => {
     });
   });
 
-  it('accepts explicit preview intent from another origin even when storage is denied', () => {
+  it('ignores the retired preview parameter when the server disables decoration', () => {
     window.history.replaceState(null, '', '/demo-fizetes/?halloweenPreview=1');
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('Storage denied');
@@ -137,16 +137,16 @@ describe('demo-payment Halloween appearance', () => {
       .expectOne(appearanceUrl)
       .flush({ halloweenActive: false, serverTime: '2026-10-30T12:00:00Z' });
     fixture.detectChanges();
-    expect(hostElement(fixture.nativeElement).classList.contains('halloween')).toBe(true);
+    expect(hostElement(fixture.nativeElement).classList.contains('halloween')).toBe(false);
   });
 
-  it('keeps a tab-local preview active on an appearance failure', () => {
+  it('ignores retired preview storage when the appearance request fails', () => {
     sessionStorage.setItem('mi-bolt.halloween-preview', '1');
     const fixture = TestBed.createComponent(App);
     TestBed.inject(HttpTestingController)
       .expectOne(appearanceUrl)
       .flush({}, { status: 503, statusText: 'Unavailable' });
     fixture.detectChanges();
-    expect(hostElement(fixture.nativeElement).classList.contains('halloween')).toBe(true);
+    expect(hostElement(fixture.nativeElement).classList.contains('halloween')).toBe(false);
   });
 });

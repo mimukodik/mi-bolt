@@ -259,13 +259,7 @@ Products are never named by slug or product name: every scenario picks its card 
 5. Press `pay-succeeded`. - expect: The browser returns to the shop and lands on the review step with `review-payment-status` reading "A fizetés jóváhagyva.".
 6. Tick `review-consent-terms-input` if it is not already ticked and press the inner button of `review-submit`. - expect: The browser lands on `/penztar/siker/<orderId>` and `order-receipt` is visible. - expect: `receipt-order-number` is not empty, `receipt-row-payment` contains "Bankkártya" and `receipt-row-status` reads "Demó rendelés visszaigazolva".
 
-## Halloween: design preview across routes
-
-### the preview survives navigation and reopening and can be dismissed
-
-1. Opt into `/primitives/halloween`. Expect the real home page, the preview notice and the Halloween shell.
-2. Follow the header to `/telefonok`, open a product card, then open `/penztar/kosar` in the same tab. Expect the route contents, preview notice and Halloween shell on each page.
-3. Reopen the cart URL, dismiss the preview, then open the catalogue. Expect the preview and its forced theme to remain disabled. Campaign data is unchanged.
+## Halloween: active campaign offers
 
 ### the promotion banner keeps active offers on reload and its filter can be removed
 

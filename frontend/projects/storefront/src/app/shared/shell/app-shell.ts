@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, effect, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
@@ -8,7 +8,6 @@ import { PERSISTENCE_MODE, SNAPSHOT_DISCARD } from '../../core/persistence-mode'
 import { PromotionStrip } from './promotion-strip';
 import { DemoNotice } from './demo-notice';
 import { ShopAppearanceFacade } from './shop-appearance.facade';
-import { HalloweenPreviewState } from './halloween-preview-state';
 
 /**
  * `AppShell` is the shared chrome (header + footer) rendered around
@@ -40,12 +39,7 @@ import { HalloweenPreviewState } from './halloween-preview-state';
 export class AppShell {
   protected readonly decorationsReady = signal(false);
   private readonly appearance = inject(ShopAppearanceFacade);
-  protected readonly preview = inject(HalloweenPreviewState);
-  /** The explicit preview can force the theme without changing campaign settings. */
-  readonly halloween = input(false);
-  protected readonly showHalloween = computed(
-    () => this.halloween() || this.preview.enabled() || this.appearance.halloweenActive(),
-  );
+  protected readonly showHalloween = this.appearance.halloweenActive;
 
   constructor() {
     effect((cleanup) => {

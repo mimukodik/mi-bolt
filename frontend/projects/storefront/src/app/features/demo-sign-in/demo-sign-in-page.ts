@@ -22,7 +22,6 @@ import { FormField, form, maxLength, required } from '@angular/forms/signals';
 
 import { Button, FormFieldMessage, StatusMessage, type FieldError } from '../../shared/ui';
 import { DemoAccess, isSafeReturnUrl } from '../../core/demo-access/demo-access';
-import { HalloweenPreviewState } from '../../shared/shell/halloween-preview-state';
 
 /** Where a visitor lands when `vissza` is missing or unsafe. */
 const HOME_PATH = '/';
@@ -34,19 +33,11 @@ const PASSWORD_MAX_LENGTH = 64;
   selector: 'app-demo-sign-in-page',
   templateUrl: './demo-sign-in-page.html',
   imports: [Button, FormField, FormFieldMessage, StatusMessage],
-  host: { '[class.halloween]': 'showHalloween()' },
 })
 export class DemoSignInPage {
   private readonly access = inject(DemoAccess);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly preview = inject(HalloweenPreviewState);
-  protected readonly showHalloween = computed(
-    () =>
-      this.preview.enabled() ||
-      this.route.snapshot.queryParamMap.get('vissza') === '/primitives/halloween',
-  );
-
   private readonly model = signal({ password: '' });
 
   protected readonly form = form(this.model, (p) => {

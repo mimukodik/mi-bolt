@@ -8,7 +8,6 @@ import { Api } from '@mi-bolt/api/api';
 import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
 import { PriceRefresh } from '../utils/price-refresh';
 import { ShopAppearanceFacade } from './shop-appearance.facade';
-import { HalloweenPreviewState } from './halloween-preview-state';
 import { promotionMotion } from '../halloween/promotion-motion';
 
 @Component({
@@ -60,13 +59,12 @@ export class PromotionStrip {
   });
   protected readonly active = signal(false);
   private readonly appearance = inject(ShopAppearanceFacade);
-  private readonly preview = inject(HalloweenPreviewState);
   private readonly promotionLink = viewChild<ElementRef<HTMLAnchorElement>>('promotionLink');
 
   constructor() {
     effect((onCleanup) => {
       const bar = this.promotionLink()?.nativeElement;
-      const themed = this.appearance.halloweenActive() || this.preview.enabled();
+      const themed = this.appearance.halloweenActive();
       if (bar === undefined || !themed || typeof bar.animate !== 'function') return;
       const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
       if (preference.matches) return;

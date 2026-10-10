@@ -1262,26 +1262,6 @@
 .halloween.sm--motion app-price-block .root.promotional .amount {
   animation: sm-candle 3.1s ease-in-out infinite;
 }
-.halloween-preview-notice {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px 16px;
-  padding: 12px 16px;
-  background: #2e1065;
-  color: #fff;
-  font-size: 14px;
-}
-.halloween-preview-notice button {
-  border: 1px solid #a78bfa;
-  border-radius: 8px;
-  padding: 8px 12px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
 @media (max-width: 1023px) {
   .halloween .brand .halloween-header-art,
   .halloween .cart .halloween-header-art {
@@ -1338,19 +1318,7 @@
 .promotion-strip > :where(.sm-deco) {
   display: none;
 }
-.halloween-sign-in-spider {
-  display: none;
-}
-.halloween .halloween-sign-in-spider {
-  display: block;
-  width: 20px;
-  height: 42px;
-  flex: none;
-}
-.halloween .halloween-sign-in-card {
-  outline: 3px solid var(--pm-frame);
-  outline-offset: -3px;
-}
+
 .halloween app-price-block .root.promotional .row {
   position: relative;
   padding-top: 8px;

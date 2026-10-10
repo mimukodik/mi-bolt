@@ -122,13 +122,6 @@ export const routes: Routes = [
   },
   // Internal routes ------------------------------------------------------
   {
-    path: 'primitives/halloween',
-    canActivate: [demoAccessGuard],
-    loadComponent: () =>
-      import('./features/halloween-preview/halloween-preview').then((m) => m.HalloweenPreview),
-    title: 'MiBolt — Halloween előnézet',
-  },
-  {
     path: 'primitives',
     canActivate: [demoAccessGuard],
     loadComponent: () =>

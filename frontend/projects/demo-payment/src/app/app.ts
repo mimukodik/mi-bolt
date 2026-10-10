@@ -30,13 +30,13 @@ export class App {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (appearance) => {
-          this.halloweenActive.set(appearance.halloweenActive || this.previewEnabled());
+          this.halloweenActive.set(appearance.halloweenActive);
           const boundary = Date.parse(appearance.nextChangeAt ?? '');
           const remaining = boundary - Date.parse(appearance.serverTime);
           this.schedule(Number.isFinite(remaining) ? Math.min(30_000, remaining + 50) : 30_000);
         },
         error: () => {
-          this.halloweenActive.set(this.previewEnabled());
+          this.halloweenActive.set(false);
           this.schedule(30_000);
         },
       });
@@ -49,14 +49,5 @@ export class App {
       },
       Math.max(50, delay),
     );
-  }
-
-  private previewEnabled(): boolean {
-    if (new URLSearchParams(window.location.search).get('halloweenPreview') === '1') return true;
-    try {
-      return sessionStorage.getItem('mi-bolt.halloween-preview') === '1';
-    } catch {
-      return false;
-    }
   }
 }
