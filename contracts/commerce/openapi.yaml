@@ -73,9 +73,104 @@ tags:
   description: Admin account management. Admin application only.
 - name: AdminProducts
   description: Catalogue maintenance, archived products included. Admin application only.
+- name: AdminCampaignSettings
+  description: Shop decoration schedules, independent of product sales.
 - name: AdminMedia
   description: Catalogue image upload. Admin application only.
 paths:
+  /shop-appearance:
+    get:
+      operationId: getShopAppearance
+      tags:
+      - Catalog
+      summary: Read the currently active shop decoration
+      description: Halloween follows its own enabled schedule, independent of product promotions. Active at startsAt inclusive until endsAt exclusive. Responses use Cache-Control no-store.
+      responses:
+        '200':
+          description: Current appearance and the next relevant schedule boundary.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always no-store.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopAppearance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/halloween-appearance:
+    get:
+      operationId: getHalloweenAppearance
+      tags:
+      - AdminCampaignSettings
+      summary: Read the independent Halloween decoration schedule
+      security:
+      - adminSession: []
+      responses:
+        '200':
+          description: Saved settings. Initially disabled with no dates.
+          headers:
+            ETag:
+              $ref: '#/components/headers/AppearanceETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HalloweenAppearance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: updateHalloweenAppearance
+      tags:
+      - AdminCampaignSettings
+      summary: Replace the Halloween decoration schedule
+      description: Enabled settings require both dates and startsAt before endsAt. A failed write preserves saved settings. Missing If-Match is 428; stale or malformed is 412 APPEARANCE_VERSION_CONFLICT.
+      security:
+      - adminSession: []
+      parameters:
+      - $ref: '#/components/parameters/AppearanceIfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HalloweenAppearanceInput'
+      responses:
+        '200':
+          description: Saved settings and their new version.
+          headers:
+            ETag:
+              $ref: '#/components/headers/AppearanceETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HalloweenAppearance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '412':
+          description: Stale or malformed version. Code APPEARANCE_VERSION_CONFLICT with params.expected and params.received.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /products:
     get:
       operationId: listProducts
@@ -153,6 +248,11 @@ paths:
           type: boolean
       - name: is5g
         in: query
+        schema:
+          type: boolean
+      - name: activePromotion
+        in: query
+        description: Restrict variants to current effective promotions; false excludes discounted variants.
         schema:
           type: boolean
       - name: featured
@@ -702,6 +802,12 @@ paths:
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentIntentRequest'
       responses:
         '201':
           description: The authorisation was started.
@@ -1723,6 +1829,10 @@ components:
         answers 401 UNAUTHENTICATED without a valid one. It carries no identity
         beyond the one demo user.
   headers:
+    AppearanceETag:
+      description: The quoted saved appearance version.
+      schema:
+        type: string
     ETag:
       description: The current session state version, quoted. Send it back in If-Match
         on the next mutation.
@@ -1738,6 +1848,13 @@ components:
         type: string
         pattern: ^"[0-9]+"$
   parameters:
+    AppearanceIfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: Quoted appearance ETag; missing is 428 and stale or malformed is 412.
+      schema:
+        type: string
     ProductSlug:
       name: slug
       in: path
@@ -1933,6 +2050,56 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    HalloweenAppearanceInput:
+      type: object
+      additionalProperties: false
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+        startsAt:
+          type: [string, 'null']
+          format: date-time
+        endsAt:
+          type: [string, 'null']
+          format: date-time
+      description: Replacement decoration settings. Dates may be absent or null when disabled. Enabled requires both dates and startsAt before endsAt. Timestamps must be exactly representable at PostgreSQL microsecond precision; finer instants receive 422 DATETIME_PRECISION.
+    HalloweenAppearance:
+      type: object
+      additionalProperties: false
+      required:
+      - enabled
+      - version
+      properties:
+        enabled:
+          type: boolean
+        startsAt:
+          type: [string, 'null']
+          format: date-time
+        endsAt:
+          type: [string, 'null']
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+    ShopAppearance:
+      type: object
+      additionalProperties: false
+      required:
+      - halloweenActive
+      - serverTime
+      properties:
+        halloweenActive:
+          type: boolean
+        serverTime:
+          type: string
+          format: date-time
+        nextChangeAt:
+          type: [string, 'null']
+          format: date-time
+          description: Nearest future start or end boundary for an enabled schedule. Absent or null when disabled or already ended.
     Money:
       type: object
       additionalProperties: false
@@ -2016,6 +2183,10 @@ components:
       - price
       - availability
       properties:
+        image:
+          $ref: '#/components/schemas/Image'
+        priceMetadata:
+          $ref: '#/components/schemas/PriceMetadata'
         colorCode:
           type: string
         colorName:
@@ -2046,6 +2217,8 @@ components:
       - maxQuantity
       - images
       properties:
+        priceMetadata:
+          $ref: '#/components/schemas/PriceMetadata'
         id:
           type: string
         slug:
@@ -2158,6 +2331,8 @@ components:
         - image
         - colors
         properties:
+          priceMetadata:
+            $ref: '#/components/schemas/PriceMetadata'
           storageGb:
             $ref: '#/components/schemas/StorageGb'
           variantId:
@@ -2190,6 +2365,12 @@ components:
         - variants
         - specGroups
         properties:
+          serverTime:
+            type: string
+            format: date-time
+          nextPriceChangeAt:
+            type: string
+            format: date-time
           description:
             type: string
           variants:
@@ -2289,6 +2470,12 @@ components:
       - totalPages
       - facets
       properties:
+        serverTime:
+          type: string
+          format: date-time
+        nextPriceChangeAt:
+          type: string
+          format: date-time
         items:
           type: array
           items:
@@ -2333,6 +2520,7 @@ components:
       - UNAUTHENTICATED
       - CSRF_TOKEN_INVALID
       - PRODUCT_VERSION_CONFLICT
+      - APPEARANCE_VERSION_CONFLICT
       - PRECONDITION_REQUIRED
       - USERNAME_TAKEN
       - ADMIN_SELF_DELETE
@@ -2460,6 +2648,8 @@ components:
       - availability
       - maxQuantity
       properties:
+        priceMetadata:
+          $ref: '#/components/schemas/PriceMetadata'
         variantId:
           type: string
         variantSlug:
@@ -2505,6 +2695,18 @@ components:
       - expiresAt
       - notices
       properties:
+        priceRevision:
+          type: string
+          description: Opaque server revision of every item price and quantity.
+        priceAcceptanceRequired:
+          type: boolean
+          description: A price changed since the last accepted item snapshot.
+        serverTime:
+          type: string
+          format: date-time
+        nextPriceChangeAt:
+          type: string
+          format: date-time
         id:
           type: string
           description: Internal reference. It never appears in a path; the session
@@ -2781,6 +2983,12 @@ components:
       - summary
       - complete
       properties:
+        priceRevision:
+          type: string
+          description: Opaque server revision of every item price and quantity.
+        priceAcceptanceRequired:
+          type: boolean
+          description: A price changed since the last accepted item snapshot.
         version:
           type: integer
           minimum: 1
@@ -2875,6 +3083,9 @@ components:
       - termsVersion
       - acceptedTerms
       properties:
+        acceptedPriceRevision:
+          type: string
+          description: Explicit acceptance of the latest displayed server price revision. Rechecked before payment or order submission.
         paymentMethod:
           type: string
           enum:
@@ -2895,6 +3106,9 @@ components:
       - termsVersion
       - acceptedTerms
       properties:
+        acceptedPriceRevision:
+          type: string
+          description: Explicit acceptance of the latest displayed server price revision. Rechecked before payment or order submission.
         paymentMethod:
           type: string
           enum:
@@ -3267,6 +3481,47 @@ components:
           pattern: ^#[0-9A-Fa-f]{6}$
         image:
           $ref: '#/components/schemas/Image'
+    PriceMetadata:
+      type: object
+      additionalProperties: false
+      description: Server-resolved pricing. Campaign activity uses the half-open interval [startsAt, endsAt). Reference price is the base price captured at campaign start and is unchanged by later base-price edits.
+      properties:
+        activePromotion:
+          type: boolean
+        referencePrice:
+          $ref: '#/components/schemas/Money'
+        promotionText:
+          type: string
+        serverTime:
+          type: string
+          format: date-time
+        nextPriceChangeAt:
+          type: string
+          format: date-time
+    CreatePaymentIntentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        acceptedPriceRevision:
+          type: string
+    Promotion:
+      type: object
+      additionalProperties: false
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+        text:
+          type: string
+          maxLength: 280
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+      description: Product-level promotion configuration. Enabling requires nonblank text, both times, startsAt before endsAt and at least one variant sale price. Omission preserves existing configuration on replace.
     AdminProductVariant:
       type: object
       additionalProperties: false
@@ -3278,6 +3533,12 @@ components:
       - price
       - stock
       properties:
+        referencePriceHuf:
+          type: integer
+          readOnly: true
+          minimum: 0
+          maximum: 100000000
+          description: Captured campaign reference price; base edits after campaign start do not change it.
         id:
           type: string
         slug:
@@ -3288,6 +3549,11 @@ components:
           $ref: '#/components/schemas/StorageGb'
         price:
           $ref: '#/components/schemas/Money'
+        salePriceHuf:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 100000000
+          description: Optional sale price in whole HUF. Omission or null preserves the stored value on replace; clearSalePrice explicitly removes it.
         stock:
           type: integer
           minimum: 0
@@ -3332,6 +3598,8 @@ components:
           type: integer
         popularityScore:
           type: integer
+        promotion:
+          $ref: '#/components/schemas/Promotion'
         featured:
           type: boolean
         status:
@@ -3413,6 +3681,14 @@ components:
           $ref: '#/components/schemas/StorageGb'
         price:
           $ref: '#/components/schemas/Money'
+        clearSalePrice:
+          type: boolean
+          description: True explicitly removes a stored sale price. Cannot be combined with a non-null salePriceHuf.
+        salePriceHuf:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 100000000
+          description: Optional sale price in whole HUF. Omission or null preserves the stored value on replace; clearSalePrice explicitly removes it.
         stock:
           type: integer
           minimum: 0
@@ -3460,6 +3736,8 @@ components:
           type: integer
         popularityScore:
           type: integer
+        promotion:
+          $ref: '#/components/schemas/Promotion'
         featured:
           type: boolean
           description: At most four active products are featured (422 FEATURED_LIMIT).

@@ -84,6 +84,52 @@ class CartServiceTest {
 	}
 
 	@Test
+	void priceReviewSurvivesReadsAndRejectsASecondChange() {
+		Cart cart = newCartNow();
+		cart.getItems().add(new CartItem(cart, navy, 1, PRICE_HUF, now()));
+		when(carts.findBySessionIdWithItems(SESSION_ID)).thenReturn(Optional.of(cart));
+		navy.setPriceHuf(PRICE_HUF - 1000);
+		CartData.CartView changed = service.getCart(session);
+		assertThat(changed.priceAcceptanceRequired()).isTrue();
+		CartData.CartView reread = service.getCart(session);
+		assertThat(reread.priceRevision()).isEqualTo(changed.priceRevision());
+		assertThat(reread.priceAcceptanceRequired()).isTrue();
+		assertThat(reread.version()).isEqualTo(changed.version());
+		assertThat(reread.notices()).hasSize(1);
+		assertThatThrownBy(() -> service.acceptPrices(session, reread, null))
+				.isInstanceOfSatisfying(DomainException.class, exception ->
+						assertThat(exception.code()).isEqualTo(ErrorCode.PRICE_CHANGED));
+		navy.setPriceHuf(PRICE_HUF - 2000);
+		CartData.CartView changedAgain = service.getCart(session);
+		assertThat(changedAgain.notices().getFirst().params().from()).isEqualTo((int) PRICE_HUF);
+		assertThatThrownBy(() -> service.acceptPrices(session, changedAgain, changed.priceRevision()))
+				.isInstanceOfSatisfying(DomainException.class, exception ->
+						assertThat(exception.code()).isEqualTo(ErrorCode.PRICE_CHANGED));
+		service.acceptPrices(session, changedAgain, changedAgain.priceRevision());
+		assertThat(service.getCart(session).priceAcceptanceRequired()).isFalse();
+	}
+
+	@Test
+	void equalTotalItemChangesProduceANewRevisionAndTwoPendingChanges() {
+		Cart cart = newCartNow();
+		ProductVariant silver = buildVariant(product, "silver", "silver-128", "silver", "Silver", 128, PRICE_HUF, 6);
+		cart.getItems().add(new CartItem(cart, navy, 1, PRICE_HUF, now()));
+		cart.getItems().add(new CartItem(cart, silver, 1, PRICE_HUF, now()));
+		when(carts.findBySessionIdWithItems(SESSION_ID)).thenReturn(Optional.of(cart));
+		CartData.CartView before = service.getCart(session);
+		navy.setPriceHuf(PRICE_HUF - 1000);
+		silver.setPriceHuf(PRICE_HUF + 1000);
+		CartData.CartView changed = service.getCart(session);
+		assertThat(changed.subtotal()).isEqualTo(before.subtotal());
+		assertThat(changed.priceRevision()).isNotEqualTo(before.priceRevision());
+		assertThat(changed.priceAcceptanceRequired()).isTrue();
+		assertThat(changed.notices()).hasSize(2);
+		assertThatThrownBy(() -> service.acceptPrices(session, changed, null))
+				.isInstanceOfSatisfying(DomainException.class, exception ->
+						assertThat(exception.code()).isEqualTo(ErrorCode.PRICE_CHANGED));
+	}
+
+	@Test
 	void versionComesFromTheReloadedSession() {
 		ReflectionTestUtils.setField(session, "stateVersion", 7L);
 		Cart cart = newCart(now(), now().plusDays(30));

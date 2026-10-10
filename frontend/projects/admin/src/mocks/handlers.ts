@@ -1,5 +1,6 @@
 import type { HttpHandler } from 'msw';
 
+import { appearanceHandlers } from './appearance.handlers';
 import { authHandlers } from './auth.handlers';
 import type { MockDb } from './db';
 import { mediaHandlers } from './media.handlers';
@@ -11,6 +12,7 @@ import { usersHandlers } from './users.handlers';
 export function adminHandlers(db: MockDb): HttpHandler[] {
   return [
     ...authHandlers(db),
+    ...appearanceHandlers(db),
     ...usersHandlers(db),
     ...productsReadHandlers(db),
     ...productsWriteHandlers(db),

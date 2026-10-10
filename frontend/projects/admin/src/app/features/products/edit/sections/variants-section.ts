@@ -75,6 +75,10 @@ export class VariantsSection {
     this.attempted() ? (this.form().variants().errors()[0]?.message ?? '') : '',
   );
 
+  protected referenceText(amount: number): string {
+    return new Intl.NumberFormat('hu-HU').format(amount);
+  }
+
   protected colorName(color: ColorModel): string {
     return color.name.trim() === '' ? 'Névtelen szín' : color.name;
   }

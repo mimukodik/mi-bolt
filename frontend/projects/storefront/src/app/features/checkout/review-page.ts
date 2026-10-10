@@ -1,3 +1,4 @@
+import { HalloweenPreviewState } from '../../shared/shell/halloween-preview-state';
 /**
  * S3-C5 — the review page on the 2.0.0 contract.
  *
@@ -58,8 +59,17 @@ const PENDING_POLL_MAX_READS = 10;
  */
 export const LOCATION_ASSIGN = new InjectionToken<(url: string) => void>('LOCATION_ASSIGN', {
   providedIn: 'root',
-  factory: () => (url: string) => {
-    globalThis.location.assign(url);
+  factory: () => {
+    const preview = inject(HalloweenPreviewState);
+    return (url: string) => {
+      if (!preview.enabled()) {
+        globalThis.location.assign(url);
+        return;
+      }
+      const target = new URL(url, globalThis.location.href);
+      target.searchParams.set('halloweenPreview', '1');
+      globalThis.location.assign(target.href);
+    };
   },
 });
 
@@ -352,6 +362,7 @@ export class ReviewPage {
    *  only way to reach the CTA after a 409. */
   onPriceChangeConfirmed(): void {
     this.checkoutFacade.confirmPriceChange();
+    this.submitFailure.set(null);
   }
 
   /** 412: replay the write that conflicted, with the current version. */

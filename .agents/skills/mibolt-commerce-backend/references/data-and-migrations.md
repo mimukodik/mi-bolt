@@ -48,7 +48,7 @@ how to reset it belong to `mibolt-workspace-ops`; the catalogue data under
   (https://docs.spring.io/spring-boot/how-to/data-initialization.html).
   Here that is
   `backend/services/commerce/src/main/resources/db/changelog/db.changelog-master.yaml` ("databaseChangeLog"),
-  eleven `include` entries in number order, one file per changeset under
+  fourteen `include` entries in number order, one file per changeset under
   `backend/services/commerce/src/main/resources/db/changelog/changes/`.
 - Observed pattern, checked by the script below: the file is
   `NNNN-kebab-topic.yaml`, the changeset `id` equals the file stem, and

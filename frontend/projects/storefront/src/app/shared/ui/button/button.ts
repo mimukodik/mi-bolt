@@ -40,6 +40,8 @@ export class Button {
   readonly type = input<'button' | 'submit' | 'reset'>('button');
   /** Full-width button for a card's action column. */
   readonly block = input(false);
+  /** Let longer action labels wrap within the available width. */
+  readonly wrap = input(false);
 
   readonly pressed = output<MouseEvent>();
 

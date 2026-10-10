@@ -44,6 +44,7 @@ import {
   tap,
 } from 'rxjs';
 
+import { PriceRefresh } from '../../shared/utils/price-refresh';
 import { Api } from '@mi-bolt/api/api';
 import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
 import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
@@ -110,6 +111,7 @@ function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
   if (a.inStock !== b.inStock) return false;
   if (a.is5g !== b.is5g) return false;
   if (a.featured !== b.featured) return false;
+  if (a.activePromotion !== b.activePromotion) return false;
   if (a.sort !== b.sort) return false;
   if (a.page !== b.page) return false;
   if (a.pageSize !== b.pageSize) return false;
@@ -144,6 +146,7 @@ function toSdkParams(q: CatalogQuery): Parameters<typeof listProducts>[2] {
   if (q.inStock !== undefined) params.inStock = q.inStock;
   if (q.is5g !== undefined) params.is5g = q.is5g;
   if (q.featured !== undefined) params.featured = q.featured;
+  if (q.activePromotion !== undefined) params.activePromotion = q.activePromotion;
   if (q.sort !== undefined) params.sort = q.sort;
   params.page = q.page;
   params.pageSize = q.pageSize;
@@ -196,6 +199,10 @@ function mergeRows<T extends { readonly value: string; readonly count: number }>
 export class CatalogFacade {
   private readonly api = inject(Api);
   private readonly destroyRef = inject(DestroyRef);
+
+  private readonly priceRefresh = new PriceRefresh(this.destroyRef, () => {
+    this.retry$.next();
+  });
 
   private readonly searchInput$ = new Subject<string>();
   private readonly queryChange$ = new Subject<CatalogQuery>();
@@ -300,6 +307,7 @@ export class CatalogFacade {
       .subscribe((event) => {
         this.inFlightSignal.set(false);
         if (event.kind === 'ok') {
+          this.priceRefresh.schedule(event.page.serverTime, event.page.nextPriceChangeAt);
           // The contract echoes a requested page past the last one with no
           // items and the real total, so the facade asks for the last page.
           const lastPage = event.page.totalPages;

@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { take } from 'rxjs';
 
+import { PriceRefresh } from '../../shared/utils/price-refresh';
 import { Api } from '@mi-bolt/api/api';
 import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
 
@@ -36,6 +37,9 @@ import { HowDemoWorks } from './how-demo-works';
 })
 export class HomePage {
   private readonly api = inject(Api);
+  private readonly priceRefresh = new PriceRefresh(inject(DestroyRef), () => {
+    this.loadFeatured();
+  });
 
   /**
    * Hero heading text, relocated character-for-character from
@@ -73,6 +77,7 @@ export class HomePage {
       .pipe(take(1))
       .subscribe({
         next: (page) => {
+          this.priceRefresh.schedule(page.serverTime, page.nextPriceChangeAt);
           this.featuredSignal.set({
             status: 'success',
             items: page.items,

@@ -80,6 +80,7 @@ export interface CatalogQuery {
   readonly inStock?: boolean;
   readonly is5g?: boolean;
   readonly featured?: boolean;
+  readonly activePromotion?: boolean;
   readonly sort?: Sort;
   readonly page: number;
   readonly pageSize: 12 | 24;
@@ -100,6 +101,7 @@ export interface CatalogFilters {
   readonly maxPrice?: number;
   readonly inStock: boolean;
   readonly is5g: boolean;
+  readonly activePromotion?: boolean;
 }
 
 /** A `CatalogQuery` with no filters applied — the documented defaults. */
@@ -159,6 +161,7 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     inStock?: boolean;
     is5g?: boolean;
     featured?: boolean;
+    activePromotion?: boolean;
     sort?: Sort;
     page: number;
     pageSize: 12 | 24;
@@ -206,6 +209,12 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   if (maxPriceRaw !== null) {
     const num = parseInteger(maxPriceRaw);
     if (num !== null && num >= 0) query.maxPrice = num;
+  }
+
+  const promotionRaw = params.get('activePromotion');
+  if (promotionRaw !== null) {
+    const parsed = parseBoolean(promotionRaw);
+    if (parsed !== null) query.activePromotion = parsed;
   }
 
   const inStockRaw = params.get('inStock');
@@ -260,6 +269,7 @@ export const CATALOG_QUERY_KEYS = [
   'inStock',
   'is5g',
   'featured',
+  'activePromotion',
   'sort',
   'page',
   'pageSize',
@@ -307,6 +317,8 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
   if (query.inStock !== undefined) params.set('inStock', String(query.inStock));
   if (query.is5g !== undefined) params.set('is5g', String(query.is5g));
   if (query.featured !== undefined) params.set('featured', String(query.featured));
+  if (query.activePromotion !== undefined)
+    params.set('activePromotion', String(query.activePromotion));
 
   if (query.sort !== undefined) params.set('sort', query.sort);
 
@@ -381,6 +393,13 @@ export function buildChips(q: CatalogQuery): readonly AppliedChip[] {
   }
   if (q.featured === true) {
     chips.push({ id: 'featured', name: 'featured', label: 'Kiemelt termékek' });
+  }
+  if (q.activePromotion === true) {
+    chips.push({
+      id: 'activePromotion',
+      name: 'activePromotion',
+      label: 'Aktív halloweeni ajánlatok',
+    });
   }
   return chips;
 }

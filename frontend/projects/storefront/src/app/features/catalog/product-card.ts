@@ -6,6 +6,7 @@ import type { ColorOption } from '@mi-bolt/api/models/color-option';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
+import { HalloweenProductArt } from '../../shared/halloween/halloween-product-art';
 
 /**
  * T13 — atomic product card for the catalogue grid (AC04).
@@ -35,7 +36,7 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
  */
 @Component({
   selector: 'app-product-card',
-  imports: [RouterLink, PriceBlock, ProductImage],
+  imports: [RouterLink, PriceBlock, ProductImage, HalloweenProductArt],
   templateUrl: './product-card.html',
   styleUrl: './product-card.scss',
 })
@@ -73,17 +74,23 @@ export class ProductCard {
    *  price, falls back to the item-level price for single-colour items. */
   readonly price = computed(() => this.selectedColor()?.price ?? this.product().price);
 
+  readonly priceMetadata = computed(
+    () => this.selectedColor()?.priceMetadata ?? this.product().priceMetadata,
+  );
+  readonly isPromotional = computed(() => this.priceMetadata()?.activePromotion === true);
+
   /** The colour name currently shown on the card. */
   readonly colorName = computed<string>(() => this.selectedColor()?.colorName ?? '');
 
   /** First image of the item's gallery. */
   readonly image = computed<ImageLike>(() => {
     const item = this.product();
+    const image = this.selectedColor()?.image ?? item.image;
     return {
-      src: item.image.src,
-      alt: item.image.alt !== '' ? item.image.alt : `${item.name} illusztráció`,
-      width: item.image.width,
-      height: item.image.height,
+      src: image.src,
+      alt: image.alt !== '' ? image.alt : `${item.name} illusztráció`,
+      width: image.width,
+      height: image.height,
     };
   });
 

@@ -17,7 +17,19 @@ export interface Cart {
   id: string;
   items: Array<CartItem>;
   lineCount: number;
+  nextPriceChangeAt?: string;
   notices: Array<CartNotice>;
+
+  /**
+   * A price changed since the last accepted item snapshot.
+   */
+  priceAcceptanceRequired?: boolean;
+
+  /**
+   * Opaque server revision of every item price and quantity.
+   */
+  priceRevision?: string;
+  serverTime?: string;
   subtotal: Money;
 
   /**

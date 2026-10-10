@@ -1,15 +1,26 @@
-<article class="line" data-testid="cart-line" [attr.aria-busy]="pending() ? 'true' : null">
+<article
+  class="line"
+  data-testid="cart-line"
+  [attr.aria-busy]="pending() ? 'true' : null"
+  [class.halloween-sale-line]="line().priceMetadata?.activePromotion === true"
+>
   <div class="media flex items-start justify-center min-w-0">
     <app-product-image
       aspectRatio="1 / 1"
       [image]="imageLike()"
       [productName]="line().productName"
     />
+    @if (line().priceMetadata?.activePromotion === true) {
+      <app-halloween-product-art />
+    }
   </div>
 
   <div class="body flex flex-col gap-3 min-w-0">
     <header class="header flex flex-col gap-1">
       <h3 class="name m-0" data-testid="cart-line-name">{{ line().productName }}</h3>
+      @if (line().priceMetadata?.activePromotion === true) {
+        <span class="halloween-sale-badge">🎃 Halloweeni ajánlat</span>
+      }
       <p class="variant m-0">
         <span class="variant-color">{{ line().colorName }}</span>
         <span aria-hidden="true" class="variant-sep mx-2">·</span>
@@ -32,5 +43,15 @@
       Törlöm
     </button>
     <app-price-block label="Részösszeg" size="md" status="success" [money]="line().lineTotal" />
+    @if (line().priceMetadata?.activePromotion === true) {
+      <app-price-block
+        label="Akciós tételár"
+        size="md"
+        status="success"
+        [money]="line().unitPrice"
+        [promotionText]="line().priceMetadata?.promotionText ?? null"
+        [referencePrice]="line().priceMetadata?.referencePrice ?? null"
+      />
+    }
   </div>
 </article>

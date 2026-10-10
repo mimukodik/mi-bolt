@@ -279,6 +279,7 @@ export class FilterPanel {
     if (q.inStock !== undefined) return true;
     if (q.is5g !== undefined) return true;
     if (q.featured === true) return true;
+    if (q.activePromotion === true) return true;
     return false;
   });
 
@@ -373,6 +374,10 @@ export class FilterPanel {
     this.emit({ inStock: current === true ? undefined : true });
   }
 
+  togglePromotion(): void {
+    this.emit({ activePromotion: this.value().activePromotion === true ? undefined : true });
+  }
+
   toggleFiveG(): void {
     const current = this.value().is5g;
     this.emit({ is5g: current === true ? undefined : true });
@@ -394,6 +399,7 @@ export class FilterPanel {
       inStock: undefined,
       is5g: undefined,
       featured: undefined,
+      activePromotion: undefined,
     });
   }
 

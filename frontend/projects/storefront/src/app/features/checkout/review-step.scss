@@ -36,6 +36,11 @@
   flex: 1 1 0;
 }
 
+.line-body > app-price-block {
+  display: block;
+  margin-top: var(--space-2);
+}
+
 .line-total {
   margin-left: auto;
 }
@@ -95,6 +100,21 @@
 .price-change {
   background: var(--color-status-warning-soft);
   color: var(--color-status-warning-text);
+}
+
+.price-change-item {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-5);
+
+  > p {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  @media (max-width: 599px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .consent[data-state='touched-invalid'],

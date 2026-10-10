@@ -55,6 +55,7 @@ export const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export interface PersistedCartLine {
   variantId: string;
   quantity: number;
+  acceptedUnitPrice?: number;
 }
 
 /** Cart snapshot — id, version, timestamps, line items. */
@@ -64,6 +65,9 @@ export interface PersistedCart {
   createdAt: string;
   expiresAt: string;
   items: readonly PersistedCartLine[];
+  priceAcceptanceRequired?: boolean;
+  priceRevision?: string;
+  priceFingerprint?: string;
 }
 
 /** The four draft sections the checkout store keeps per session. */
@@ -424,7 +428,24 @@ function isValidCart(value: unknown): value is PersistedCart {
     return false;
   if (Date.parse(c['expiresAt']) <= Date.parse(c['createdAt'])) return false;
   if (!Array.isArray(c['items'])) return false;
-  const allowed = new Set(['id', 'version', 'createdAt', 'expiresAt', 'items']);
+  if (
+    c['priceAcceptanceRequired'] !== undefined &&
+    typeof c['priceAcceptanceRequired'] !== 'boolean'
+  )
+    return false;
+  if (c['priceRevision'] !== undefined && typeof c['priceRevision'] !== 'string') return false;
+  if (c['priceFingerprint'] !== undefined && typeof c['priceFingerprint'] !== 'string')
+    return false;
+  const allowed = new Set([
+    'id',
+    'version',
+    'createdAt',
+    'expiresAt',
+    'items',
+    'priceAcceptanceRequired',
+    'priceRevision',
+    'priceFingerprint',
+  ]);
   for (const key of Object.keys(c)) {
     if (!allowed.has(key)) return false;
   }
@@ -439,7 +460,13 @@ function isValidCartLine(value: unknown): value is PersistedCartLine {
   const i = value;
   if (typeof i['variantId'] !== 'string') return false;
   if (!isPositiveInteger(i['quantity'])) return false;
-  const allowed = new Set(['variantId', 'quantity']);
+  const price = i['acceptedUnitPrice'];
+  if (
+    price !== undefined &&
+    (typeof price !== 'number' || !Number.isInteger(price) || price < 1 || price > 100_000_000)
+  )
+    return false;
+  const allowed = new Set(['variantId', 'quantity', 'acceptedUnitPrice']);
   for (const key of Object.keys(i)) {
     if (!allowed.has(key)) return false;
   }

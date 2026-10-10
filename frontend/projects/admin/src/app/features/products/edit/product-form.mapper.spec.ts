@@ -10,6 +10,7 @@ import type { ColorModel, ProductFormModel } from './product-form.model';
 /** The `AdminProductInput` the contract expects for `product`, built without going through the mapper. */
 function expectedInputFrom(product: AdminProduct): AdminProductInput {
   return {
+    promotion: { enabled: false, text: '' },
     slug: product.slug,
     brand: product.brand,
     name: product.name,
@@ -33,6 +34,7 @@ function expectedInputFrom(product: AdminProduct): AdminProductInput {
       storageGb: variant.storageGb,
       price: variant.price,
       stock: variant.stock,
+      clearSalePrice: true,
     })),
     specGroups: product.specGroups,
   };
@@ -55,6 +57,7 @@ function validModel(): ProductFormModel {
     },
   };
   return {
+    promotion: { enabled: false, text: '', startsAt: '', endsAt: '' },
     slug: 'teszt-telefon',
     brand: 'Teszt',
     name: 'Teszt Telefon',
@@ -67,7 +70,15 @@ function validModel(): ProductFormModel {
     highlights: [{ key: 'h-1', text: 'Gyors' }],
     colors: [color],
     variants: [
-      { key: 'variant-1', id: null, colorKey: color.key, storageGb: 128, price: 100_000, stock: 5 },
+      {
+        key: 'variant-1',
+        id: null,
+        colorKey: color.key,
+        storageGb: 128,
+        price: 100_000,
+        stock: 5,
+        salePriceHuf: null,
+      },
     ],
     specGroups: [
       { key: 'group-1', title: 'Kijelző', rows: [{ key: 'row-1', label: 'Méret', value: '6.1"' }] },
@@ -214,5 +225,45 @@ describe('toModelPointer', () => {
 
   it('leaves an unrelated pointer unchanged', () => {
     expect(toModelPointer('/brand')).toBe('/brand');
+  });
+});
+
+describe('promotion mapping', () => {
+  it('round-trips exact UTC instants and distinct base/sale prices', () => {
+    const product = seedCatalog().products[0];
+    const model = toFormModel({
+      ...product,
+      promotion: {
+        enabled: true,
+        text: 'Halloween',
+        startsAt: '2026-10-30T15:01:23+01:00',
+        endsAt: '2026-11-01T00:00:00+01:00',
+      },
+      variants: [{ ...product.variants[0], salePriceHuf: 99000 }],
+    });
+    expect(model.promotion.startsAt).toBe('2026-10-30T14:01:23');
+    const input = toProductInput(model);
+    expect(input.promotion?.startsAt).toBe('2026-10-30T14:01:23Z');
+    expect(input.promotion?.endsAt).toBe('2026-10-31T23:00:00Z');
+    expect(input.variants[0].price).toEqual(product.variants[0].price);
+    expect(input.variants[0].salePriceHuf).toBe(99000);
+    model.variants[0].salePriceHuf = null;
+    expect(toProductInput(model).variants[0].clearSalePrice).toBe(true);
+  });
+});
+
+describe('promotion timestamp precision', () => {
+  it('preserves a fractional-second interval on unrelated save', () => {
+    const product = {
+      ...seedCatalog().products[0],
+      promotion: {
+        enabled: false,
+        startsAt: '2026-10-30T01:00:00.123456789+01:00',
+        endsAt: '2026-10-30T01:00:00.123456790+01:00',
+      },
+    };
+    const input = toProductInput(toFormModel(product));
+    expect(input.promotion?.startsAt).toBe('2026-10-30T00:00:00.123456789Z');
+    expect(input.promotion?.endsAt).toBe('2026-10-30T00:00:00.123456790Z');
   });
 });

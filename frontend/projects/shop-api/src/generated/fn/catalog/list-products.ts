@@ -46,6 +46,11 @@ export interface ListProducts$Params {
   is5g?: boolean;
 
 /**
+ * Restrict variants to current effective promotions; false excludes discounted variants.
+ */
+  activePromotion?: boolean;
+
+/**
  * Curated selection for the home page. At most four entries, in curated order.
  */
   featured?: boolean;
@@ -65,6 +70,7 @@ export function listProducts(http: HttpClient, rootUrl: string, params?: ListPro
     rb.query('maxPrice', params.maxPrice, {});
     rb.query('inStock', params.inStock, {});
     rb.query('is5g', params.is5g, {});
+    rb.query('activePromotion', params.activePromotion, {});
     rb.query('featured', params.featured, {});
     rb.query('sort', params.sort, {});
     rb.query('page', params.page, {});

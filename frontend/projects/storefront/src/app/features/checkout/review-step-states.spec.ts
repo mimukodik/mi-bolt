@@ -576,7 +576,9 @@ describe('PC-01 the price-changed state renders both totals side by side', () =>
     );
 
     const banner = getElement(root, '[data-testid="review-price-change"]');
-    expect(banner.textContent).toContain('A végösszeg időközben megváltozott.');
+    expect(banner.textContent).toContain(
+      'A tételárak időközben megváltoztak. Ellenőrizd az új árakat és összesítést.',
+    );
     expect(banner.getAttribute('role')).toBe('alert');
   });
 });
@@ -585,9 +587,9 @@ describe('PC-01 the price-changed state renders both totals side by side', () =>
 // PC-02 — confirm control label names the new total
 // ---------------------------------------------------------------------------
 describe('PC-02 the confirm control names the new total in its own label', () => {
-  it('the confirm label reads exactly "Elfogadom az új végösszeget: {formatHuf(159980)} Ft" — built by formatHuf, not by typing the grouped digits', () => {
+  it('the confirm label reads exactly "Elfogadom az új tételárakat és végösszeget: {formatHuf(159980)} Ft" — built by formatHuf, not by typing the grouped digits', () => {
     const fixture = createFixture({ state: 'price-changed', priceChange: PRICE_CHANGE });
-    const expected = `Elfogadom az új végösszeget: ${PriceBlock.formatHuf(159_980)} Ft`;
+    const expected = `Elfogadom az új tételárakat és végösszeget: ${PriceBlock.formatHuf(159_980)} Ft`;
     const confirm = getButton(getRootElement(fixture), 'review-price-change-confirm');
     expect(confirm.textContent.trim()).toBe(expected);
   });
@@ -819,5 +821,21 @@ describe('ST-06 in the error state the CTA resubmits once the other conditions h
     expect(emitted.length).toBe(0);
     expect(document.activeElement).toBe(root.querySelector('[data-testid="review-state-banner"]'));
     expect(fixture.componentInstance.termsConsentState()).toBe('submitted-invalid');
+  });
+});
+
+describe('BOLT-6 price acceptance gates payment', () => {
+  it('disables a new payment and omits an unknown old total', () => {
+    const fixture = createFixture({
+      state: 'price-changed',
+      paymentIntent: null,
+      paymentIntentMissing: true,
+      priceChange: { shownTotal: null, currentTotal: SUMMARY.total, awaitingConfirmation: true },
+    });
+    const root = getRootElement(fixture);
+    expect(getButton(root, 'review-payment-new').disabled).toBe(true);
+    expect(getButton(root, 'review-submit').disabled).toBe(true);
+    expect(queryElement(root, '[data-testid="review-price-change-old"]')).toBeNull();
+    expect(queryElement(root, '[data-testid="review-price-change-new"]')).not.toBeNull();
   });
 });

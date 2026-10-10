@@ -6,10 +6,20 @@ import { StorageGb } from '../models/storage-gb';
 export interface AdminProductVariantInput {
 
   /**
+   * True explicitly removes a stored sale price. Cannot be combined with a non-null salePriceHuf.
+   */
+  clearSalePrice?: boolean;
+
+  /**
    * The code of one of this product's colours.
    */
   colorCode: string;
   price: Money;
+
+  /**
+   * Optional sale price in whole HUF. Omission or null preserves the stored value on replace; clearSalePrice explicitly removes it.
+   */
+  salePriceHuf?: (number | null);
   slug: string;
   stock: number;
   storageGb: StorageGb;

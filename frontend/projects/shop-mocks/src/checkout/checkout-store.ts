@@ -344,7 +344,13 @@ export class CheckoutStore {
       cart.items.length > 0 &&
       delivery?.available === true &&
       payment?.available === true;
-    const session: CheckoutSession = { summary, complete, version: cart.version };
+    const session: CheckoutSession = {
+      summary,
+      complete,
+      version: cart.version,
+      priceRevision: cart.priceRevision,
+      priceAcceptanceRequired: cart.priceAcceptanceRequired,
+    };
     if (draft.contact !== undefined) session.contact = draft.contact;
     if (draft.billing !== undefined) session.billing = draft.billing;
     if (draft.delivery !== undefined) session.delivery = draft.delivery;

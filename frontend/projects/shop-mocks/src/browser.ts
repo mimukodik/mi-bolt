@@ -29,6 +29,7 @@
 import { http, HttpResponse, passthrough, type HttpHandler } from 'msw';
 import { setupWorker } from 'msw/browser';
 
+import { halloweenFixture } from './catalog/halloween-fixture';
 import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
 import { createDemoGateHandler } from './demo/demo-access';
@@ -95,7 +96,11 @@ export function resolveBrowserHandlerOptions(
   const clock = createRealClock(scenario.clockOffsetMs);
   const repository = new Repository(scenario, ids, clock);
   if (isCatalogFixtureShape(catalogFixture)) {
-    loadCatalogFixture(catalogFixture);
+    loadCatalogFixture(
+      scenario.name === 'halloween'
+        ? halloweenFixture(catalogFixture, clock.now())
+        : catalogFixture,
+    );
   }
   const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
   return {

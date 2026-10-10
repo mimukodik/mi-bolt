@@ -16,7 +16,12 @@ public interface CartData {
 			int totalQuantity,
 			long subtotal,
 			OffsetDateTime expiresAt,
-			List<Notice> notices) {
+			List<Notice> notices, String priceRevision, boolean priceAcceptanceRequired,
+			OffsetDateTime serverTime, OffsetDateTime nextPriceChangeAt) {
+		public CartView(long id, long version, List<Line> items, int lineCount, int totalQuantity,
+				long subtotal, OffsetDateTime expiresAt, List<Notice> notices) {
+			this(id, version, items, lineCount, totalQuantity, subtotal, expiresAt, notices, null, false, null, null);
+		}
 	}
 
 	record Line(
@@ -32,7 +37,13 @@ public interface CartData {
 			long unitPrice,
 			long lineTotal,
 			boolean inStock,
-			int maxQuantity) {
+			int maxQuantity, CatalogData.PriceData priceMetadata) {
+		public Line(String variantId, String variantSlug, String productId, String productSlug, String productName,
+				String colorName, int storageGb, CatalogData.ImageData image, int quantity, long unitPrice,
+				long lineTotal, boolean inStock, int maxQuantity) {
+			this(variantId, variantSlug, productId, productSlug, productName, colorName, storageGb, image,
+					quantity, unitPrice, lineTotal, inStock, maxQuantity, null);
+		}
 	}
 
 	record Notice(String code, String variantId, String productName, NoticeParams params) {

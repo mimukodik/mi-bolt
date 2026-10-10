@@ -2,6 +2,9 @@ package com.example.mi_bolt_backend.catalog;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Objects;
+import com.example.mi_bolt_backend.api.model.PriceMetadata;
 
 import com.example.mi_bolt_backend.api.model.Availability;
 import com.example.mi_bolt_backend.api.model.CatalogItem;
@@ -43,6 +46,7 @@ public final class CatalogModels {
 			page.addItemsItem(toCatalogItem(item));
 		}
 		page.setFacets(toFacets(data.facets()));
+		page.serverTime(data.serverTime()).nextPriceChangeAt(data.nextPriceChangeAt());
 		return page;
 	}
 
@@ -62,7 +66,7 @@ public final class CatalogModels {
 				data.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK,
 				data.maxQuantity(),
 				toImage(data.image()),
-				toColorOptions(data.colors()));
+				toColorOptions(data.colors())).priceMetadata(toPriceMetadata(data.priceMetadata()));
 	}
 
 	public static Product toProduct(CatalogData.ProductData data) {
@@ -84,7 +88,9 @@ public final class CatalogModels {
 				data.releasedAt(),
 				data.description(),
 				variants,
-				groups);
+				groups).serverTime(data.variants().isEmpty() ? null : data.variants().getFirst().priceMetadata().serverTime())
+				.nextPriceChangeAt(data.variants().stream().map(variant -> variant.priceMetadata().nextPriceChangeAt())
+						.filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null));
 	}
 
 	public static Variant toVariant(CatalogData.VariantData data) {
@@ -98,7 +104,7 @@ public final class CatalogModels {
 				money(data.priceAmount()),
 				data.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK,
 				data.maxQuantity(),
-				List.of(toImage(data.image())));
+				List.of(toImage(data.image()))).priceMetadata(toPriceMetadata(data.priceMetadata()));
 	}
 
 	public static SpecGroup toSpecGroup(CatalogData.SpecGroupData data) {
@@ -146,9 +152,22 @@ public final class CatalogModels {
 					c.variantId(),
 					c.variantSlug(),
 					money(c.priceAmount()),
-					c.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK));
+					c.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK)
+					.image(toImage(c.image())).priceMetadata(toPriceMetadata(c.priceMetadata())));
 		}
 		return out;
+	}
+
+	public static PriceMetadata toPriceMetadata(CatalogData.PriceData data) {
+		if (data == null) {
+			return null;
+		}
+		PriceMetadata metadata = new PriceMetadata().activePromotion(data.activePromotion())
+				.promotionText(data.promotionText()).serverTime(data.serverTime()).nextPriceChangeAt(data.nextPriceChangeAt());
+		if (data.referencePrice() != null) {
+			metadata.referencePrice(money(Math.toIntExact(data.referencePrice())));
+		}
+		return metadata;
 	}
 
 	private static Money money(int amount) {

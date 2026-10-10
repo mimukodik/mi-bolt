@@ -29,7 +29,9 @@ public final class CartModels {
 			notices.add(toCartNotice(notice));
 		}
 		return new Cart(String.valueOf(view.id()), Math.toIntExact(view.version()), items,
-				view.lineCount(), view.totalQuantity(), money(view.subtotal()), view.expiresAt(), notices);
+				view.lineCount(), view.totalQuantity(), money(view.subtotal()), view.expiresAt(), notices).priceRevision(view.priceRevision())
+				.priceAcceptanceRequired(view.priceAcceptanceRequired()).serverTime(view.serverTime())
+				.nextPriceChangeAt(view.nextPriceChangeAt());
 	}
 
 	public static CartItem toCartItem(CartData.Line line) {
@@ -37,7 +39,7 @@ public final class CartModels {
 				line.productName(), line.colorName(), StorageGb.fromValue(line.storageGb()),
 				CatalogModels.toImage(line.image()), line.quantity(), money(line.unitPrice()),
 				money(line.lineTotal()), line.inStock() ? Availability.IN_STOCK : Availability.OUT_OF_STOCK,
-				line.maxQuantity());
+				line.maxQuantity()).priceMetadata(CatalogModels.toPriceMetadata(line.priceMetadata()));
 	}
 
 	public static CartNotice toCartNotice(CartData.Notice notice) {

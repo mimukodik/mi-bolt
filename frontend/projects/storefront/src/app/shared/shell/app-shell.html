@@ -1,4 +1,14 @@
 <app-demo-notice [persistenceMode]="persistenceMode" [snapshotDiscard]="snapshotDiscard" />
+<app-promotion-strip />
 <app-header-nav [variant]="variant()" />
+@if (preview.enabled()) {
+  <aside class="halloween-preview-notice">
+    <span
+      >Halloween látvány-előnézet · Minden oldalon aktív, az üzleti beállításokat nem
+      módosítja.</span
+    >
+    <button type="button" (click)="preview.setEnabled(false)">Előnézet bezárása</button>
+  </aside>
+}
 <ng-content />
 <app-footer-nav [compact]="compact()" (demoInfoRequested)="onDemoInfo()" />

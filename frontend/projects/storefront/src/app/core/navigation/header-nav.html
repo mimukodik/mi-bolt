@@ -17,6 +17,23 @@
           class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
           >M</span
         >
+        <span aria-hidden="true" class="halloween-header-art bd bd-spider"
+          ><svg aria-hidden="true" class="sm-spider" focusable="false" viewBox="0 0 26 64">
+            <line class="sm-spider__thread" x1="13" x2="13" y1="0" y2="44" />
+            <g class="sm-spider__legs" fill="none" stroke-linecap="round">
+              <path
+                d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+              />
+              <path
+                d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+                transform="translate(26 0) scale(-1 1)"
+              />
+            </g>
+            <circle class="sm-spider__body" cx="13" cy="44.2" r="2.9" />
+            <ellipse class="sm-spider__body" cx="13" cy="51.4" rx="5.3" ry="6.5" />
+            <path class="sm-spider__mark" d="M11.3 49h3.4l-1.7 2.6 1.7 2.8h-3.4l1.7-2.8z" />
+          </svg>
+        </span>
         <span class="brand__word tracking-wide">MiBolt</span>
       </a>
       <span aria-label="Demó pénztár" class="header__label uppercase tracking-wider text-sm"
@@ -61,6 +78,23 @@
           class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
           >M</span
         >
+        <span aria-hidden="true" class="halloween-header-art bd bd-spider"
+          ><svg aria-hidden="true" class="sm-spider" focusable="false" viewBox="0 0 26 64">
+            <line class="sm-spider__thread" x1="13" x2="13" y1="0" y2="44" />
+            <g class="sm-spider__legs" fill="none" stroke-linecap="round">
+              <path
+                d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+              />
+              <path
+                d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+                transform="translate(26 0) scale(-1 1)"
+              />
+            </g>
+            <circle class="sm-spider__body" cx="13" cy="44.2" r="2.9" />
+            <ellipse class="sm-spider__body" cx="13" cy="51.4" rx="5.3" ry="6.5" />
+            <path class="sm-spider__mark" d="M11.3 49h3.4l-1.7 2.6 1.7 2.8h-3.4l1.7-2.8z" />
+          </svg>
+        </span>
         <span class="brand__word tracking-wide">MiBolt</span>
       </a>
       <nav aria-label="Fő navigáció" class="header__nav hidden gap-4 flex-1 justify-center lg:flex">
@@ -97,6 +131,17 @@
           routerLink="/penztar/kosar"
           [attr.aria-label]="cartLabel()"
         >
+          <span aria-hidden="true" class="halloween-header-art bd bd-ghost"
+            ><svg aria-hidden="true" class="sm-ghost" focusable="false" viewBox="0 0 32 36">
+              <path
+                class="sm-ghost__body"
+                d="M3.5 34V15C3.5 7 9 2 16 2S28.5 7 28.5 15V34L24 29.6L20 34L16 29.6L12 34L8 29.6Z"
+              />
+              <ellipse class="sm-ghost__eye" cx="11.6" cy="15" rx="2" ry="3.1" />
+              <ellipse class="sm-ghost__eye" cx="20.4" cy="15" rx="2" ry="3.1" />
+              <ellipse class="sm-ghost__eye" cx="16" cy="22.4" rx="2.3" ry="2.9" />
+            </svg>
+          </span>
           <span aria-hidden="true" class="cart__icon inline-flex">
             <svg aria-hidden="true" focusable="false" height="24" viewBox="0 0 24 24" width="24">
               <path
@@ -109,7 +154,7 @@
           @if (cartFacade.itemCount() > 0) {
             <span
               aria-hidden="true"
-              class="cart__badge inline-flex items-center justify-center w-4 h-4 rounded-full"
+              class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4 rounded-full"
               data-testid="cart-badge"
             >
               {{ cartFacade.itemCount() }}
@@ -117,7 +162,7 @@
           } @else {
             <span
               aria-hidden="true"
-              class="cart__badge inline-flex items-center justify-center w-4 h-4 rounded-full"
+              class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4 rounded-full"
               data-testid="cart-badge"
               >0</span
             >

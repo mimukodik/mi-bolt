@@ -1,6 +1,7 @@
 package com.example.mi_bolt_backend.catalog;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -13,6 +14,10 @@ import java.util.List;
  * the single-type import shadowing the entity of the same name.
  */
 public interface CatalogData {
+
+	record PriceData(long amount, boolean activePromotion, Long referencePrice, String promotionText,
+			OffsetDateTime serverTime, OffsetDateTime nextPriceChangeAt) {
+	}
 
 	public record CatalogItemData(
 			String id,
@@ -29,7 +34,7 @@ public interface CatalogData {
 			boolean inStock,
 			int maxQuantity,
 			ImageData image,
-			List<ColorOptionData> colors) {
+			List<ColorOptionData> colors, PriceData priceMetadata) {
 	}
 
 	public record ColorOptionData(
@@ -39,7 +44,7 @@ public interface CatalogData {
 			String variantId,
 			String variantSlug,
 			int priceAmount,
-			boolean inStock) {
+			boolean inStock, ImageData image, PriceData priceMetadata) {
 	}
 
 	public record ImageData(
@@ -73,7 +78,7 @@ public interface CatalogData {
 			int priceAmount,
 			boolean inStock,
 			int maxQuantity,
-			ImageData image) {
+			ImageData image, PriceData priceMetadata) {
 	}
 
 	public record SpecGroupData(
@@ -120,6 +125,6 @@ public interface CatalogData {
 			int page,
 			int pageSize,
 			int totalPages,
-			FacetsData facets) {
+			FacetsData facets, OffsetDateTime serverTime, OffsetDateTime nextPriceChangeAt) {
 	}
 }

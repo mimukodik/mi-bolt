@@ -15,6 +15,7 @@ import { SubmitAttempt } from '../../../shared/forms/submit-attempt';
 import { toServerErrors } from '../../../shared/forms/server-errors';
 import { UploadTracker } from '../../../shared/image-upload/upload-tracker';
 
+import { conflictDifferences } from './conflict-differences';
 import { openConflict } from './conflict-dialog';
 import { ProductEditStore } from './product-edit.store';
 import { toFormModel, toModelPointer, toProductInput } from './product-form.mapper';
@@ -27,6 +28,7 @@ import { ColorsSection } from './sections/colors-section';
 import { DisplayCard } from './sections/display-card';
 import { HighlightsSection } from './sections/highlights-section';
 import { SpecGroupsSection } from './sections/spec-groups-section';
+import { PromotionSection } from './sections/promotion-section';
 import { VariantsSection } from './sections/variants-section';
 
 const PRODUCT_ID_PATTERN = /^[1-9][0-9]*$/;
@@ -35,7 +37,7 @@ const PRODUCT_ID_PATTERN = /^[1-9][0-9]*$/;
  * The product edit page (MIM-355, F19): `/termekek/uj` creates a product, `/termekek/:productId`
  * loads and saves one. Lays out the five numbered section cards beside the Megjelenítés,
  * Előnézet and Adatok side cards under a sticky header; Mentés saves through `SubmitAttempt`,
- * maps a 422 onto the form, answers a 412 with the conflict dialog's Újratöltés and a success
+ * maps a 422 onto the form, answers a 412 with a comparison that preserves input and a success
  * with a snack-bar, sends a fresh product to its own URL, and stays disabled while an image
  * uploads.
  */
@@ -57,6 +59,7 @@ const PRODUCT_ID_PATTERN = /^[1-9][0-9]*$/;
     HighlightsSection,
     ColorsSection,
     VariantsSection,
+    PromotionSection,
     SpecGroupsSection,
     DisplayCard,
   ],
@@ -164,8 +167,10 @@ export class ProductEditPage {
   }
 
   private async save(): Promise<TreeValidationResult> {
+    const productId = this.id();
     const input = toProductInput(this.model());
     const result = this.isCreate() ? await this.store.create(input) : await this.store.save(input);
+    if (this.id() !== productId) return undefined;
     switch (result.kind) {
       case 'saved':
         this.snackBar.open('Mentve', undefined, { duration: 4000 });
@@ -184,10 +189,27 @@ export class ProductEditPage {
           this.form,
           result.fieldErrors.map((error) => ({ ...error, path: toModelPointer(error.path) })),
         );
-      case 'conflict':
-        await firstValueFrom(openConflict(this.dialog));
-        await this.open(this.id());
+      case 'conflict': {
+        const local = structuredClone(this.model());
+        const server = await this.store.readLatest();
+        if (this.id() !== productId) return undefined;
+        if (server === null) {
+          this.snackBar.open(
+            'A friss adatok nem tölthetők be. A beviteled megmaradt; próbáld újra.',
+            undefined,
+            { duration: 4000 },
+          );
+          return undefined;
+        }
+        await firstValueFrom(
+          openConflict(
+            this.dialog,
+            conflictDifferences(toProductInput(local), toProductInput(toFormModel(server.product))),
+          ),
+        );
+        this.store.useLatestVersion(server);
         return undefined;
+      }
       case 'failed': {
         const message =
           result.problem?.code === 'VARIANT_IN_CART'

@@ -40,7 +40,7 @@ describe('ConflictDialog', () => {
     return found === null ? '' : found.textContent.trim();
   }
 
-  it('shows the title, the message, the single Újratöltés button, opened with disableClose', async () => {
+  it('shows the title, the message, the single Bevitel megtartása button, opened with disableClose', async () => {
     // Fails if the template drops the title, the paragraph, gains a second
     // button, or openConflict stops passing disableClose: true.
     void openConflict(TestBed.inject(MatDialog));
@@ -48,17 +48,17 @@ describe('ConflictDialog', () => {
 
     expect(paneText('h2')).toBe('Valaki közben módosította ezt a terméket');
     expect(paneText('mat-dialog-content p')).toBe(
-      'A mentés nem történt meg. Töltsd újra a legfrissebb változatot; a módosításaid elvesznek.',
+      'A mentés nem történt meg. A beviteled megmarad. Hasonlítsd össze a friss szerveradatokat a saját értékeiddel; újabb mentéssel ezeket az értékeket mented.',
     );
     expect(buttons().length).toBe(1);
-    expect(buttons()[0].textContent.trim()).toBe('Újratöltés');
+    expect(buttons()[0].textContent.trim()).toBe('Bevitel megtartása');
     expect(TestBed.inject(MatDialog).openDialogs.at(0)?.disableClose).toBe(true);
 
     TestBed.inject(MatDialog).closeAll();
     await fixture.whenStable();
   });
 
-  it('emits once and closes the dialog when Újratöltés is clicked', async () => {
+  it('emits once and closes the dialog when Bevitel megtartása is clicked', async () => {
     // Fails if openConflict stops mapping afterClosed() to a single undefined
     // emission, or the button stops carrying mat-dialog-close.
     const closed = firstValueFrom(openConflict(TestBed.inject(MatDialog)));

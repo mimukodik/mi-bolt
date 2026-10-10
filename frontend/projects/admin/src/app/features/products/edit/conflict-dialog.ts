@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import {
+  MAT_DIALOG_DATA,
   MatDialogActions,
   MatDialogClose,
   MatDialogContent,
@@ -10,11 +11,12 @@ import type { MatDialog } from '@angular/material/dialog';
 import { map } from 'rxjs';
 import type { Observable } from 'rxjs';
 
-/**
- * The save-conflict dialog (412): someone saved the product since it was loaded.
- * It has one way out, Újratöltés; the page then reloads the product and drops the
- * edits. Opened with `disableClose`, so Escape and the backdrop do nothing.
- */
+export interface ConflictDifference {
+  readonly label: string;
+  readonly local: string;
+  readonly server: string;
+}
+
 @Component({
   selector: 'adm-conflict-dialog',
   imports: [MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose, MatButton],
@@ -22,20 +24,31 @@ import type { Observable } from 'rxjs';
     <h2 mat-dialog-title>Valaki közben módosította ezt a terméket</h2>
     <mat-dialog-content>
       <p>
-        A mentés nem történt meg. Töltsd újra a legfrissebb változatot; a módosításaid elvesznek.
+        A mentés nem történt meg. A beviteled megmarad. Hasonlítsd össze a friss szerveradatokat a
+        saját értékeiddel; újabb mentéssel ezeket az értékeket mented.
       </p>
+      @for (row of differences; track row.label) {
+        <h3>{{ row.label }}</h3>
+        <p>Saját bevitel: {{ row.local }}</p>
+        <p>Friss szerveradat: {{ row.server }}</p>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-dialog-close matButton="filled" type="button">Újratöltés</button>
+      <button mat-dialog-close matButton="filled" type="button">Bevitel megtartása</button>
     </mat-dialog-actions>
   `,
 })
-export class ConflictDialog {}
+export class ConflictDialog {
+  protected readonly differences = inject<readonly ConflictDifference[]>(MAT_DIALOG_DATA);
+}
 
-/** Opens {@link ConflictDialog}; emits once when Újratöltés closed it. */
-export function openConflict(dialog: MatDialog): Observable<void> {
+/** The dialog preserves edits; it never saves or discards them. */
+export function openConflict(
+  dialog: MatDialog,
+  differences: readonly ConflictDifference[] = [],
+): Observable<void> {
   return dialog
-    .open(ConflictDialog, { disableClose: true, width: '28rem' })
+    .open(ConflictDialog, { disableClose: true, width: '40rem', data: differences })
     .afterClosed()
     .pipe(map(() => undefined));
 }

@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
 import java.text.Normalizer;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -47,7 +49,8 @@ class CatalogServiceTest {
 	private void useCatalogue(List<Product> catalogue) {
 		ProductRepository productRepository = mock(ProductRepository.class);
 		SpecGroupRepository specGroupRepository = mock(SpecGroupRepository.class);
-		service = new CatalogService(productRepository, specGroupRepository);
+		service = new CatalogService(productRepository, specGroupRepository,
+				Clock.fixed(Instant.parse("2026-10-31T00:00:00Z"), ZoneOffset.UTC), null);
 		when(productRepository.findAllWithColors()).thenReturn(catalogue);
 		when(productRepository.fetchHighlights(ArgumentMatchers.anyList())).thenReturn(catalogue);
 		when(productRepository.fetchVariants(ArgumentMatchers.anyList())).thenReturn(catalogue);
@@ -79,6 +82,43 @@ class CatalogServiceTest {
 				LocalDate.parse("2025-01-01"), 1, 50, false, true,
 				List.of("probe highlight"), colours, variants));
 		return out;
+	}
+
+	@Test
+	void activePromotionSelectsDiscountedColourAndEffectivePriceRange() {
+		List<Product> products = buildProbePhone();
+		Product product = products.getFirst();
+		product.setPromotionEnabled(true);
+		product.setPromotionText("Halloween");
+		product.setPromotionStartsAt(OffsetDateTime.parse("2026-10-30T00:00Z"));
+		product.setPromotionEndsAt(OffsetDateTime.parse("2026-11-02T00:00Z"));
+		ProductVariant discounted = product.getVariants().get(1);
+		discounted.setSalePriceHuf(90_000L);
+		useCatalogue(products);
+		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
+				80_000, 95_000, null, null, null, true, ProductSort.PRICE_ASC, 1, 12);
+		assertThat(page.items()).hasSize(1);
+		assertThat(page.items().getFirst().variantId()).isEqualTo(discounted.getId());
+		assertThat(page.items().getFirst().priceAmount()).isEqualTo(90_000);
+		assertThat(page.items().getFirst().priceMetadata().referencePrice()).isEqualTo(200_000);
+		assertThat(page.facets().priceRange().min()).isEqualTo(90_000);
+	}
+
+	@Test
+	void emptyActiveFilterStillReturnsScheduledBoundary() {
+		List<Product> products = buildProbePhone();
+		Product product = products.getFirst();
+		product.setPromotionEnabled(true);
+		product.setPromotionText("Later");
+		product.setPromotionStartsAt(OffsetDateTime.parse("2026-11-01T00:00Z"));
+		product.setPromotionEndsAt(OffsetDateTime.parse("2026-11-02T00:00Z"));
+		product.getVariants().getFirst().setSalePriceHuf(90_000L);
+		useCatalogue(products);
+		CatalogData.ProductPageData page = service.listProducts(null, null, null, null,
+				null, null, null, null, null, true, ProductSort.RECOMMENDED, 1, 12);
+		assertThat(page.items()).isEmpty();
+		assertThat(page.serverTime()).isEqualTo(OffsetDateTime.parse("2026-10-31T00:00Z"));
+		assertThat(page.nextPriceChangeAt()).isEqualTo(product.getPromotionStartsAt());
 	}
 
 	@Test

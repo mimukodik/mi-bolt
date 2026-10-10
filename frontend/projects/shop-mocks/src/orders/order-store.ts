@@ -190,6 +190,7 @@ export class OrderStore {
     sessionId: string,
     idempotencyKey: string,
     ifMatch: string | null,
+    acceptedPriceRevision?: string,
   ): PaymentIntentOutcome {
     if (
       idempotencyKey.length < IDEMPOTENCY_KEY_MIN ||
@@ -208,7 +209,7 @@ export class OrderStore {
     }
 
     const key = deriveIdempotencyKey('POST', '/payment-intents', sessionId, idempotencyKey);
-    const payload = { ifMatch };
+    const payload = { ifMatch, acceptedPriceRevision };
     const hash = hashPayload(payload);
     const cached = this.idempotency.find(key, hash);
     if (cached !== null) {
@@ -233,6 +234,17 @@ export class OrderStore {
     const readResult = this.checkout.read(sessionId);
     if (!readResult.ok) return { ok: false, problem: readResult.problem };
     const { cart, draft } = readResult;
+    if (!this.cart().pricesMatch(sessionId, acceptedPriceRevision))
+      return {
+        ok: false,
+        problem: this.problem(
+          409,
+          'PRICE_CHANGED',
+          'Item prices changed; explicit acceptance required.',
+          { priceRevision: cart.priceRevision },
+          [],
+        ),
+      };
 
     const versionCheck = this.checkIfMatch(ifMatch, cart.version);
     if (!versionCheck.ok) return { ok: false, problem: versionCheck.problem };
@@ -274,6 +286,7 @@ export class OrderStore {
       redirectUrl: `/demo-fizetes/${id}`,
       returnUrl: `/penztar?paymentIntentId=${id}${scenarioQuery}`,
     };
+    this.cart().acceptPrices(sessionId, acceptedPriceRevision);
     this.intents.set(id, stored);
     const wire = this.toWireIntent(stored);
     this.idempotency.record(key, hash, { status: 201, body: wire });
@@ -407,6 +420,17 @@ export class OrderStore {
     const readResult = this.checkout.read(sessionId);
     if (!readResult.ok) return { ok: false, problem: readResult.problem };
     const { cart, draft } = readResult;
+    if (!this.cart().pricesMatch(sessionId, orderRequest.acceptedPriceRevision))
+      return {
+        ok: false,
+        problem: this.problem(
+          409,
+          'PRICE_CHANGED',
+          'Item prices changed; explicit acceptance required.',
+          { priceRevision: cart.priceRevision },
+          [],
+        ),
+      };
 
     const versionCheck = this.checkIfMatch(ifMatch, cart.version);
     if (!versionCheck.ok) return { ok: false, problem: versionCheck.problem };
@@ -754,6 +778,12 @@ export class OrderStore {
     const paymentMethod = body['paymentMethod'];
     const termsVersion = body['termsVersion'];
     const acceptedTerms = body['acceptedTerms'];
+    const acceptedPriceRevision = body['acceptedPriceRevision'];
+    if (acceptedPriceRevision !== undefined && typeof acceptedPriceRevision !== 'string')
+      return {
+        ok: false,
+        problem: this.problem(400, 'INVALID_REQUEST', 'Price revision must be a string', {}, []),
+      };
 
     if (paymentMethod !== 'card' && paymentMethod !== 'cash_on_delivery') {
       return {
@@ -784,6 +814,7 @@ export class OrderStore {
       }
       const request: CardOrderRequest = {
         acceptedTerms,
+        acceptedPriceRevision,
         paymentIntentId,
         paymentMethod: 'card',
         termsVersion,
@@ -792,6 +823,7 @@ export class OrderStore {
     }
     const request: CashOnDeliveryOrderRequest = {
       acceptedTerms,
+      acceptedPriceRevision,
       paymentMethod: 'cash_on_delivery',
       termsVersion,
     };

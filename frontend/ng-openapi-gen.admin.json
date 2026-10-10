@@ -10,5 +10,5 @@
   "enumArray": true,
   "ignoreUnusedModels": true,
   "excludeParameters": ["If-Match"],
-  "includeTags": ["AdminAuth", "AdminUsers", "AdminProducts", "AdminMedia"]
+  "includeTags": ["AdminAuth", "AdminUsers", "AdminProducts", "AdminMedia", "AdminCampaignSettings"]
 }

@@ -5,6 +5,7 @@ import { AdminProductColor } from '../models/admin-product-color';
 import { AdminProductStatus } from '../models/admin-product-status';
 import { AdminProductVariant } from '../models/admin-product-variant';
 import { AdminSpecGroup } from '../models/admin-spec-group';
+import { Promotion } from '../models/promotion';
 export interface AdminProduct {
   archivedAt?: string;
   brand: string;
@@ -16,6 +17,7 @@ export interface AdminProduct {
   is5g: boolean;
   name: string;
   popularityScore: number;
+  promotion?: Promotion;
   rank: number;
   releasedAt: string;
   slug: string;

@@ -110,7 +110,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('T26-AC01 operation inventory parity', () => {
-  it('declares exactly 19 operationIds in the spec', () => {
+  it('declares exactly 20 operationIds in the spec', () => {
     expect(operationsById.size).toBe(REQUIRED_OPERATION_COUNT);
   });
 
@@ -736,6 +736,9 @@ function routeKey(handler: unknown): string {
 function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unknown {
   const schemas = (spec.components?.schemas ?? {}) as Record<string, Record<string, unknown>>;
   switch (op.operationId) {
+    case 'getShopAppearance': {
+      return { halloweenActive: false, serverTime: '2026-10-10T12:00:00Z' };
+    }
     case 'listProducts': {
       // ProductPage (contracts/commerce/openapi.yaml:1419-1452) requires
       // items, total, page, pageSize, totalPages, facets; Facets
@@ -992,6 +995,10 @@ function buildDriftedFixture(op: OperationDescriptor): unknown {
   // the surface.
   const fixture = buildHappyPathFixture(op, dereferencedSpec) as Record<string, unknown>;
   switch (op.operationId) {
+    case 'getShopAppearance': {
+      fixture['halloweenActive'] = 'false';
+      break;
+    }
     case 'listProducts': {
       fixture['page'] = 'one'; // wrong type
       break;

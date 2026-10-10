@@ -1,5 +1,6 @@
 package com.example.mi_bolt_backend.checkout;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,7 +35,8 @@ public class CheckoutController implements CheckoutApi {
 
 	@Override
 	public ResponseEntity<CheckoutOptions> getCheckoutOptions() {
-		return ResponseEntity.ok(CheckoutModels.toOptions(checkoutService.getOptions(session())));
+		return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+				.body(CheckoutModels.toOptions(checkoutService.getOptions(session())));
 	}
 
 	@Override
@@ -55,6 +57,7 @@ public class CheckoutController implements CheckoutApi {
 
 	private static ResponseEntity<CheckoutSession> respond(CheckoutData.Session view) {
 		return ResponseEntity.ok()
+				.cacheControl(CacheControl.noStore())
 				.eTag("\"" + view.version() + "\"")
 				.body(CheckoutModels.toCheckoutSession(view));
 	}

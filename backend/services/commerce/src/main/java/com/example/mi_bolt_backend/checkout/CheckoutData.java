@@ -38,7 +38,11 @@ public interface CheckoutData {
 
 	/** Every section is null until set. */
 	record Session(long version, Contact contact, Billing billing, Delivery delivery, Payment payment,
-			Summary summary, boolean complete) {
+			Summary summary, boolean complete, String priceRevision, boolean priceAcceptanceRequired) {
+		public Session(long version, Contact contact, Billing billing, Delivery delivery, Payment payment,
+				Summary summary, boolean complete) {
+			this(version, contact, billing, delivery, payment, summary, complete, null, false);
+		}
 	}
 
 	/** What the controller passes in for a PATCH; a null section is "not sent". */

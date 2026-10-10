@@ -1,0 +1,19 @@
+# 0024 — Server promotion prices and explicit item revision acceptance
+
+BOLT-6 resolves campaign pricing in one server rule used by catalogue reads and cart reconciliation. Checkout, payment and order placement use that reconciled cart; clients never supply authoritative prices. A promotion is active at `startsAt <= serverTime < endsAt`. Only variants with a positive sale price below their captured reference are discounted. Other variants retain their base price. Price filters, facets and sorting use the effective price.
+
+The reference is the variant base price at campaign start. Scheduling captures a provisional reference, and every base edit before start refreshes it. Once started, base edits retain the reference and configured sale price. A conditional database update captures a missing reference before pricing reads. PostgreSQL additionally maintains the reference on base-column writes, covering previous binaries that cannot see the new nullable reference column. The trigger refreshes prestart references and freezes started ones, including capturing the old base on the first started write. Campaign rescheduling establishes a new reference. Sale prices are validated against the resolved reference when saved.
+
+The catalogue keeps `Cache-Control: no-cache`. Root and per-variant server timing exposes the next start/end boundary. Root list timing considers all catalogue campaigns before filtering, including an empty list of currently active promotions. Colour options carry their own image, effective price and price metadata.
+
+Each cart line retains its accepted unit price independently from its current effective unit price. Reconciliation emits item changes and keeps acceptance pending across later reads. A server-generated SHA-256 revision covers cart identity and sorted variant IDs, quantities and unit prices; equal cart totals with different item prices have different revisions. Clients explicitly submit `acceptedPriceRevision` after showing changed prices. Payment and order creation reject absent or obsolete acceptance and recheck the checkout's item revision after reconciliation. A new change during that recheck is rejected. Unchanged initial carts remain compatible with old request bodies.
+
+An accepted order freezes its item unit prices and totals at submission, after the final server recheck. Later campaign or base edits cannot change its receipt. Card intent amounts must equal the final order total. Idempotent payment/order replays remain checked before current cart state and return the stored result.
+
+## Compatibility and rollout
+
+All new contract members are optional and all database columns are nullable. Old admin payloads preserve omitted campaign and sale settings; old binaries can keep writing the base column after migration, with the PostgreSQL trigger retaining campaign references. Startup migrations add columns and a trigger; no old field is removed or tightened. Reference capture never assumes every row has already been backfilled. A previous binary continues its previous base-price behaviour; promotion pricing applies when the new binary serves the request.
+
+## Verification
+
+Fixed-clock unit cases cover start/end boundaries, disabled and partial promotions, prestart reference refresh, started reference retention, effective-price filters and timing on an empty active list. Cart cases cover persistent pending review, equal-total item changes and a second change after review. HTTP integration covers omitted/stale acceptance rejection, accepted submission, immutable receipts and idempotent replay. PostgreSQL 16.15 startup ran the actual Liquibase migration, and transactional SQL assertions verified prestart legacy base writes, active reference retention and missing-reference capture. Those PostgreSQL assertions verify the migration/trigger separately from the H2 integration suite.

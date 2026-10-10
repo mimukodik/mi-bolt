@@ -55,6 +55,7 @@ class CartApiTest {
 		MvcResult first = mockMvc.perform(get("/cart"))
 				.andExpect(status().isOk())
 				.andExpect(header().exists("Set-Cookie"))
+				.andExpect(header().string("Cache-Control", "no-store"))
 				.andExpect(header().string("ETag", "\"1\""))
 				.andExpect(jsonPath("$.version").value(1))
 				.andExpect(jsonPath("$.id").isString())

@@ -1,6 +1,14 @@
-<article class="card flex flex-col gap-3" data-testid="product-card">
+<article
+  class="card sm-card flex flex-col gap-3"
+  data-testid="product-card"
+  [class.card--promotion]="isPromotional()"
+  [class.sm-card--promo]="isPromotional()"
+>
+  @if (isPromotional()) {
+    <span class="promotion-badge">🎃 Halloweeni ajánlat</span>
+  }
   <a
-    class="media"
+    class="media sm-card__media"
     [attr.aria-label]="ariaLabel()"
     [queryParams]="detailsQuery()"
     [routerLink]="detailsLink()"
@@ -13,6 +21,9 @@
       [image]="image()"
       [productName]="product().name"
     />
+    @if (isPromotional()) {
+      <app-halloween-product-art />
+    }
   </a>
 
   <div class="body flex flex-col gap-2 flex-1">
@@ -56,7 +67,14 @@
       </p>
     }
     <div class="price-row mt-auto">
-      <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
+      <app-price-block
+        label="Egyszeri készülékár"
+        size="md"
+        status="success"
+        [money]="price()"
+        [promotionText]="isPromotional() ? (priceMetadata()?.promotionText ?? null) : null"
+        [referencePrice]="isPromotional() ? (priceMetadata()?.referencePrice ?? null) : null"
+      />
       @if (isOutOfStock()) {
         <p class="stock" data-testid="product-card-stock">Elfogyott</p>
       }

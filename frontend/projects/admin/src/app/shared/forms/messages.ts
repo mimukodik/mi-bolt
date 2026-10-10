@@ -1,5 +1,10 @@
 /** Hungarian validation messages shared by every admin form. */
 export const MESSAGES = {
+  appearancePrecision: 'Az időpont mikroszekundumos pontossággal adható meg.',
+  promotionDate: 'Érvényes dátumot és időpontot adj meg.',
+  promotionPeriod: 'A lejáratnak a kezdés után kell lennie.',
+  promotionVariant: 'Legalább egy változathoz adj meg akciós árat.',
+  positivePrice: 'Legalább 1 Ft legyen.',
   required: 'Kötelező mező.',
   notNegative: 'Nem lehet negatív.',
   imageRequired: 'Tölts fel képet.',
@@ -24,6 +29,14 @@ export const MESSAGES = {
 
 /** Hungarian messages for the field-level codes of the admin API's 422 answers. */
 export const SERVER_FIELD_MESSAGES: Readonly<Record<string, string>> = {
+  DATETIME_PRECISION: 'Az időpont mikroszekundumos pontossággal adható meg.',
+  INVALID_PERIOD: 'A lejáratnak a kezdés után kell lennie.',
+  PROMOTION_TIME_REQUIRED: 'Add meg a kezdést és a lejáratot.',
+  PROMOTION_TIME_RANGE: 'A lejáratnak a kezdés után kell lennie.',
+  PROMOTION_SALE_PRICE_REQUIRED: 'Legalább egy változathoz adj meg akciós árat.',
+  SALE_PRICE_NOT_LOWER: 'Az akciós árnak a rögzített referenciaárnál alacsonyabbnak kell lennie.',
+  SALE_PRICE_CONFLICT: 'Az akciós ár megadása és törlése együtt nem menthető.',
+  MIN: 'Az összegnek legalább 1 Ft-nak kell lennie.',
   REQUIRED: 'Kötelező mező.',
   NOTBLANK: 'Kötelező mező.',
   WRONG_PASSWORD: 'Hibás jelenlegi jelszó.',
