@@ -258,3 +258,11 @@ Products are never named by slug or product name: every scenario picks its card 
 4. Press the inner button of `review-payment-retry`. - expect: A new payment starts and the browser goes back to the demo payment page under `/demo-fizetes/<paymentIntentId>` with a fresh intent id. - expect: `pay-succeeded` ("Sikeres fizetés") is offered again.
 5. Press `pay-succeeded`. - expect: The browser returns to the shop and lands on the review step with `review-payment-status` reading "A fizetés jóváhagyva.".
 6. Tick `review-consent-terms-input` if it is not already ticked and press the inner button of `review-submit`. - expect: The browser lands on `/penztar/siker/<orderId>` and `order-receipt` is visible. - expect: `receipt-order-number` is not empty, `receipt-row-payment` contains "Bankkártya" and `receipt-row-status` reads "Demó rendelés visszaigazolva".
+
+## Halloween: active campaign offers
+
+### the promotion banner keeps active offers on reload and its filter can be removed
+
+1. Open the explicit `halloween` mock scenario and follow the campaign banner. Expect `activePromotion=true` in the URL, promotional cards and visible reference prices.
+2. Reload that URL. Expect the active-offer filter, promotional card and reference price to remain.
+3. Remove the active-offer chip. Expect its URL parameter and chip row to disappear and the catalogue to remain usable.

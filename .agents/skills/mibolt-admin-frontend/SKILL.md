@@ -44,11 +44,11 @@ done; it owns the full check matrix, which this skill does not repeat.
   (`frontend/angular.json`, "baseHref"), dev server on port 4220 (`frontend/angular.json`, "4220"),
   Hungarian UI copy, `LOCALE_ID` `hu-HU`. The routes are `/bejelentkezes` (sign-in),
   `/attekintes` (the Áttekintés overview, which its component calls the dashboard), `/termekek`,
-  `/termekek/uj`, `/termekek/:productId` and `/adminok`; the page to return to after sign-in
+  `/termekek/uj`, `/termekek/:productId`, `/megjelenes` and `/adminok`; the page to return to after sign-in
   travels in the `vissza` query parameter.
 - **Its own client.** `AdminApi` is generated into
   `frontend/projects/admin/src/app/api/generated/` from the same contract as the shop SDK,
-  restricted to the `AdminAuth`, `AdminUsers`, `AdminProducts` and `AdminMedia` tags
+  restricted to the `AdminAuth`, `AdminUsers`, `AdminProducts` `AdminMedia` and `AdminCampaignSettings` tags
   (`frontend/ng-openapi-gen.admin.json`, "includeTags") and without an `If-Match` parameter
   (`frontend/ng-openapi-gen.admin.json`, "excludeParameters"). Import it by relative path;
   there is no alias. `api.invoke(fn, params, context)` returns an `Observable` of the response
@@ -411,3 +411,13 @@ name: today `mibolt-frontend-code-standards`, `mibolt-shop-frontend`, `mibolt-ve
 only when a cited name no longer occurs anywhere in the cited file or skill, so it cannot see a
 section that kept its name and changed what it says: reread each section this skill or its
 references cite from what was edited, against what they use it for.
+
+## Independent Halloween appearance
+
+`frontend/projects/admin/src/app/features/appearance/appearance.routes.ts` loads the
+`/megjelenes` screen. `AppearanceStore` reads and saves the separate enabled/start/end
+settings under If-Match, while `AppearancePage` keeps its UTC draft on 422 and 412.
+Refreshing a conflicting version preserves the draft and shows the current server values;
+only a subsequent explicit save overwrites them. `frontend/projects/admin/src/mocks/appearance.handlers.ts`
+answers the same operations with the shared `MockDb.appearance` singleton. Decoration
+scheduling does not change product promotion windows or prices.

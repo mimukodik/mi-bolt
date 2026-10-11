@@ -13,6 +13,7 @@ import com.example.mi_bolt_backend.api.model.Product;
 import com.example.mi_bolt_backend.api.model.ProductPage;
 import com.example.mi_bolt_backend.api.model.ProductSort;
 import com.example.mi_bolt_backend.api.model.StorageGb;
+import com.example.mi_bolt_backend.api.model.ShopAppearance;
 
 /**
  * Catalogue HTTP entry point. Implements the generated {@link CatalogApi}
@@ -28,9 +29,16 @@ import com.example.mi_bolt_backend.api.model.StorageGb;
 public class ProductsController implements CatalogApi {
 
 	private final CatalogService catalogService;
+	private final HalloweenAppearanceService appearanceService;
 
-	public ProductsController(CatalogService catalogService) {
+	public ProductsController(CatalogService catalogService, HalloweenAppearanceService appearanceService) {
 		this.catalogService = catalogService;
+		this.appearanceService = appearanceService;
+	}
+
+	@Override
+	public ResponseEntity<ShopAppearance> getShopAppearance() {
+		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(appearanceService.shop());
 	}
 
 	@Override
@@ -42,12 +50,13 @@ public class ProductsController implements CatalogApi {
 			Integer maxPrice,
 			Boolean inStock,
 			Boolean is5g,
+			Boolean activePromotion,
 			Boolean featured,
 			ProductSort sort,
 			Integer page,
 			Integer pageSize) {
 		return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(CatalogModels.toProductPage(catalogService.listProducts(q, brand, storageGb, color,
-				minPrice, maxPrice, inStock, is5g, featured, sort, page, pageSize)));
+				minPrice, maxPrice, inStock, is5g, featured, activePromotion, sort, page, pageSize)));
 	}
 
 	@Override

@@ -321,3 +321,43 @@ the state becomes terminal before `expiresAt`.
 - The server **does not** send error text meant for the user.
 - Neither side introduces a field, endpoint or status code that is not in the
   spec.
+
+## Admin promóciós adatok (BOLT-6)
+
+Az `AdminProduct` és `AdminProductInput` opcionális `promotion` mezője a
+telefon közös engedélyezését, szövegét és offsetes kezdési/lejárati időpontját
+hordozza. Az admin a dátumokat kifejezetten UTC-ben szerkeszti. Engedélyezett
+promócióhoz szöveg, két rendezett időpont és legalább egy tárolt változatár
+szükséges. A változat `price` mezője továbbra is a tárolt alapár;
+`salePriceHuf` az opcionális tárolt akciós ár.
+
+Régi kliens teljes cseréjénél a hiányzó `promotion` megőrzi a közös adatokat.
+A hiányzó vagy null `salePriceHuf` megőrzi az azonos szín/tárhely változat
+korábbi árát. Törléshez az új kliens `clearSalePrice: true` értéket küld;
+ez és konkrét akciós ár együtt nem megengedett. A promóció `enabled: false`
+értékkel kapcsolható ki. A termék és változatok közös tranzakcióban mentődnek,
+a meglévő If-Match ellenőrzéssel.
+
+Ez az admin adatkezelési bővítés. A vásárlói effektív ár, referenciaár,
+ajánlatszűrés és fizetés alatti árrögzítés integrációja még nincs bekapcsolva;
+a referenciaár és az árrögzítési pont üzleti döntése a BOLT-6 tervében nyitott.
+
+
+## Independent Halloween decoration schedule (BOLT-6)
+
+Decoration has its own persisted singleton settings and never follows product
+sale dates. `GET /admin/halloween-appearance` reads `enabled`, optional nullable
+`startsAt` and `endsAt`, and `version`, initially disabled with no dates and
+version 0. `PUT /admin/halloween-appearance` replaces them using the quoted
+ETag in `If-Match`. Missing headers return 428 `PRECONDITION_REQUIRED`; stale
+or malformed headers return 412 `APPEARANCE_VERSION_CONFLICT`, with
+`params.expected` and `params.received`. Invalid schedules return 422
+`VALIDATION_FAILED` with `/startsAt` or `/endsAt` field pointers, and failures
+preserve the saved settings. Enabled requires both dates and start before end.
+
+The demo-gated `GET /shop-appearance` returns `halloweenActive`, required
+`serverTime` and optional nullable `nextChangeAt`. Active is exactly the enabled
+interval `[startsAt, endsAt)`, using the server clock. The next change is the
+start before the period or the end during it; disabled and finished schedules
+have no next boundary. `Cache-Control: no-store` prevents stale appearance
+responses. Null optional response members may be omitted.

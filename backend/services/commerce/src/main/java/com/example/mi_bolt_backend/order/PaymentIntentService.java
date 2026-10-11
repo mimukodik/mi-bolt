@@ -62,8 +62,14 @@ public class PaymentIntentService {
 	}
 
 	public OrderData.IntentView create(ShopSession current, String ifMatch) {
+		return create(current, ifMatch, null);
+	}
+
+	public OrderData.IntentView create(ShopSession current, String ifMatch, String acceptedPriceRevision) {
 		CartData.CartView cart = cartService.getCart(current);
-		if (!cart.notices().isEmpty()) {
+		cartService.acceptPrices(current, cart, acceptedPriceRevision);
+		if (!cart.notices().isEmpty() && (acceptedPriceRevision == null
+				|| cart.notices().stream().anyMatch(notice -> !"PRICE_CHANGED".equals(notice.code())))) {
 			List<String> codes = cart.notices().stream().map(CartData.Notice::code).collect(Collectors.toList());
 			throw new DomainException(ErrorCode.PRICE_CHANGED,
 					"Cart prices were updated; the shopper must review the new total",
@@ -71,6 +77,11 @@ public class PaymentIntentService {
 		}
 		cartService.expectVersion(current, ifMatch);
 		CheckoutData.Session checkout = checkoutService.getCheckout(current);
+		if (checkout.priceAcceptanceRequired() || (cart.priceRevision() != null
+				&& !cart.priceRevision().equals(checkout.priceRevision()))) {
+			throw new DomainException(ErrorCode.PRICE_CHANGED, "Item prices changed during the server recheck",
+					Map.of("priceRevision", checkout.priceRevision()));
+		}
 		if (!checkout.complete()) {
 			List<FieldError> fieldErrors = sectionMissing(checkout, cart);
 			throw new DomainException(ErrorCode.CHECKOUT_INCOMPLETE,

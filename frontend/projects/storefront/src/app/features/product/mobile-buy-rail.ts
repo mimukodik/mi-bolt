@@ -38,6 +38,8 @@ import type { UiProblem } from '../../shared/types/ui-problem';
 })
 export class MobileBuyRail {
   readonly money = input<Money | null>(null);
+  readonly referencePrice = input<Money | null>(null);
+  readonly promotionText = input<string | null>(null);
   readonly available = input<boolean>(false);
   readonly pending = input<boolean>(false);
   readonly error = input<UiProblem | null>(null);

@@ -4,6 +4,7 @@
 import { Availability } from '../models/availability';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
+import { PriceMetadata } from '../models/price-metadata';
 import { StorageGb } from '../models/storage-gb';
 export interface CartItem {
   availability: Availability;
@@ -15,6 +16,7 @@ export interface CartItem {
    * Effective cap for this line. quantity never exceeds it; if stock drops below it, the server reduces quantity and reports a notice.
    */
   maxQuantity: number;
+  priceMetadata?: PriceMetadata;
   productId: string;
   productName: string;
   productSlug: string;

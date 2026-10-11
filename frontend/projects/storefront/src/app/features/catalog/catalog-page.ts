@@ -312,6 +312,9 @@ export class CatalogPage {
       case 'maxPrice':
         this.facade.setPriceRange(this.facade.query().minPrice, undefined);
         break;
+      case 'activePromotion':
+        this.facade.setFilters({ activePromotion: undefined });
+        break;
       case 'featured':
         this.facade.setFeatured(undefined);
         break;

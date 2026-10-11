@@ -204,3 +204,26 @@ describe('seedCatalog guards', () => {
     expect(() => seedCatalog(badSource)).toThrow('data/catalog/catalog.json: storageGb 64');
   });
 });
+
+describe('promotion import mapping', () => {
+  it('carries optional promotion fields and keeps unpriced variants unchanged', () => {
+    const base = catalogSource.products[0];
+    const source = {
+      products: [
+        {
+          ...base,
+          promotion: { enabled: false, text: 'Draft', startsAt: '2026-10-30T00:00:00Z' },
+          variants: base.variants.map((v, i) => ({
+            ...v,
+            ...(i === 0 ? { salePriceHuf: 1 } : {}),
+          })),
+        },
+      ],
+    };
+    const product = seedCatalog(source).products[0];
+    expect(product.promotion?.text).toBe('Draft');
+    expect(product.promotion?.enabled).toBe(false);
+    expect(product.variants[0].salePriceHuf).toBe(1);
+    expect(product.variants[0].price.amount).toBe(source.products[0].variants[0].priceHuf);
+  });
+});

@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
+import { priceCacheInterceptor } from './core/price-cache.interceptor';
 import { demoAccessInterceptor } from './core/demo-access/demo-access.interceptor';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
@@ -18,7 +19,7 @@ import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.intercept
  */
 const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
 const _provideHttp = provideHttpClient(
-  withInterceptors([demoSessionInterceptor, demoAccessInterceptor]),
+  withInterceptors([demoSessionInterceptor, priceCacheInterceptor, demoAccessInterceptor]),
 );
 const _provideRouter = provideRouter(
   routes,

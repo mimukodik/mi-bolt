@@ -15,6 +15,13 @@
   </header>
 
   <app-navigation-reason-banner />
+  @if (cart()?.priceAcceptanceRequired === true) {
+    <app-status-message
+      message="A tételárak megváltoztak. Ellenőrizd az új árakat és összesítést; a pénztárban külön elfogadást kérünk."
+      severity="info"
+      [persistent]="true"
+    />
+  }
 
   @if (statusMessage(); as message) {
     <div class="status flex">

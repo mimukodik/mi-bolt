@@ -16,6 +16,14 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 			+ " where v.id = :id")
 	Optional<ProductVariant> findByIdWithDetails(@Param("id") String id);
 
+	@Modifying(flushAutomatically = true)
+	@Query(value = "update product_variant set promotion_reference_price_huf = price_huf"
+			+ " where id = :id and promotion_reference_price_huf is null", nativeQuery = true)
+	int capturePromotionReference(@Param("id") String id);
+
+	@Query(value = "select promotion_reference_price_huf from product_variant where id = :id", nativeQuery = true)
+	Long findPromotionReference(@Param("id") String id);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("update ProductVariant v set v.stock = v.stock - :quantity where v.id = :id and v.stock >= :quantity")
 	int decrementStock(@Param("id") String id, @Param("quantity") int quantity);

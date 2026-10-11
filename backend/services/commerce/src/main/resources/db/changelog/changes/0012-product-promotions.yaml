@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0012-product-promotions
+      author: mi-bolt
+      comment: Optional admin promotion configuration; existing products remain without a promotion.
+      changes:
+        - addColumn:
+            tableName: product
+            columns:
+              - column:
+                  name: promotion_enabled
+                  type: boolean
+              - column:
+                  name: promotion_text
+                  type: varchar(280)
+              - column:
+                  name: promotion_starts_at
+                  type: timestamp with time zone
+              - column:
+                  name: promotion_ends_at
+                  type: timestamp with time zone
+        - addColumn:
+            tableName: product_variant
+            columns:
+              - column:
+                  name: sale_price_huf
+                  type: bigint

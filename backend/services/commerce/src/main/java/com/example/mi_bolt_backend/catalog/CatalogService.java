@@ -1,6 +1,10 @@
 package com.example.mi_bolt_backend.catalog;
 
 import java.text.Normalizer;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -29,12 +33,12 @@ import com.example.mi_bolt_backend.problem.ErrorCode;
  * {@link CatalogModels}. The shape and the reasoning are recorded in
  * docs/decisions/0008.
  *
- * <p>The class is {@code readOnly}: nothing here writes. Domain validation
- * throws {@link DomainException} and the {@code ProblemAdvice} layer turns it
+ * <p>Reads conditionally capture a missing campaign reference price in the same
+ * transaction. Domain validation throws {@link DomainException} and the {@code ProblemAdvice} layer turns it
  * into a wire response.
  */
 @Service
-@Transactional(readOnly = true)
+@Transactional
 public class CatalogService {
 
 	/** Per-order-line cap, exposed as {@code maxQuantity} on every list entry and variant. */
@@ -59,10 +63,19 @@ public class CatalogService {
 
 	private static final Pattern NON_SLUG = Pattern.compile("[^a-z0-9]+");
 
+	private final Clock clock;
+	private final ProductVariantRepository variants;
 	private final ProductRepository productRepository;
 	private final SpecGroupRepository specGroupRepository;
 
 	public CatalogService(ProductRepository productRepository, SpecGroupRepository specGroupRepository) {
+		this(productRepository, specGroupRepository, Clock.systemUTC(), null);
+	}
+
+	@Autowired
+	public CatalogService(ProductRepository productRepository, SpecGroupRepository specGroupRepository, Clock clock, ProductVariantRepository variants) {
+		this.variants = variants;
+		this.clock = clock;
 		this.productRepository = productRepository;
 		this.specGroupRepository = specGroupRepository;
 	}
@@ -80,15 +93,27 @@ public class CatalogService {
 				.toList());
 		productRepository.fetchHighlights(products);
 		productRepository.fetchVariants(products);
+		captureReferences(products);
 		productRepository.fetchSpecGroups(products);
 		specGroupRepository.fetchRows(products);
 		return products;
+	}
+
+	private void captureReferences(List<Product> products) {
+		if (variants != null) {
+			for (Product product : products) {
+				for (ProductVariant variant : product.getVariants()) {
+					PriceResolver.captureReference(variant, variants);
+				}
+			}
+		}
 	}
 
 	private Product loadOne(Product p) {
 		productRepository.fetchColors(List.of(p));
 		productRepository.fetchHighlights(List.of(p));
 		productRepository.fetchVariants(List.of(p));
+		captureReferences(List.of(p));
 		productRepository.fetchSpecGroups(List.of(p));
 		specGroupRepository.fetchRows(List.of(p));
 		return p;
@@ -103,6 +128,22 @@ public class CatalogService {
 			Boolean inStock,
 			Boolean is5g,
 			Boolean featured,
+			ProductSort sort,
+			int page,
+			int pageSize) {
+		return listProducts(q, brand, storageGb, color, minPrice, maxPrice, inStock, is5g, featured, null, sort, page, pageSize);
+	}
+
+	public CatalogData.ProductPageData listProducts(String q,
+			List<String> brand,
+			List<StorageGb> storageGb,
+			List<String> color,
+			Integer minPrice,
+			Integer maxPrice,
+			Boolean inStock,
+			Boolean is5g,
+			Boolean featured,
+			Boolean activePromotion,
 			ProductSort sort,
 			int page,
 			int pageSize) {
@@ -147,6 +188,7 @@ public class CatalogService {
 			all.addAll(buildEntriesForProduct(p, Filters.none()));
 		}
 
+		filters.activePromotion = activePromotion;
 		List<Entry> filtered = filterEntries(all, filters);
 		List<Entry> displayed = new ArrayList<>();
 		for (Entry e : filtered) {
@@ -171,7 +213,10 @@ public class CatalogService {
 		}
 
 		CatalogData.FacetsData facets = computeFacets(all, capped, filters);
-		return new CatalogData.ProductPageData(items, total, page, pageSizeValue, totalPages, facets);
+		return new CatalogData.ProductPageData(items, total, page, pageSizeValue, totalPages, facets, OffsetDateTime.now(clock),
+				products.stream().flatMap(product -> product.getVariants().stream())
+						.map(variant -> PriceResolver.resolve(variant, clock).nextPriceChangeAt())
+						.filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null));
 	}
 
 	public CatalogData.ProductData getProduct(String slug) {
@@ -349,13 +394,17 @@ public class CatalogService {
 	}
 
 	private boolean variantMatches(ProductVariant v, Filters filters) {
+		if (filters.activePromotion != null && PriceResolver.resolve(v, clock).activePromotion()
+				!= filters.activePromotion.booleanValue()) {
+			return false;
+		}
 		if (!filters.color.isEmpty() && !filters.color.contains(v.getColor().getCode())) {
 			return false;
 		}
-		if (filters.minPrice != null && v.getPriceHuf() < filters.minPrice.longValue()) {
+		if (filters.minPrice != null && PriceResolver.resolve(v, clock).amount() < filters.minPrice.longValue()) {
 			return false;
 		}
-		if (filters.maxPrice != null && v.getPriceHuf() > filters.maxPrice.longValue()) {
+		if (filters.maxPrice != null && PriceResolver.resolve(v, clock).amount() > filters.maxPrice.longValue()) {
 			return false;
 		}
 		if (filters.inStock != null) {
@@ -392,11 +441,11 @@ public class CatalogService {
 					.thenComparing(RECOMMENDED_ENTRY_ORDER);
 		}
 		else if (effective == ProductSort.PRICE_ASC) {
-			cmp = Comparator.comparingLong((Entry e) -> e.displayed.variant.getPriceHuf())
+			cmp = Comparator.comparingLong((Entry e) -> PriceResolver.resolve(e.displayed.variant, clock).amount())
 					.thenComparing(RECOMMENDED_ENTRY_ORDER);
 		}
 		else if (effective == ProductSort.PRICE_DESC) {
-			cmp = Comparator.comparingLong((Entry e) -> -e.displayed.variant.getPriceHuf())
+			cmp = Comparator.comparingLong((Entry e) -> -PriceResolver.resolve(e.displayed.variant, clock).amount())
 					.thenComparing(RECOMMENDED_ENTRY_ORDER);
 		}
 		else if (effective == ProductSort.NAME_ASC) {
@@ -518,7 +567,7 @@ public class CatalogService {
 		long minPrice = Long.MAX_VALUE;
 		long maxPrice = Long.MIN_VALUE;
 		for (Entry e : capped) {
-			long price = e.displayed.variant.getPriceHuf();
+			long price = PriceResolver.resolve(e.displayed.variant, clock).amount();
 			if (price < minPrice) {
 				minPrice = price;
 			}
@@ -717,8 +766,8 @@ public class CatalogService {
 				color.getSwatchHex(),
 				v.getId(),
 				v.getSlug(),
-				(int) v.getPriceHuf(),
-				v.getStock() != null && v.getStock() > 0);
+				(int) PriceResolver.resolve(v, clock).amount(),
+				v.getStock() != null && v.getStock() > 0, toImageData(color), PriceResolver.resolve(v, clock));
 	}
 
 	public static CatalogData.ImageData toImageData(ProductColor color) {
@@ -744,11 +793,11 @@ public class CatalogService {
 				e.storage,
 				e.displayed.variant.getId(),
 				e.displayed.variant.getSlug(),
-				(int) e.displayed.variant.getPriceHuf(),
+				(int) PriceResolver.resolve(e.displayed.variant, clock).amount(),
 				e.displayed.variant.getStock() != null && e.displayed.variant.getStock() > 0,
 				maxQuantity(e.displayed.variant.getStock()),
 				toImageData(e.displayed.color),
-				new ArrayList<>(e.colors));
+				new ArrayList<>(e.colors), PriceResolver.resolve(e.displayed.variant, clock));
 	}
 
 	private CatalogData.ProductData toProductData(Product entity) {
@@ -761,10 +810,10 @@ public class CatalogService {
 					v.getColor().getName(),
 					v.getColor().getSwatchHex(),
 					v.getStorageGb(),
-					(int) v.getPriceHuf(),
+					(int) PriceResolver.resolve(v, clock).amount(),
 					v.getStock() != null && v.getStock() > 0,
 					maxQuantity(v.getStock()),
-					toImageData(v.getColor())));
+					toImageData(v.getColor()), PriceResolver.resolve(v, clock)));
 		}
 
 		List<CatalogData.SpecGroupData> groups = new ArrayList<>();
@@ -900,6 +949,7 @@ public class CatalogService {
 		final Boolean inStock;
 		final Boolean is5g;
 		final Boolean featured;
+		Boolean activePromotion;
 
 		Filters(String q, List<String> brand, Set<Integer> storage, Set<String> color,
 				Integer minPrice, Integer maxPrice, Boolean inStock, Boolean is5g, Boolean featured) {
@@ -919,7 +969,7 @@ public class CatalogService {
 		}
 
 		Filters without(String facetToIgnore) {
-			return switch (facetToIgnore) {
+			Filters relaxed = switch (facetToIgnore) {
 				case "brand" -> new Filters(q, List.of(), storage, color, minPrice, maxPrice, inStock, is5g, featured);
 				case "storage" -> new Filters(q, brand, Set.of(), color, minPrice, maxPrice, inStock, is5g, featured);
 				case "color" -> new Filters(q, brand, storage, Set.of(), minPrice, maxPrice, inStock, is5g, featured);
@@ -927,6 +977,8 @@ public class CatalogService {
 				case "inStock" -> new Filters(q, brand, storage, color, minPrice, maxPrice, null, is5g, featured);
 				default -> this;
 			};
+			relaxed.activePromotion = activePromotion;
+			return relaxed;
 		}
 	}
 

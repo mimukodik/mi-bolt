@@ -86,6 +86,10 @@ interface ReviewLineDisplay {
   readonly quantity: number;
   readonly unitPriceText: string;
   readonly lineTotal: Money;
+  readonly unitPrice: Money;
+  readonly referencePrice: Money | null;
+  readonly promotionText: string | null;
+  readonly promotional: boolean;
 }
 
 /** Rendered when an option id has no matching entry on the wire. */
@@ -206,6 +210,10 @@ export class ReviewStep {
       quantity: item.quantity,
       unitPriceText: PriceBlock.formatHuf(item.unitPrice.amount),
       lineTotal: item.lineTotal,
+      unitPrice: item.unitPrice,
+      referencePrice: item.priceMetadata?.referencePrice ?? null,
+      promotionText: item.priceMetadata?.promotionText ?? null,
+      promotional: item.priceMetadata?.activePromotion === true,
     })),
   );
 
@@ -314,7 +322,7 @@ export class ReviewStep {
   readonly priceChangeConfirmLabel = computed<string>(() => {
     const change = this.priceChange();
     if (change === null) return '';
-    return `Elfogadom az új végösszeget: ${PriceBlock.formatHuf(change.currentTotal.amount)} Ft`;
+    return `Elfogadom az új tételárakat és végösszeget: ${PriceBlock.formatHuf(change.currentTotal.amount)} Ft`;
   });
 
   // ---------------------------------------------------------------------------
@@ -322,7 +330,8 @@ export class ReviewStep {
   // the backend `detail` is never rendered (R15) — so these are fixed.
   // ---------------------------------------------------------------------------
 
-  readonly priceChangedMessage = 'A végösszeg időközben megváltozott.';
+  readonly priceChangedMessage =
+    'A tételárak időközben megváltoztak. Ellenőrizd az új árakat és összesítést.';
   readonly conflictMessage = 'Az adatok időközben megváltoztak. Ellenőrizd és próbáld újra.';
   readonly outOfStockMessage =
     'Egy vagy több termék közben elfogyott, ezért a rendelés nem jött létre. A kosárban javíthatod; a megadott adataid megmaradnak.';
@@ -444,7 +453,7 @@ export class ReviewStep {
    *  and error states moves focus to that state's banner (its
    *  explanation), otherwise to the unticked terms, and with the
    *  terms ticked to the explanation under the button. Disabled while
-   *  submitting and for an unpaid card draft. In the error state a
+   *  submitting, while new item prices await acceptance, and for an unpaid card draft. In the error state a
    *  click that can submit resubmits. */
   onSubmit(): void {
     if (this.state() === 'submitting') return;

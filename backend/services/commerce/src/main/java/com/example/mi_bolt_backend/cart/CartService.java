@@ -1,6 +1,11 @@
 package com.example.mi_bolt_backend.cart;
 
 import java.time.Clock;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.Comparator;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -8,12 +13,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.mi_bolt_backend.catalog.CatalogService;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
+import com.example.mi_bolt_backend.catalog.PriceResolver;
 import com.example.mi_bolt_backend.catalog.ProductVariantRepository;
 import com.example.mi_bolt_backend.problem.DomainException;
 import com.example.mi_bolt_backend.problem.ErrorCode;
@@ -89,6 +96,7 @@ public class CartService {
 				.orElseThrow(() -> new DomainException(ErrorCode.NOT_FOUND,
 						"variant not found",
 						Map.of("variantId", variantId)));
+		PriceResolver.captureReference(variant, variants);
 		int max = CatalogService.orderableMax(variant);
 		if (max == 0) {
 			throw new DomainException(ErrorCode.OUT_OF_STOCK, "variant is out of stock",
@@ -106,12 +114,12 @@ public class CartService {
 		}
 		ReconciliationResult result = reconcile(cart);
 		if (line == null) {
-			line = new CartItem(cart, variant, merged, variant.getPriceHuf(), now());
+			line = new CartItem(cart, variant, merged, PriceResolver.resolve(variant, clock).amount(), now());
 			cart.getItems().add(line);
 		}
 		else {
 			line.setQuantity(merged, now());
-			line.setUnitPriceHuf(variant.getPriceHuf(), now());
+			line.setUnitPriceHuf(PriceResolver.resolve(variant, clock).amount(), now());
 		}
 		result.markMutated();
 		return finalize(cart, session, result);
@@ -130,6 +138,7 @@ public class CartService {
 				.orElseThrow(() -> new DomainException(ErrorCode.NOT_FOUND,
 						"variant not found",
 						Map.of("variantId", variantId)));
+		PriceResolver.captureReference(variant, variants);
 		int max = CatalogService.orderableMax(variant);
 		if (quantity > max) {
 			throw new DomainException(ErrorCode.QUANTITY_LIMIT, "quantity limit exceeded",
@@ -211,6 +220,7 @@ public class CartService {
 		while (iterator.hasNext()) {
 			CartItem item = iterator.next();
 			ProductVariant variant = item.getVariant();
+			PriceResolver.captureReference(variant, variants);
 			int max = CatalogService.orderableMax(variant);
 			int oldQty = item.getQuantity();
 			long oldPrice = item.getUnitPriceHuf();
@@ -225,10 +235,15 @@ public class CartService {
 					result.add(new CartData.Notice(N_QUANTITY_REDUCED, variant.getId(), variant.getProduct().getName(),
 							new CartData.NoticeParams(null, oldQty, max)));
 				}
-				if (oldPrice != variant.getPriceHuf()) {
-					item.setUnitPriceHuf(variant.getPriceHuf(), now());
+				if (oldPrice != PriceResolver.resolve(variant, clock).amount()) {
+					item.setAcceptedUnitPriceHuf(item.getAcceptedUnitPriceHuf());
+					item.setUnitPriceHuf(PriceResolver.resolve(variant, clock).amount(), now());
 					result.add(new CartData.Notice(N_PRICE_CHANGED, variant.getId(), variant.getProduct().getName(),
-							new CartData.NoticeParams(null, Math.toIntExact(oldPrice), Math.toIntExact(variant.getPriceHuf()))));
+							new CartData.NoticeParams(null, Math.toIntExact(item.getAcceptedUnitPriceHuf()), Math.toIntExact(PriceResolver.resolve(variant, clock).amount()))));
+				}
+				else if (item.getAcceptedUnitPriceHuf() != oldPrice) {
+					result.addPending(new CartData.Notice(N_PRICE_CHANGED, variant.getId(), variant.getProduct().getName(),
+							new CartData.NoticeParams(null, Math.toIntExact(item.getAcceptedUnitPriceHuf()), Math.toIntExact(oldPrice))));
 				}
 			}
 		}
@@ -236,7 +251,7 @@ public class CartService {
 	}
 
 	private CartData.CartView finalize(Cart cart, ShopSession session, ReconciliationResult result) {
-		if (result.noticeCount() > 0 || result.mutated()) {
+		if (result.mutated()) {
 			session.bumpStateVersion();
 			session.extend(now(), now().plus(sessionService.lifetime()));
 			cart.touch(now(), now().plus(sessionService.lifetime()));
@@ -263,7 +278,7 @@ public class CartService {
 					unitPrice,
 					lineTotal,
 					max > 0,
-					max);
+					max, PriceResolver.resolve(v, clock));
 			lines.add(line);
 			totalQty += qty;
 			subtotal += lineTotal;
@@ -276,7 +291,40 @@ public class CartService {
 				totalQty,
 				subtotal,
 				cart.getExpiresAt(),
-				result.notices());
+				result.notices(), priceRevision(cart), cart.getItems().stream().anyMatch(item ->
+						item.getAcceptedUnitPriceHuf() != item.getUnitPriceHuf()), now(),
+				lines.stream().map(line -> line.priceMetadata().nextPriceChangeAt()).filter(Objects::nonNull)
+						.min(Comparator.naturalOrder()).orElse(null));
+	}
+
+	/** Checks the exact latest item snapshot, then records explicit acceptance in this transaction. */
+	public void acceptPrices(ShopSession current, CartData.CartView view, String acceptedRevision) {
+		boolean supplied = acceptedRevision != null;
+		if ((view.priceAcceptanceRequired() && !supplied)
+				|| (supplied && !acceptedRevision.equals(view.priceRevision()))) {
+			throw new DomainException(ErrorCode.PRICE_CHANGED, "Current item prices require explicit acceptance",
+					Map.of("priceRevision", view.priceRevision(), "changes", view.notices()));
+		}
+		if (view.priceAcceptanceRequired()) {
+			Cart cart = loadOrCreateCart(loadSession(current));
+			for (CartItem item : cart.getItems()) {
+				item.setAcceptedUnitPriceHuf(item.getUnitPriceHuf());
+			}
+		}
+	}
+
+	private static String priceRevision(Cart cart) {
+		StringBuilder snapshot = new StringBuilder().append(cart.getId()).append(':');
+		cart.getItems().stream().sorted(Comparator.comparing(item -> item.getVariant().getId())).forEach(item ->
+				snapshot.append(item.getVariant().getId()).append(':').append(item.getQuantity()).append(':')
+						.append(item.getUnitPriceHuf()).append(';'));
+		try {
+			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+					.digest(snapshot.toString().getBytes(StandardCharsets.UTF_8)));
+		}
+		catch (NoSuchAlgorithmException exception) {
+			throw new IllegalStateException("SHA-256 unavailable", exception);
+		}
 	}
 
 	private OffsetDateTime now() {
@@ -293,10 +341,11 @@ public class CartService {
 
 		void add(CartData.Notice notice) {
 			notices.add(notice);
+			mutated = true;
 		}
 
-		int noticeCount() {
-			return notices.size();
+		void addPending(CartData.Notice notice) {
+			notices.add(notice);
 		}
 
 		List<CartData.Notice> notices() {

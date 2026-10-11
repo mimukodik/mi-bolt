@@ -4,6 +4,7 @@
 import { Availability } from '../models/availability';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
+import { PriceMetadata } from '../models/price-metadata';
 import { StorageGb } from '../models/storage-gb';
 export interface Variant {
   availability: Availability;
@@ -17,6 +18,7 @@ export interface Variant {
    */
   maxQuantity: number;
   price: Money;
+  priceMetadata?: PriceMetadata;
 
   /**
    * Unique inside one product, used as the route segment after the product slug.

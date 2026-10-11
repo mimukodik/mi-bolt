@@ -1,5 +1,6 @@
 package com.example.mi_bolt_backend.cart;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -72,6 +73,7 @@ public class CartController implements CartApi {
 
 	private static ResponseEntity<Cart> respond(CartData.CartView view) {
 		return ResponseEntity.ok()
+				.cacheControl(CacheControl.noStore())
 				.eTag("\"" + view.version() + "\"")
 				.body(CartModels.toCart(view));
 	}

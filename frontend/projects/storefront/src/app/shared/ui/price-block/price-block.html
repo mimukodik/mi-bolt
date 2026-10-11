@@ -4,6 +4,7 @@
   [attr.data-layout]="layout()"
   [attr.data-size]="size()"
   [attr.data-status]="status()"
+  [class.promotional]="referenceText() !== null"
 >
   @if (showLabel()) {
     <span class="label">{{ label() }}</span>
@@ -20,6 +21,15 @@
     }
     @case ('success') {
       @if (amountText()) {
+        @if (referenceText(); as reference) {
+          <span class="reference"
+            ><span>Referenciaár: </span
+            ><s data-testid="reference-price">{{ reference }} Ft</s></span
+          >
+          @if (promotionText(); as text) {
+            <span class="promotion-copy">{{ text }}</span>
+          }
+        }
         <span class="row inline-flex items-baseline">
           <span class="amount font-bold leading-tight tabular-nums" data-testid="price-amount">{{
             amountText()

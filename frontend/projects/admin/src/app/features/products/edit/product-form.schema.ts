@@ -1,3 +1,4 @@
+import { utcTimestampKey } from '../../../core/utc-timestamp';
 import type { Signal } from '@angular/core';
 import {
   applyEach,
@@ -46,6 +47,38 @@ function variantIdTooLongMessage(): string {
 /** The product edit form's validators: every contract limit in the brief, plus the client-side echoes of the backend's uniqueness codes. */
 export function productFormSchema(context: ProductFormSchemaContext): Schema<ProductFormModel> {
   return schema<ProductFormModel>((path) => {
+    maxLength(path.promotion.text, 280, { message: MESSAGES.maxLength(280) });
+    validate(path.promotion.text, (ctx) =>
+      ctx.valueOf(path.promotion.enabled) && ctx.value().trim() === ''
+        ? { kind: 'required', message: MESSAGES.required }
+        : null,
+    );
+    for (const time of [path.promotion.startsAt, path.promotion.endsAt]) {
+      validate(time, (ctx) => {
+        const value = ctx.value();
+        if (value === '')
+          return ctx.valueOf(path.promotion.enabled)
+            ? { kind: 'required', message: MESSAGES.required }
+            : null;
+        return utcTimestampKey(value) === null
+          ? { kind: 'date', message: MESSAGES.promotionDate }
+          : null;
+      });
+    }
+    validate(path.promotion.endsAt, (ctx) => {
+      const starts = ctx.valueOf(path.promotion.startsAt);
+      const ends = ctx.value();
+      const startKey = utcTimestampKey(starts);
+      const endKey = utcTimestampKey(ends);
+      return startKey !== null && endKey !== null && startKey >= endKey
+        ? { kind: 'period', message: MESSAGES.promotionPeriod }
+        : null;
+    });
+    validate(path.promotion.enabled, (ctx) =>
+      ctx.value() && !ctx.valueOf(path.variants).some((variant) => variant.salePriceHuf !== null)
+        ? { kind: 'variants', message: MESSAGES.promotionVariant }
+        : null,
+    );
     required(path.slug, { message: MESSAGES.required });
     maxLength(path.slug, 120, { message: MESSAGES.maxLength(120) });
     validate(path.slug, ({ value }) => {
@@ -196,6 +229,14 @@ export function productFormSchema(context: ProductFormSchemaContext): Schema<Pro
       min(variant.price, 0, { message: MESSAGES.notNegative });
       max(variant.price, 100_000_000, { message: MESSAGES.priceMax });
 
+      validate(variant.salePriceHuf, ({ value }) => {
+        const price = value();
+        return price !== null && !Number.isInteger(price)
+          ? { kind: 'integer', message: MESSAGES.integer }
+          : null;
+      });
+      min(variant.salePriceHuf, 1, { message: MESSAGES.positivePrice });
+      max(variant.salePriceHuf, 100_000_000, { message: MESSAGES.priceMax });
       required(variant.stock, { message: MESSAGES.required });
       validate(variant.stock, ({ value }) => {
         const stock = value();

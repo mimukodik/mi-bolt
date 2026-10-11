@@ -27,6 +27,7 @@ const CONTRACT_PARAMETERS = [
   'inStock',
   'is5g',
   'featured',
+  'activePromotion',
   'sort',
   'page',
   'pageSize',
@@ -53,6 +54,7 @@ export interface CatalogFilter {
   inStock?: boolean;
   is5g?: boolean;
   featured?: boolean;
+  activePromotion?: boolean;
   sort: ProductSort;
   page: number;
   pageSize: 12 | 24;
@@ -205,6 +207,12 @@ export function parseListProductsParams(params: URLSearchParams): ParseListProdu
     filter.is5g = is5gRaw === 'true';
   }
 
+  const promotionRaw = params.get('activePromotion');
+  if (promotionRaw !== null) {
+    if (promotionRaw !== 'true' && promotionRaw !== 'false')
+      return { ok: false, error: invalidValue('activePromotion', 'activePromotion is invalid') };
+    filter.activePromotion = promotionRaw === 'true';
+  }
   const featuredRaw = params.get('featured');
   if (featuredRaw !== null) {
     if (featuredRaw !== 'true' && featuredRaw !== 'false') {
@@ -289,6 +297,11 @@ export function compareCaseInsensitive(a: string, b: string): number {
  */
 export function variantMatches(variant: Variant, filter: CatalogFilter): boolean {
   if (filter.colors.length > 0 && !filter.colors.includes(variant.colorCode)) return false;
+  if (
+    filter.activePromotion !== undefined &&
+    filter.activePromotion !== (variant.priceMetadata?.activePromotion === true)
+  )
+    return false;
   const amount = variant.price.amount;
   if (filter.minPrice !== undefined && amount < filter.minPrice) return false;
   if (filter.maxPrice !== undefined && amount > filter.maxPrice) return false;

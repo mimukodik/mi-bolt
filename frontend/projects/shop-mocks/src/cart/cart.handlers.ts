@@ -78,7 +78,7 @@ function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<De
   if (outcome.ok) {
     return HttpResponse.json(outcome.cart, {
       status: 200,
-      headers: { ETag: `"${String(outcome.cart.version)}"` },
+      headers: { 'Cache-Control': 'no-store', ETag: `"${String(outcome.cart.version)}"` },
     });
   }
   return problemResponse(outcome);
@@ -148,7 +148,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
   const store = new CartStore(options, (id) => {
-    const hit = requireCatalog().getVariant(id);
+    const hit = requireCatalog().getVariant(id, options.clock.now());
     if (hit === undefined) return undefined;
     const ledger = stockLedger.current;
     return ledger === null

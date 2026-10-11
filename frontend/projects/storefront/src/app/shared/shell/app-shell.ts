@@ -1,11 +1,13 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, effect, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';
 import { PERSISTENCE_MODE, SNAPSHOT_DISCARD } from '../../core/persistence-mode';
+import { PromotionStrip } from './promotion-strip';
 import { DemoNotice } from './demo-notice';
+import { ShopAppearanceFacade } from './shop-appearance.facade';
 
 /**
  * `AppShell` is the shared chrome (header + footer) rendered around
@@ -24,11 +26,42 @@ import { DemoNotice } from './demo-notice';
  */
 @Component({
   selector: 'app-app-shell',
-  imports: [HeaderNav, FooterNav, DemoNotice],
+  imports: [HeaderNav, FooterNav, DemoNotice, PromotionStrip],
   templateUrl: './app-shell.html',
+  host: {
+    '[class.halloween]': 'showHalloween()',
+    '[class.sm--motion]': 'showHalloween()',
+    '[class.sm--deco]': 'showHalloween()',
+    '[class.bd-wait]': 'showHalloween() && !decorationsReady()',
+  },
   styleUrl: './app-shell.scss',
 })
 export class AppShell {
+  protected readonly decorationsReady = signal(false);
+  private readonly appearance = inject(ShopAppearanceFacade);
+  protected readonly showHalloween = this.appearance.halloweenActive;
+
+  constructor() {
+    effect((cleanup) => {
+      const active = this.showHalloween();
+      this.decorationsReady.set(false);
+      if (!active) return;
+      const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const reveal = (): void => {
+        this.decorationsReady.set(true);
+      };
+      const changed = (): void => {
+        if (preference.matches) reveal();
+      };
+      const timer = window.setTimeout(reveal, preference.matches ? 0 : 1000);
+      preference.addEventListener('change', changed);
+      cleanup(() => {
+        window.clearTimeout(timer);
+        preference.removeEventListener('change', changed);
+      });
+    });
+  }
+
   /** Header variant — drives which chrome appears. */
   readonly variant = input.required<HeaderVariant>();
 

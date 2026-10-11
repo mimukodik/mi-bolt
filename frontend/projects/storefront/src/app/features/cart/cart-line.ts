@@ -29,10 +29,11 @@ import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block'
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
 
 import type { CartItem } from '@mi-bolt/api/models/cart-item';
+import { HalloweenProductArt } from '../../shared/halloween/halloween-product-art';
 
 @Component({
   selector: 'app-cart-line',
-  imports: [PriceBlock, ProductImage],
+  imports: [PriceBlock, ProductImage, HalloweenProductArt],
   templateUrl: './cart-line.html',
   styleUrl: './cart-line.scss',
 })

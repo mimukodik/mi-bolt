@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0014-halloween-appearance
+      author: mi-bolt
+      comment: Additive independent decoration schedule; old binaries never read or write this table.
+      changes:
+        - createTable:
+            tableName: halloween_appearance
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  constraints:
+                    nullable: false
+              - column:
+                  name: starts_at
+                  type: timestamp with time zone
+              - column:
+                  name: ends_at
+                  type: timestamp with time zone
+              - column:
+                  name: version
+                  type: bigint
+                  constraints:
+                    nullable: false
+        - insert:
+            tableName: halloween_appearance
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1
+              - column:
+                  name: enabled
+                  valueBoolean: false
+              - column:
+                  name: version
+                  valueNumeric: 0

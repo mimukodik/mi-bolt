@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildChips,
   isSort,
   isStorageBucket,
   parseCatalogQuery,
@@ -92,5 +93,23 @@ describe('parseCatalogQuery / serializeCatalogQuery — color[] and the 8 sorts'
     const params = new URLSearchParams('sort=cheapest');
     const parsed = parseCatalogQuery(params);
     expect(parsed.sort).toBeUndefined();
+  });
+});
+
+describe('active promotion URL', () => {
+  it('round-trips the offer filter independently of featured and exposes a removable chip', () => {
+    const query = parseCatalogQuery(new URLSearchParams('activePromotion=true&featured=true'));
+    expect(query.activePromotion).toBe(true);
+    expect(query.featured).toBe(true);
+    expect(serializeCatalogQuery(query).get('activePromotion')).toBe('true');
+    expect(buildChips(query).find((chip) => chip.name === 'activePromotion')?.label).toBe(
+      'Aktív halloweeni ajánlatok',
+    );
+    expect(parseCatalogQuery(serializeCatalogQuery(query))).toEqual(query);
+  });
+  it('drops malformed promotion values', () => {
+    expect(
+      parseCatalogQuery(new URLSearchParams('activePromotion=yes')).activePromotion,
+    ).toBeUndefined();
   });
 });

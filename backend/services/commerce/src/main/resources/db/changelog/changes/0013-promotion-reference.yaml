@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0013-promotion-reference
+      author: pixi
+      changes:
+        - addColumn:
+            tableName: product_variant
+            columns:
+              - column:
+                  name: promotion_reference_price_huf
+                  type: bigint
+        - addColumn:
+            tableName: cart_item
+            columns:
+              - column:
+                  name: accepted_unit_price_huf
+                  type: bigint
+  - changeSet:
+      id: 0013-promotion-reference-legacy-writes
+      author: pixi
+      dbms: postgresql
+      comment: Preserve the campaign-start reference even when an earlier binary writes the base price.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE FUNCTION maintain_promotion_reference() RETURNS trigger AS $$
+              DECLARE campaign_start timestamp with time zone;
+              BEGIN
+                SELECT promotion_starts_at INTO campaign_start FROM product WHERE id = NEW.product_id;
+                IF campaign_start IS NOT NULL AND campaign_start > clock_timestamp() THEN
+                  NEW.promotion_reference_price_huf := NEW.price_huf;
+                ELSIF campaign_start IS NOT NULL AND NEW.promotion_reference_price_huf IS NULL THEN
+                  NEW.promotion_reference_price_huf := OLD.price_huf;
+                END IF;
+                RETURN NEW;
+              END;
+              $$ LANGUAGE plpgsql;
+              CREATE TRIGGER product_variant_promotion_reference
+              BEFORE UPDATE OF price_huf ON product_variant
+              FOR EACH ROW EXECUTE FUNCTION maintain_promotion_reference();

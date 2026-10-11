@@ -1,0 +1,66 @@
+<section class="mx-auto max-w-3xl p-6">
+  <h1>Halloween megjelenés</h1>
+  <p>
+    A lila–narancs dekoráció saját időszakban jelenik meg. Ez nem módosítja a termékek akciós árait
+    vagy azok időzítését.
+  </p>
+  <p>
+    Időzóna: <strong>UTC</strong>. A kezdés pillanatától a lejáratig aktív; lejáratkor automatikusan
+    kikapcsol. A bolt nyitva hagyott oldalakon is frissíti a megjelenést.
+  </p>
+  @if (store.loadFailed()) {
+    <p>A beállítások betöltése nem sikerült.</p>
+    <button matButton type="button" (click)="retryLoad()">Újrapróbálás</button>
+  }
+  @if (store.loading()) {
+    <p>Betöltés…</p>
+  }
+  @if (store.stored() !== null) {
+    <form class="flex flex-col gap-4" (submit)="onSubmit($event)">
+      <mat-checkbox [formField]="form.enabled">Halloween-dekoráció engedélyezve</mat-checkbox>
+      <mat-form-field>
+        <mat-label>Kezdés (UTC)</mat-label>
+        <input matInput placeholder="2026-10-30T18:00:00" [formField]="form.startsAt" />
+      </mat-form-field>
+      <adm-control-error errorId="appearance-start-error" [field]="form.startsAt" />
+      <mat-form-field>
+        <mat-label>Lejárat (UTC)</mat-label>
+        <input matInput placeholder="2026-11-01T00:00:00" [formField]="form.endsAt" />
+      </mat-form-field>
+      <adm-control-error errorId="appearance-end-error" [field]="form.endsAt" />
+      @if (status() === 'conflict') {
+        <p>
+          Másik admin közben módosította a beállításokat. A beviteled megmaradt; mentés előtt töltsd
+          be az aktuális verziót.
+        </p>
+        <button matButton type="button" [disabled]="store.loading()" (click)="refreshVersion()">
+          Aktuális verzió betöltése, bevitel megtartásával
+        </button>
+      }
+      @if (status() === 'refreshed') {
+        @let stored = store.stored();
+        <p>
+          Az aktuális verzió betöltve, a beviteled megmaradt. Új mentéssel felülírod a következő
+          beállításokat:
+        </p>
+        <p>
+          Engedélyezve: {{ stored?.enabled ? 'igen' : 'nem' }} · Kezdés:
+          {{ stored?.startsAt ?? 'nincs' }} · Lejárat: {{ stored?.endsAt ?? 'nincs' }}
+        </p>
+      }
+      @if (status() === 'saved' && !form().dirty()) {
+        <p>Mentve.</p>
+      }
+      @if (status() === 'failed') {
+        <p>A mentés nem sikerült. A beviteled megmaradt; próbáld újra.</p>
+      }
+      <button
+        matButton="filled"
+        type="submit"
+        [disabled]="attempt.disabled(form) || store.loading() || status() === 'conflict'"
+      >
+        Mentés
+      </button>
+    </form>
+  }
+</section>

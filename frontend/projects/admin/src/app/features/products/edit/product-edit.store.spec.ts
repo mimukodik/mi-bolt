@@ -535,3 +535,16 @@ describe('ProductEditStore', () => {
     expect(s.product()?.id).toBe(2);
   });
 });
+
+describe('conflict snapshot generation', () => {
+  it('does not install a compared snapshot after navigating to another product', async () => {
+    signedIn();
+    const s = store();
+    await s.load(1);
+    const snapshot = await s.readLatest();
+    if (snapshot === null) throw new Error('missing snapshot');
+    await s.load(5);
+    s.useLatestVersion(snapshot);
+    expect(s.product()?.id).toBe(5);
+  });
+});

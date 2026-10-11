@@ -300,7 +300,7 @@ describe('ProductEditPage', () => {
     expect(metaTexts(harness)[2]).toBe(String(product.version + 1));
   });
 
-  it('6: a save conflict opens the dialog; Újratöltés reloads and drops the edit', async () => {
+  it('6: a save conflict preserves the edit after comparison', async () => {
     const db = signedIn('save-conflict');
     const product = seededProduct(db, 1);
 
@@ -315,11 +315,11 @@ describe('ProductEditPage', () => {
 
     expect(dialogTitle()).toBe('Valaki közben módosította ezt a terméket');
 
-    dialogButtonByLabel('Újratöltés').click();
+    dialogButtonByLabel('Bevitel megtartása').click();
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(MatDialog).openDialogs.length).toBe(0);
-    expect(page.model().name).toBe(product.name);
+    expect(page.model().name).toBe('Átírt név');
     expect(db.products.get(1)?.version).toBe(product.version);
     expect(saveButton(harness).disabled).toBe(false);
   });

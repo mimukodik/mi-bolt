@@ -55,7 +55,8 @@ public final class CheckoutModels {
 
 	public static CheckoutSession toCheckoutSession(CheckoutData.Session view) {
 		CheckoutSession session = new CheckoutSession(Math.toIntExact(view.version()),
-				toSummary(view.summary()), view.complete());
+				toSummary(view.summary()), view.complete()).priceRevision(view.priceRevision())
+				.priceAcceptanceRequired(view.priceAcceptanceRequired());
 		if (view.contact() != null) {
 			CheckoutData.Contact c = view.contact();
 			session.contact(new Contact(c.fullName(), c.email(), c.phone()));

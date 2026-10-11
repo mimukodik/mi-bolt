@@ -166,8 +166,15 @@
         } @else {
           <ul class="line-list">
             @for (line of lines(); track line.variantId) {
-              <li class="line" data-testid="review-line">
+              <li
+                class="line"
+                data-testid="review-line"
+                [class.halloween-sale-line]="line.promotional"
+              >
                 <div class="line-body">
+                  @if (line.promotional) {
+                    <span class="halloween-sale-badge">🎃 Halloweeni ajánlat</span>
+                  }
                   <p
                     class="line-name m-0 [font-weight:var(--weight-medium)] text-(color:--color-text-primary)"
                   >
@@ -181,6 +188,15 @@
                   <p class="line-quantity" data-testid="review-line-quantity">
                     {{ line.quantity }} × {{ line.unitPriceText }} Ft
                   </p>
+                  @if (line.promotional) {
+                    <app-price-block
+                      label="Akciós tételár"
+                      status="success"
+                      [money]="line.unitPrice"
+                      [promotionText]="line.promotionText"
+                      [referencePrice]="line.referencePrice"
+                    />
+                  }
                 </div>
                 <div class="line-total">
                   <app-price-block
@@ -254,6 +270,7 @@
                     data-testid="review-payment-retry"
                     label="Újrapróbálom"
                     variant="primary"
+                    [disabled]="state() === 'price-changed' || state() === 'submitting'"
                     (pressed)="paymentRetryRequested.emit()"
                   />
                   <app-button
@@ -291,6 +308,7 @@
                     data-testid="review-payment-back"
                     label="Vissza a fizetéshez"
                     variant="primary"
+                    [disabled]="state() === 'price-changed' || state() === 'submitting'"
                     (pressed)="backToPaymentRequested.emit()"
                   />
                 </div>
@@ -310,6 +328,7 @@
               <app-button
                 data-testid="review-payment-new"
                 variant="primary"
+                [disabled]="state() === 'price-changed' || state() === 'submitting'"
                 [label]="newPaymentLabel()"
                 (pressed)="newPaymentRequested.emit()"
               />
@@ -331,21 +350,45 @@
                   {{ priceChangedMessage }}
                 </p>
                 <div class="price-change-rows flex flex-wrap gap-(--space-5)">
-                  <div data-testid="review-price-change-old">
-                    <app-price-block
-                      label="Korábban"
-                      status="success"
-                      [money]="change.shownTotal"
-                    />
-                  </div>
+                  @if (change.shownTotal !== null) {
+                    <div data-testid="review-price-change-old">
+                      <app-price-block
+                        label="Korábban"
+                        status="success"
+                        [money]="change.shownTotal"
+                      />
+                    </div>
+                  }
                   <div data-testid="review-price-change-new">
                     <app-price-block label="Most" status="success" [money]="change.currentTotal" />
                   </div>
                 </div>
+                @for (item of change.items ?? []; track item.variantId) {
+                  <div class="price-change-item">
+                    <p>
+                      {{ item.productName }} · {{ item.colorName }} · {{ item.storageGb }} GB ·
+                      {{ item.quantity }} db
+                    </p>
+                    <app-price-block
+                      label="Új tételár"
+                      size="md"
+                      status="success"
+                      [money]="item.unitPrice"
+                    />
+                    <app-price-block
+                      label="Új részösszeg"
+                      size="md"
+                      status="success"
+                      [money]="item.lineTotal"
+                    />
+                  </div>
+                }
                 <app-button
                   data-testid="review-price-change-confirm"
                   variant="primary"
+                  [block]="true"
                   [label]="priceChangeConfirmLabel()"
+                  [wrap]="true"
                   (pressed)="priceChangeConfirmed.emit()"
                 />
               </div>
@@ -484,7 +527,9 @@
           label="Demórendelés véglegesítése"
           loadingLabel="Feldolgozás…"
           variant="primary"
-          [disabled]="state() === 'submitting' || cardPaymentMissing()"
+          [disabled]="
+            state() === 'submitting' || state() === 'price-changed' || cardPaymentMissing()
+          "
           [loading]="state() === 'submitting'"
           (pressed)="onSubmit()"
         />

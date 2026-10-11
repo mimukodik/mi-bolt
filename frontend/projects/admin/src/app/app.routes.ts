@@ -29,6 +29,11 @@ export const routes: Routes = [
           import('./features/products/products.routes').then((m) => m.PRODUCTS_ROUTES),
       },
       {
+        path: 'megjelenes',
+        loadChildren: () =>
+          import('./features/appearance/appearance.routes').then((m) => m.APPEARANCE_ROUTES),
+      },
+      {
         path: 'adminok',
         loadChildren: () => import('./features/admins/admins.routes').then((m) => m.ADMINS_ROUTES),
       },

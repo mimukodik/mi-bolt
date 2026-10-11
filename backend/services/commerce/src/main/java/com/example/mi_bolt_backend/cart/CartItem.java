@@ -37,6 +37,9 @@ public class CartItem {
 	@Column(name = "unit_price_huf", nullable = false)
 	private long unitPriceHuf;
 
+	@Column(name = "accepted_unit_price_huf")
+	private Long acceptedUnitPriceHuf;
+
 	@Column(name = "created_at", nullable = false)
 	private OffsetDateTime createdAt;
 
@@ -74,6 +77,14 @@ public class CartItem {
 
 	public long getUnitPriceHuf() {
 		return unitPriceHuf;
+	}
+
+	public long getAcceptedUnitPriceHuf() {
+		return acceptedUnitPriceHuf == null ? unitPriceHuf : acceptedUnitPriceHuf;
+	}
+
+	public void setAcceptedUnitPriceHuf(long value) {
+		this.acceptedUnitPriceHuf = value;
 	}
 
 	public OffsetDateTime getCreatedAt() {

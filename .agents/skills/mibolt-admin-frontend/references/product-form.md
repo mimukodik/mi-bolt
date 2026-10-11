@@ -34,7 +34,7 @@ a new list filter and a new list column. Paths resolve as `SKILL.md` says.
 - Mentés runs through `SubmitAttempt.run`, calls `create` or `save`, and switches on `SaveResult`
   (`frontend/projects/admin/src/app/features/products/edit/product-edit-page.ts`, "private async
   save()"): `saved` shows a snack-bar and, after a create, navigates to the new product's URL;
-  `invalid` maps the field errors onto the form; `conflict` opens `ConflictDialog` and reloads;
+  `invalid` maps the field errors onto the form; `conflict` reads a generation-guarded server snapshot, opens `ConflictDialog` with field differences, preserves input and updates only the version after explicit comparison;
   `failed` shows a snack-bar, with its own text for `VARIANT_IN_CART`.
 - Mentés is disabled while the form submits, after a failed attempt until the form is valid, and
   while an image uploads

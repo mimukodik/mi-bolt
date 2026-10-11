@@ -29,6 +29,7 @@ function validModel(): ProductFormModel {
     },
   };
   return {
+    promotion: { enabled: false, text: '', startsAt: '', endsAt: '' },
     slug: 'teszt-telefon',
     brand: 'Teszt',
     name: 'Teszt Telefon',
@@ -41,7 +42,15 @@ function validModel(): ProductFormModel {
     highlights: [{ key: 'h-1', text: 'Gyors' }],
     colors: [color],
     variants: [
-      { key: 'variant-1', id: null, colorKey: color.key, storageGb: 128, price: 100_000, stock: 5 },
+      {
+        key: 'variant-1',
+        id: null,
+        colorKey: color.key,
+        storageGb: 128,
+        price: 100_000,
+        stock: 5,
+        salePriceHuf: null,
+      },
     ],
     specGroups: [
       { key: 'group-1', title: 'Kijelző', rows: [{ key: 'row-1', label: 'Méret', value: '6.1"' }] },
@@ -886,5 +895,53 @@ describe('productFormSchema: whole-form validity', () => {
     }
     const f = buildForm(toFormModel(product), 0);
     expect(f().valid()).toBe(true);
+  });
+});
+
+describe('promotion validation', () => {
+  it('requires text, times and a priced variant when enabled', () => {
+    const model = validModel();
+    model.promotion.enabled = true;
+    const f = buildForm(model);
+    expect(f.promotion.text().invalid()).toBe(true);
+    expect(f.promotion.startsAt().invalid()).toBe(true);
+    expect(f.promotion.endsAt().invalid()).toBe(true);
+    expect(f.promotion.enabled().invalid()).toBe(true);
+  });
+  it('allows an unscheduled disabled promotion', () => {
+    expect(buildForm(validModel()).promotion().valid()).toBe(true);
+  });
+  it('accepts a complete promotion without changing featured or base price', () => {
+    const model = validModel();
+    model.promotion = {
+      enabled: true,
+      text: 'Halloween',
+      startsAt: '2026-10-30T00:00:00',
+      endsAt: '2026-11-01T00:00:00',
+    };
+    model.variants[0].salePriceHuf = 90000;
+    const f = buildForm(model);
+    expect(f.promotion().valid()).toBe(true);
+    expect(f.variants().valid()).toBe(true);
+    expect(f.variants[0].price().value()).toBe(100000);
+    expect(f.featured().value()).toBe(false);
+  });
+  it('rejects equal/reversed periods, invalid dates and nonpositive/fractional sale prices', () => {
+    const model = validModel();
+    model.promotion = {
+      enabled: false,
+      text: '',
+      startsAt: '2026-10-30T00:00:00',
+      endsAt: '2026-10-30T00:00:00',
+    };
+    expect(buildForm(model).promotion.endsAt().invalid()).toBe(true);
+    model.promotion.endsAt = '2026-10-29T00:00:00';
+    expect(buildForm(model).promotion.endsAt().invalid()).toBe(true);
+    model.promotion.startsAt = 'invalid';
+    expect(buildForm(model).promotion.startsAt().invalid()).toBe(true);
+    for (const price of [0, -1, 1.5, 100000001]) {
+      model.variants[0].salePriceHuf = price;
+      expect(buildForm(model).variants[0].salePriceHuf().invalid()).toBe(true);
+    }
   });
 });

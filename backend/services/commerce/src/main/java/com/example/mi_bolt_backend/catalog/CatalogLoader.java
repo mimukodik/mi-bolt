@@ -3,6 +3,7 @@ package com.example.mi_bolt_backend.catalog;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -91,7 +93,8 @@ public class CatalogLoader implements ApplicationRunner {
 
 		CatalogDto catalog;
 		try {
-			catalog = objectMapper.readValue(catalogFile.toFile(), CatalogDto.class);
+			catalog = objectMapper.readerFor(CatalogDto.class)
+					.without(DeserializationFeature.ACCEPT_FLOAT_AS_INT).readValue(catalogFile.toFile());
 		}
 		catch (Exception e) {
 			throw new CatalogValidationException(
@@ -137,6 +140,7 @@ public class CatalogLoader implements ApplicationRunner {
 			product.setRank(productDto.getRank());
 			product.setPopularityScore(productDto.getPopularityScore());
 			product.setFeatured(productDto.isFeatured());
+			applyPromotion(product, productDto.getPromotion());
 
 			int pos = 0;
 			for (String text : productDto.getHighlights()) {
@@ -192,6 +196,7 @@ public class CatalogLoader implements ApplicationRunner {
 				variant.setColor(colorByCode.get(variantDto.getColorCode()));
 				variant.setStorageGb(variantDto.getStorageGb());
 				variant.setPriceHuf(variantDto.getPriceHuf());
+				variant.setSalePriceHuf(variantDto.getSalePriceHuf());
 				variant.setStock(variantDto.getStock());
 				product.getVariants().add(variant);
 				variants++;
@@ -208,6 +213,16 @@ public class CatalogLoader implements ApplicationRunner {
 			log.info("catalogue loaded: {} products, {} variants, {} images, {} featured",
 					products, variants, imagesBySha.size(), featured);
 		}
+	}
+
+	private static void applyPromotion(Product product, PromotionDto promotion) {
+		if (promotion == null) {
+			return;
+		}
+		product.setPromotionEnabled(promotion.enabled());
+		product.setPromotionText(promotion.text() == null ? null : promotion.text().strip());
+		product.setPromotionStartsAt(promotion.startsAt() == null ? null : OffsetDateTime.parse(promotion.startsAt()));
+		product.setPromotionEndsAt(promotion.endsAt() == null ? null : OffsetDateTime.parse(promotion.endsAt()));
 	}
 
 	private static String stripExt(String file) {

@@ -138,8 +138,8 @@ Hungarian; the section titles are given so the lines can be found.
 - **Controllers implement the generated interfaces and declare no route, HTTP
   method or status code of their own** (§2 "Kódgenerálás",
   `backend/docs/02-backend.md`, "Elvárás: a szerződésből generált interfészek").
-  Review-only. 11 of the 12 `*Controller`
-  classes implement a generated `*Api`; the twelfth, `ProblemErrorController`,
+  Review-only. 12 of the 13 `*Controller`
+  classes implement a generated `*Api`; the thirteenth, `ProblemErrorController`,
   implements Spring Boot's `ErrorController` and holds the only hand-written
   `@RequestMapping` in main code
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemErrorController.java`, "@RequestMapping(ERROR_PATH)"),
@@ -217,8 +217,8 @@ No document states these; the code follows them consistently.
   suffix. Tests mirror the main tree, plus `api.model` for two
   deserialisation tests of generated models and `test` for shared support such
   as `IntegrationTest` and `ContractValidation`.
-- **Suffixes** in main code: `*Controller` (12), `*Service` (15),
-  `*Repository` (15, Spring Data interfaces), `*Data` (4 interfaces grouping
+- **Suffixes** in main code: `*Controller` (13), `*Service` (16),
+  `*Repository` (16, Spring Data interfaces), `*Data` (4 interfaces grouping
   the domain records, such as `CartData.CartView`), `*Models` (5 mappers from
   those records to the generated `api.model` types, such as `CartModels`),
   `*Dto` (7, the catalogue loader's JSON shapes). Entities carry no suffix:
@@ -326,8 +326,8 @@ git grep -lE 'private final Clock ' -- 'backend/services/commerce/src/main/*.jav
 git grep -hE '(^|[^A-Za-z])record [A-Z]' -- 'backend/services/commerce/src/main/*.java' | wc -l   # 37
 git grep -hE '(^|[^A-Za-z])record [A-Z]' -- 'backend/services/commerce/src/main/*Data.java' | wc -l   # 31 in the *Data interfaces
 git ls-files 'backend/services/commerce/src/main/java/com/example/mi_bolt_backend/*/*' | cut -d/ -f10 | sort -u | wc -l   # 8 domain packages
-for s in Controller Service Repository Data Models Dto; do printf '%s ' "$s"; git ls-files "backend/services/commerce/src/main/*$s.java" | wc -l; done   # 12 15 15 4 5 7
-git grep -lE 'implements [A-Za-z]+Api' -- 'backend/services/commerce/src/main/*Controller.java' | wc -l   # 11 of the 12 controllers
+for s in Controller Service Repository Data Models Dto; do printf '%s ' "$s"; git ls-files "backend/services/commerce/src/main/*$s.java" | wc -l; done   # 13 16 16 4 5 8
+git grep -lE 'implements [A-Za-z]+Api' -- 'backend/services/commerce/src/main/*Controller.java' | wc -l   # 12 of the 13 controllers
 git grep -o '@Autowired' -- 'backend/services/commerce/src/main/*.java' | wc -l                         # 1 in main
 git grep -lE '^@IntegrationTest' -- 'backend/services/commerce/src/test/*.java' | wc -l                 # 48
 git grep -o '@Autowired' -- 'backend/services/commerce/src/test/*.java' | wc -l                         # 116

@@ -26,6 +26,7 @@ public enum ErrorCode {
 	SERVICE_UNAVAILABLE(503, "Service unavailable"),
 	UNAUTHENTICATED(401, "Authentication required"),
 	CSRF_TOKEN_INVALID(403, "CSRF token missing or invalid"),
+	APPEARANCE_VERSION_CONFLICT(412, "Appearance version conflict"),
 	PRODUCT_VERSION_CONFLICT(412, "Product version conflict"),
 	PRECONDITION_REQUIRED(428, "If-Match required"),
 	USERNAME_TAKEN(409, "Username already taken"),

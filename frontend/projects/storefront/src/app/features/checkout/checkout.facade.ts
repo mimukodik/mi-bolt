@@ -26,7 +26,7 @@
  */
 
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Service, computed, inject, signal, type Signal } from '@angular/core';
+import { Service, DestroyRef, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '@mi-bolt/api/api';
@@ -50,6 +50,7 @@ import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
 import type { Contact } from '@mi-bolt/api/models/contact';
 import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
 import type { FieldError } from '@mi-bolt/api/models/field-error';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
 import type { Money } from '@mi-bolt/api/models/money';
 import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 import type { OrderRequest } from '@mi-bolt/api/models/order-request';
@@ -57,6 +58,7 @@ import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
 import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
 import type { UpdateCheckoutRequest } from '@mi-bolt/api/models/update-checkout-request';
 
+import { PriceRefresh } from '../../shared/utils/price-refresh';
 import { CartFacade } from '../cart/cart.facade';
 import { checkoutKeys } from './checkout-keys';
 
@@ -85,11 +87,13 @@ export interface CheckoutConflict {
 /** 409 PRICE_CHANGED: the shopper must confirm the new total (§8.2). */
 export interface PriceChange {
   /** The total the shopper last saw, captured before the refetch. */
-  readonly shownTotal: Money;
+  readonly shownTotal: Money | null;
   /** The total the server recomputed after the refetch. */
   readonly currentTotal: Money;
   /** True until confirmPriceChange() is called. Gates the submit CTA. */
   readonly awaitingConfirmation: true;
+  readonly items?: readonly CartItem[];
+  readonly revision?: string;
 }
 
 export type CheckoutIntentKind =
@@ -201,6 +205,10 @@ export class CheckoutFacade {
   /** True after the server returned 410 for the active session. */
   readonly cartExpired: Signal<boolean> = this.cartExpiredWritable.asReadonly();
 
+  private readonly priceRefresh = new PriceRefresh(inject(DestroyRef), () => {
+    void this.refreshPrices();
+  });
+  private acceptedPriceRevision: string | undefined;
   private readonly priceChangeWritable = signal<PriceChange | null>(null);
   /** Last 409 PRICE_CHANGED; null until cleared by `confirmPriceChange()`. */
   readonly priceChange: Signal<PriceChange | null> = this.priceChangeWritable.asReadonly();
@@ -283,9 +291,17 @@ export class CheckoutFacade {
         return { ok: true, value: existing };
       }
     }
+    const previousTotal = this.summary()?.total ?? null;
+    const previousChange = this.priceChangeWritable();
     const result = await this.refreshSession();
     if (result.ok) {
       this.clearFailureOverlay();
+      this.observePriceAcceptance(
+        result.value,
+        previousChange !== null && previousChange.revision === result.value.priceRevision
+          ? previousChange.shownTotal
+          : previousTotal,
+      );
     }
     return result;
   }
@@ -300,8 +316,12 @@ export class CheckoutFacade {
    */
   private async refreshSession(): Promise<CheckoutResult<CheckoutSession>> {
     try {
+      const previousTotal = this.summary()?.total ?? null;
       const session = await firstValueFrom(this.api.invoke(getCheckout, {}));
       this.sessionWritable.set(session);
+      const cart = this.cart.cart();
+      this.priceRefresh.schedule(cart?.serverTime, cart?.nextPriceChangeAt);
+      this.observePriceAcceptance(session, previousTotal);
       this.dropStaleIntent(session);
       this.cart.acceptServerVersion(session.version);
       return { ok: true, value: session };
@@ -349,7 +369,10 @@ export class CheckoutFacade {
           const session = await firstValueFrom(
             this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
           );
+          const previousTotal = this.summary()?.total ?? null;
           this.sessionWritable.set(session);
+          if (session.priceAcceptanceRequired === true) await this.cart.refetch();
+          this.observePriceAcceptance(session, previousTotal);
           this.dropStaleIntent(session);
           this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
@@ -385,7 +408,13 @@ export class CheckoutFacade {
           const intent = await firstValueFrom(
             this.api.invoke(
               createPaymentIntent,
-              { 'Idempotency-Key': key },
+              {
+                'Idempotency-Key': key,
+                body:
+                  this.acceptedPriceRevision === undefined
+                    ? undefined
+                    : { acceptedPriceRevision: this.acceptedPriceRevision },
+              },
               withIfMatch(expectedVersion),
             ),
           );
@@ -407,6 +436,8 @@ export class CheckoutFacade {
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateIntentKey();
           }
+          if (error.code === 'PRICE_CHANGED')
+            return { ok: false, error: await this.recordPriceChange(error) };
           return { ok: false, error };
         }
       },
@@ -497,7 +528,10 @@ export class CheckoutFacade {
           const receipt = await firstValueFrom(
             this.api.invoke(
               createOrder,
-              { 'Idempotency-Key': key, body },
+              {
+                'Idempotency-Key': key,
+                body: { ...body, acceptedPriceRevision: this.acceptedPriceRevision },
+              },
               withIfMatch(expectedVersion),
             ),
           );
@@ -574,6 +608,9 @@ export class CheckoutFacade {
    * confirmation).
    */
   confirmPriceChange(): void {
+    const change = this.priceChangeWritable();
+    if (change === null) return;
+    this.acceptedPriceRevision = change.revision;
     this.priceChangeWritable.set(null);
   }
 
@@ -621,6 +658,7 @@ export class CheckoutFacade {
    */
   resetAfterOrder(): void {
     checkoutKeys.clearAll();
+    this.acceptedPriceRevision = undefined;
     this.sessionWritable.set(null);
     this.paymentIntentWritable.set(null);
     this.intentDroppedWritable.set(null);
@@ -769,13 +807,46 @@ export class CheckoutFacade {
       return read.error;
     }
     const currentTotal = read.value.summary.total;
-    if (shownTotal !== undefined && shownTotal.amount !== currentTotal.amount) {
-      this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
-    }
+    this.acceptedPriceRevision = undefined;
+    this.priceChangeWritable.set({
+      shownTotal: shownTotal ?? null,
+      currentTotal,
+      awaitingConfirmation: true,
+      items: this.cart.cart()?.items ?? [],
+      revision: read.value.priceRevision,
+    });
     this.errorWritable.set(error);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
     return error;
+  }
+
+  private async refreshPrices(): Promise<void> {
+    if (this.sessionWritable() === null) return;
+    await this.tail;
+    if (this.sessionWritable() === null) return;
+    await this.cart.refetch();
+    await this.refreshSession();
+  }
+
+  private observePriceAcceptance(session: CheckoutSession, previousTotal: Money | null): void {
+    if (
+      session.priceAcceptanceRequired !== true ||
+      session.priceRevision === this.acceptedPriceRevision
+    )
+      return;
+    const total = session.summary.total;
+    const previousChange = this.priceChangeWritable();
+    this.priceChangeWritable.set({
+      shownTotal:
+        previousChange !== null && previousChange.revision === session.priceRevision
+          ? previousChange.shownTotal
+          : previousTotal,
+      currentTotal: total,
+      awaitingConfirmation: true,
+      items: this.cart.cart()?.items ?? [],
+      revision: session.priceRevision,
+    });
   }
 
   private clearFailureOverlay(): void {

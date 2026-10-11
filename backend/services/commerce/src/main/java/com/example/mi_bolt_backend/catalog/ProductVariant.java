@@ -33,6 +33,12 @@ public class ProductVariant {
 	@Column(name = "price_huf", nullable = false)
 	private long priceHuf;
 
+	@Column(name = "sale_price_huf")
+	private Long salePriceHuf;
+
+	@Column(name = "promotion_reference_price_huf")
+	private Long promotionReferencePriceHuf;
+
 	@Column(nullable = false)
 	private Integer stock;
 
@@ -90,5 +96,21 @@ public class ProductVariant {
 
 	public void setStock(Integer stock) {
 		this.stock = stock;
+	}
+
+	public Long getPromotionReferencePriceHuf() {
+		return promotionReferencePriceHuf;
+	}
+
+	public void setPromotionReferencePriceHuf(Long value) {
+		this.promotionReferencePriceHuf = value;
+	}
+
+	public Long getSalePriceHuf() {
+		return salePriceHuf;
+	}
+
+	public void setSalePriceHuf(Long salePriceHuf) {
+		this.salePriceHuf = salePriceHuf;
 	}
 }

@@ -18,7 +18,13 @@
   }
   <div class="rail-row flex items-center gap-(--space-4)">
     <div class="rail-price">
-      <app-price-block label="Készülékár" [money]="money()" [status]="priceStatus()" />
+      <app-price-block
+        label="Készülékár"
+        [money]="money()"
+        [promotionText]="promotionText()"
+        [referencePrice]="referencePrice()"
+        [status]="priceStatus()"
+      />
     </div>
     <div class="rail-cta">
       <app-button

@@ -20,6 +20,16 @@ export interface CheckoutSession {
   contact?: Contact;
   delivery?: DeliverySelection;
   payment?: PaymentSelection;
+
+  /**
+   * A price changed since the last accepted item snapshot.
+   */
+  priceAcceptanceRequired?: boolean;
+
+  /**
+   * Opaque server revision of every item price and quantity.
+   */
+  priceRevision?: string;
   summary: CheckoutSummary;
 
   /**
