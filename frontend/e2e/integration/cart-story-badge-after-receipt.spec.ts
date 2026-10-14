@@ -14,9 +14,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Shop: cart, context and receipt stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): cart-story-new-shopping-after-receipt.spec.ts covers the new shopping after a receipt.
   test(
     '[E104] the header badge after a completed receipt',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
 

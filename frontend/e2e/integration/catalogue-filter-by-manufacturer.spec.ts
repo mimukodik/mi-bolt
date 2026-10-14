@@ -16,9 +16,10 @@ const SIDEBAR_MIN_WIDTH = 1024;
 const RESULT_COUNT_PATTERN = /^\s*[1-9]\d* találat a szűrt feltételek szerint\s*$/;
 
 test.describe('Catalogue: browse, filter, sort and page', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): shop-story-two-brands-storage-stock.spec.ts covers filtering by brand.
   test(
     'filtering by manufacturer narrows the catalogue',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       // The two mounts the plan's overview names: the sidebar carries the
       // `filter-*` controls at the full HD viewport, and the drawer the

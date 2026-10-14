@@ -211,7 +211,8 @@ jobs:
         run: npx ng build demo-payment --configuration development
       - name: Playwright ${{ matrix.project }}
         timeout-minutes: 12
-        run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }}
+        # Specs tagged @ci-skip are left out of CI to keep this run short (BOLT-7); they still run locally.
+        run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }} --grep-invert @ci-skip
         env:
           CI: 'true'
           E2E_COVERAGE_GATE: ${{ matrix.gate }}

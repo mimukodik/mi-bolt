@@ -4,9 +4,10 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Checkout: from the cart to the receipt', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): cart-story-new-shopping-after-receipt.spec.ts covers a cash-on-delivery order to a receipt.
   test(
     'cash on delivery purchase reaches the receipt',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       // The purchase control and its confirmation are laid out differently at
       // the two integration viewports: below 1024px the desktop CTA column is

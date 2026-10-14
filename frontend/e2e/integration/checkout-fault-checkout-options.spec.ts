@@ -12,9 +12,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): checkout-retry-delivery-options-once.spec.ts covers the delivery options error.
   test(
     'the delivery step cannot load its delivery and payment options',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport
