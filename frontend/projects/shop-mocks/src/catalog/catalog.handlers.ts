@@ -115,7 +115,6 @@ function notFoundProblem(
 function buildProductPage(
   store: CatalogStore,
   filter: CatalogFilter,
-  now?: string,
 ): {
   items: ReturnType<typeof toCatalogItem>[];
   total: number;
@@ -123,7 +122,7 @@ function buildProductPage(
   page: number;
   pageSize: 12 | 24;
 } {
-  const entries = stockEntries(store, now);
+  const entries = stockEntries(store);
   const filtered = applyFilters(entries, filter);
   const sorted = sortEntries(filtered, filter.sort, filter.q);
   const capped = filter.featured === true ? sorted.slice(0, 4) : sorted;
@@ -143,29 +142,24 @@ function buildProductPage(
  * facets and the related products all read through this so a unit's
  * sold-out state reaches every catalogue answer.
  */
-function stockEntries(store: CatalogStore, now?: string): readonly CatalogEntry[] {
+function stockEntries(store: CatalogStore): readonly CatalogEntry[] {
   const ledger = stockLedger.current;
-  if (ledger === null) return store.listEntries(now);
-  return store.listEntries(now).map((entry) => ledger.applyToEntry(entry));
+  if (ledger === null) return store.listEntries();
+  return store.listEntries().map((entry) => ledger.applyToEntry(entry));
 }
 
 /** Build the `listProducts` handler. */
 function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products', async ({ request }) => {
+    const fault = faultResponse(options, 'products');
+    if (fault !== null) return fault;
+    await slowOnce(options, 'products');
     const url = new URL(request.url);
-    // The shell's availability probe must not consume the page's
-    // catalogue retry/race scenario. Full filtered pages still exercise it.
-    const promotionProbe = request.headers.get('X-Mibolt-Promotion-Probe') === 'true';
-    if (!promotionProbe) {
-      const fault = faultResponse(options, 'products');
-      if (fault !== null) return fault;
-      await slowOnce(options, 'products');
-    }
     const parsed = parseListProductsParams(url.searchParams);
     if (!parsed.ok) return invalidRequest(options, parsed.error);
     const store = requireStore();
-    const page = buildProductPage(store, parsed.filter, options.clock.now());
-    const facets = buildFacets(stockEntries(store, options.clock.now()), parsed.filter);
+    const page = buildProductPage(store, parsed.filter);
+    const facets = buildFacets(stockEntries(store), parsed.filter);
     const body = {
       items: page.items,
       total: page.total,
@@ -173,11 +167,6 @@ function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
       pageSize: page.pageSize,
       totalPages: page.totalPages,
       facets,
-      serverTime: options.clock.now(),
-      nextPriceChangeAt: stockEntries(store, options.clock.now())
-        .map((entry) => entry.product.nextPriceChangeAt)
-        .filter((value): value is string => value !== undefined)
-        .sort()[0],
     };
     return HttpResponse.json(body);
   });
@@ -226,7 +215,7 @@ function getProductHandler(options: CreateHandlersOptions): RequestHandler {
     await slowOnce(options, 'product');
     const slug = String(params['slug']);
     const store = requireStore();
-    const product = store.getProduct(slug, options.clock.now());
+    const product = store.getProduct(slug);
     if (product === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
     }
@@ -246,11 +235,11 @@ function listRelatedProductsHandler(options: CreateHandlersOptions): RequestHand
     await slowOnce(options, 'related-products');
     const slug = String(params['slug']);
     const store = requireStore();
-    const subject = store.getProduct(slug, options.clock.now());
+    const subject = store.getProduct(slug);
     if (subject === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
     }
-    const items = relatedItems(store, slug, options.clock.now());
+    const items = relatedItems(store, slug);
     return HttpResponse.json(items);
   });
 }
@@ -259,9 +248,8 @@ function listRelatedProductsHandler(options: CreateHandlersOptions): RequestHand
 function relatedItems(
   store: CatalogStore,
   subjectSlug: string,
-  now: string,
 ): ReturnType<typeof toCatalogItem>[] {
-  const subject = store.getProduct(subjectSlug, now);
+  const subject = store.getProduct(subjectSlug);
   if (subject === undefined) return [];
   const subjectBrand = subject.brand;
   const subjectStorages = new Set<number>();
@@ -296,7 +284,7 @@ function relatedItems(
   for (const product of merged) {
     if (seen.has(product.slug)) continue;
     seen.add(product.slug);
-    const entry = pickMinimumEntry(store, product.slug, now);
+    const entry = pickMinimumEntry(store, product.slug);
     if (entry !== null) out.push(entry);
     if (out.length === 4) break;
   }
@@ -307,9 +295,8 @@ function relatedItems(
 function pickMinimumEntry(
   store: CatalogStore,
   slug: string,
-  now: string,
 ): ReturnType<typeof toCatalogItem> | null {
-  const entries = stockEntries(store, now)
+  const entries = stockEntries(store)
     .filter((e) => e.product.slug === slug)
     .sort((a, b) => a.storageGb - b.storageGb);
   const entry = entries.at(0);
@@ -389,34 +376,7 @@ function readOrigin(scope: Record<string, unknown>): string {
 
 /** Public handler factory. Hands the four handlers back to the registry. */
 export function buildCatalogHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
-  const origin = Date.parse(options.clock.now());
-  // Explicit demonstration scenarios only; ordinary fixtures stay undecorated.
-  const start =
-    origin + (options.scenario.name === 'halloween-appearance-future' ? 60_000 : -60_000);
-  const end = origin + (options.scenario.name === 'halloween-appearance-expired' ? -1 : 120_000);
-  const enabled =
-    options.scenario.name === 'halloween' ||
-    options.scenario.name.startsWith('halloween-appearance-');
   return [
-    http.get(`${options.apiRoot}/shop-appearance`, ({ request }) => {
-      const unknown = new URL(request.url).searchParams.keys().next().value;
-      if (unknown !== undefined)
-        return invalidRequest(options, { kind: 'unknown-parameter', parameter: unknown });
-      const serverTime = options.clock.now();
-      const now = Date.parse(serverTime);
-      return HttpResponse.json(
-        {
-          halloweenActive: enabled && now >= start && now < end,
-          serverTime,
-          ...(enabled && now < start
-            ? { nextChangeAt: new Date(start).toISOString() }
-            : enabled && now < end
-              ? { nextChangeAt: new Date(end).toISOString() }
-              : {}),
-        },
-        { headers: { 'Cache-Control': 'no-store' } },
-      );
-    }),
     listProductsHandler(options),
     getProductHandler(options),
     listRelatedProductsHandler(options),

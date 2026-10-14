@@ -18,7 +18,7 @@ import com.example.mi_bolt_backend.api.model.ProblemCode;
 /**
  * Pins {@link ErrorCode} and the contract's {@link ProblemCode} enum to the
  * same value set, asserts the HTTP status for each new code added in contract
- * 2.1.0, and pins {@link ErrorCode#values()} length to 27.
+ * 2.1.0, and pins {@link ErrorCode#values()} length to 26.
  *
  * <p>Removing any one new {@code ErrorCode} constant fails the name-set
  * case; changing any new code's HTTP status fails its parameterised row.
@@ -48,8 +48,8 @@ class ErrorCodeTest {
 	}
 
 	@Test
-	void errorCodeValuesLengthIs27() {
-		assertThat(ErrorCode.values()).hasSize(27);
+	void errorCodeValuesLengthIs26() {
+		assertThat(ErrorCode.values()).hasSize(26);
 	}
 
 	static Stream<Arguments> newCodeStatus() {
@@ -57,7 +57,6 @@ class ErrorCodeTest {
 				Arguments.of(ErrorCode.UNAUTHENTICATED, 401),
 				Arguments.of(ErrorCode.CSRF_TOKEN_INVALID, 403),
 				Arguments.of(ErrorCode.PRODUCT_VERSION_CONFLICT, 412),
-				Arguments.of(ErrorCode.APPEARANCE_VERSION_CONFLICT, 412),
 				Arguments.of(ErrorCode.PRECONDITION_REQUIRED, 428),
 				Arguments.of(ErrorCode.USERNAME_TAKEN, 409),
 				Arguments.of(ErrorCode.ADMIN_SELF_DELETE, 409),

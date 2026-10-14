@@ -1538,36 +1538,6 @@ describe('orders', () => {
     expect(checkout.summary()?.total).toEqual({ amount: 159_980, currency: 'HUF' });
   });
 
-  it('BOLT-6: equal totals still require item acceptance and carry the displayed revision to payment', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const intentId = await seedCardDraftWithResolvedIntent(checkout);
-    const shown = checkout.summary()?.total;
-    server.use(
-      http.post(`${BASE_URL}/orders`, () =>
-        HttpResponse.json(PRICE_CHANGED_PROBLEM, {
-          status: 409,
-          headers: { 'Content-Type': 'application/problem+json' },
-        }),
-      ),
-    );
-    await checkout.submitOrder({
-      paymentMethod: 'card',
-      paymentIntentId: intentId,
-      termsVersion: TERMS_VERSION,
-      acceptedTerms: true,
-    });
-    const change = checkout.priceChange();
-    expect(change?.currentTotal).toEqual(shown);
-    expect(change?.awaitingConfirmation).toBe(true);
-    expect(change?.items?.length).toBeGreaterThan(0);
-    expect(change?.revision).toBeTypeOf('string');
-    checkout.confirmPriceChange();
-    const created = await checkout.createPaymentIntent();
-    expect(created.ok).toBe(true);
-    const request = requestsTo('POST', '/payment-intents').at(-1);
-    expect(JSON.parse(request?.body ?? '{}')).toEqual({ acceptedPriceRevision: change?.revision });
-  });
-
   it('F-27: confirmPriceChange() clears the flag and the next submit uses a NEW key', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     const intentId = await seedCardDraftWithResolvedIntent(checkout);
@@ -1810,34 +1780,5 @@ describe('orders', () => {
     if (missing.ok) return;
     expect(missing.error.status).toBe(404);
     expect(checkout.order()?.id).toBe(placedId);
-  });
-  it('BOLT-6: refreshed prices retain the displayed total; a cold draft has no invented previous total', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    await seedMoto();
-    await checkout.ensureOptions();
-    await seedCompleteDraft(checkout, 'card');
-    const baseline = checkout.session();
-    if (baseline === null) throw new Error('Expected loaded draft');
-    const previous = baseline.summary.total;
-    const current = { amount: previous.amount + 1000, currency: 'HUF' as const };
-    server.use(
-      http.get('*/api/v1/checkout', () =>
-        HttpResponse.json({
-          ...baseline,
-          summary: { ...baseline.summary, total: current },
-          priceAcceptanceRequired: true,
-          priceRevision: 'changed-item-prices',
-        }),
-      ),
-    );
-    await checkout.ensureSession(true);
-    expect(checkout.priceChange()?.shownTotal).toEqual(previous);
-    expect(checkout.priceChange()?.currentTotal).toEqual(current);
-    await checkout.ensureSession(true);
-    expect(checkout.priceChange()?.shownTotal).toEqual(previous);
-    checkout.startNewPurchase();
-    await checkout.ensureSession(true);
-    expect(checkout.priceChange()?.shownTotal).toBeNull();
-    expect(checkout.priceChange()?.currentTotal).toEqual(current);
   });
 });

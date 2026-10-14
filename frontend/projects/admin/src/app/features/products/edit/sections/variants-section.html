@@ -7,8 +7,8 @@
     @for (variant of form().variants; track variant; let index = $index) {
       @let value = variant().value();
       <div class="flex flex-col">
-        <div class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
-          <mat-form-field class="min-w-0 w-full" subscriptSizing="dynamic">
+        <div class="flex flex-wrap items-start gap-2">
+          <mat-form-field class="min-w-40 flex-1" subscriptSizing="dynamic">
             <mat-label>Szín</mat-label>
             <mat-select [formField]="variant.colorKey">
               @for (color of colors(); track color.key) {
@@ -31,39 +31,21 @@
               [field]="variant.storageGb"
             />
           </div>
-          <mat-form-field class="min-w-0 w-full" subscriptSizing="dynamic">
-            <mat-label>Alapár</mat-label>
+          <mat-form-field class="w-40" subscriptSizing="dynamic">
+            <mat-label>Ár</mat-label>
             <input matInput type="number" [formField]="variant.price" />
             <span matTextSuffix>Ft</span>
             <mat-error>{{ variant.price().errors()[0]?.message }}</mat-error>
           </mat-form-field>
-          <mat-form-field class="min-w-0 w-full" subscriptSizing="dynamic">
-            <mat-label>Akciós ár</mat-label>
-            <input matInput type="number" [formField]="variant.salePriceHuf" />
-            <span matTextSuffix>Ft</span>
-            <mat-hint>Üresen nincs kedvezmény.</mat-hint>
-            <mat-error>{{ variant.salePriceHuf().errors()[0]?.message }}</mat-error>
-          </mat-form-field>
-          <mat-form-field class="min-w-0 w-full" subscriptSizing="dynamic">
+          <mat-form-field class="w-28" subscriptSizing="dynamic">
             <mat-label>Készlet</mat-label>
             <input matInput type="number" [formField]="variant.stock" />
             <mat-error>{{ variant.stock().errors()[0]?.message }}</mat-error>
           </mat-form-field>
-          <button
-            class="adm-row-delete justify-self-end"
-            matIconButton
-            type="button"
-            (click)="remove(index)"
-          >
+          <button class="adm-row-delete" matIconButton type="button" (click)="remove(index)">
             <mat-icon>delete</mat-icon>
           </button>
         </div>
-        @if (value.referencePriceHuf !== undefined) {
-          <p class="adm-variant-id">
-            Referenciaár: {{ referenceText(value.referencePriceHuf) }} Ft. A kezdésig az alapárat
-            követi; a kampány indulásától az alapár módosítása nem változtatja meg.
-          </p>
-        }
         <p class="adm-variant-id">{{ idText(value) }}</p>
       </div>
     }

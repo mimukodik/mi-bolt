@@ -106,8 +106,8 @@ Two independent version schemes:
   A missing header is 400 `INVALID_REQUEST` with `params.header`, because the
   generated interface declares it required
   (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/cart/CartApiTest.java`, "missingOrMalformedIfMatchIs400").
-  The version rises once per request that changed something, including
-  reconciliation marked mutated (`CartService.finalize`, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "if (result.mutated())"), and the response
+  The version rises once per request that changed something, reconciliation
+  notices included (`CartService.finalize`, `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartService.java`, "result.noticeCount() > 0"), and the response
   carries it as the `ETag`
   (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/cart/CartController.java`, "private static ResponseEntity<Cart> respond").
   `backend/docs/decisions/0011-cart-version-etag-and-reconciliation.md` records
@@ -118,12 +118,6 @@ Two independent version schemes:
   `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/admin/catalog/AdminProductEtags.java` ("public final class AdminProductEtags"):
   a missing or blank `If-Match` is 428 `PRECONDITION_REQUIRED`, another
   version is 412 `PRODUCT_VERSION_CONFLICT`.
-
-- Halloween decoration settings use their own singleton JPA version.
-  `HalloweenAppearanceService` locks the row before checking the quoted
-  `If-Match`: missing is 428 `PRECONDITION_REQUIRED`, stale or malformed is
-  412 `APPEARANCE_VERSION_CONFLICT`.
-  Source: `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/catalog/HalloweenAppearanceService.java` ("private static void expectVersion").
 
 ## Idempotency keys
 

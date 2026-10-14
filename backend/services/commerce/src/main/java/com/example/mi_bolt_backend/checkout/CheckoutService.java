@@ -290,7 +290,7 @@ public class CheckoutService {
 				&& chosenPayment != null && chosenPayment.available();
 
 		return new CheckoutData.Session(session.getStateVersion(), contact, billing, delivery, payment,
-				summary, complete, cart.priceRevision(), cart.priceAcceptanceRequired());
+				summary, complete);
 	}
 
 	private static CheckoutData.Summary buildSummary(CartData.CartView cart,

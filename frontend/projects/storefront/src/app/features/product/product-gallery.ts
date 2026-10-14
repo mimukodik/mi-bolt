@@ -2,7 +2,6 @@ import { Component, computed, effect, input, output, signal } from '@angular/cor
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { ProductImage } from '../../shared/ui/product-image/product-image';
-import { HalloweenProductArt } from '../../shared/halloween/halloween-product-art';
 
 import type { Image } from '@mi-bolt/api/models/image';
 
@@ -40,13 +39,12 @@ import type { Image } from '@mi-bolt/api/models/image';
  */
 @Component({
   selector: 'app-product-gallery',
-  imports: [AccessibleDialog, ProductImage, HalloweenProductArt],
+  imports: [AccessibleDialog, ProductImage],
   templateUrl: './product-gallery.html',
   styleUrl: './product-gallery.scss',
 })
 export class ProductGallery {
   readonly images = input<readonly Image[]>([]);
-  readonly promotional = input(false);
   readonly selectedImageId = input<string>('');
   readonly productName = input<string>('');
 

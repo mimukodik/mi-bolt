@@ -32,7 +32,7 @@ import { withoutAdminOperations } from './admin-tags';
 export const REPO_ROOT = resolve(__dirname, '../..');
 export const SPEC_PATH = resolve(REPO_ROOT, '../contracts/commerce/openapi.yaml');
 
-export const REQUIRED_OPERATION_COUNT = 20;
+export const REQUIRED_OPERATION_COUNT = 19;
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 

@@ -38,6 +38,7 @@ export class DemoSignInPage {
   private readonly access = inject(DemoAccess);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+
   private readonly model = signal({ password: '' });
 
   protected readonly form = form(this.model, (p) => {

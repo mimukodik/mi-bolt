@@ -144,7 +144,7 @@ The 401 round trip:
   response, and the API accepts only the strong form, so a copied header fails with 400
   `INVALID_REQUEST` (MIM-453).
 - A 412 means someone else saved first. The list answers it with a snack-bar and `retry()`; the
-  edit page opens `ConflictDialog`, which compares local and server values and preserves edits. The guarded snapshot updates only the next If-Match version after explicit comparison; another save remains an administrator action.
+  edit page opens `ConflictDialog`, whose only way out reloads the product and drops the edits.
 - `frontend/projects/admin/src/app/core/api/problem.ts` is where a Problem body is read.
   `isProblem` is the type guard; `problemOf(error)` returns the body or `null`, parsing a string
   body first (an operation generated with `responseType: 'text'` leaves the error body as text);

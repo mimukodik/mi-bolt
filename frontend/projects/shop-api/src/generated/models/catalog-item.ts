@@ -5,7 +5,6 @@ import { Availability } from '../models/availability';
 import { ColorOption } from '../models/color-option';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
-import { PriceMetadata } from '../models/price-metadata';
 import { ProductBase } from '../models/product-base';
 import { StorageGb } from '../models/storage-gb';
 
@@ -13,7 +12,6 @@ import { StorageGb } from '../models/storage-gb';
  * One list entry: a product at one storage size. Carries a concrete price, so no "from" pricing is needed, and the colours array drives the colour switch inside the card.
  */
 export type CatalogItem = ProductBase & {
-'priceMetadata'?: PriceMetadata;
 'storageGb': StorageGb;
 'variantId': string;
 'variantSlug': string;

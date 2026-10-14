@@ -97,12 +97,3 @@ body {
   justify-content: center;
   padding: var(--pay-space-12) var(--pay-space-4) var(--pay-space-16);
 }
-
-pay-root.halloween .pay-card {
-  outline: 3px solid #8b5cf6;
-  outline-offset: -3px;
-}
-pay-root.halloween .pay-amount {
-  color: #7c3aed;
-  text-shadow: 0 0 9px rgba(255, 122, 26, 0.3);
-}

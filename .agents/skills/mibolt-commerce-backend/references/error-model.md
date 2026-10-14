@@ -9,7 +9,7 @@ themselves are the contract's: `contracts/commerce/kommunikacio.md` ("5. Error c
 
 - [The wire shape](#the-wire-shape)
 - [Throwing a refusal](#throwing-a-refusal)
-- [The 27 codes](#the-27-codes)
+- [The 26 codes](#the-26-codes)
 - [What ProblemAdvice maps, and to what](#what-problemadvice-maps-and-to-what)
 - [400 or 422](#400-or-422)
 - [Field errors and JSON pointers](#field-errors-and-json-pointers)
@@ -66,10 +66,10 @@ constructor that carries what the client needs:
 The detail text is English; that rule belongs to
 `mibolt-backend-code-standards`.
 
-## The 27 codes
+## The 26 codes
 
 `backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ErrorCode.java` ("public enum ErrorCode"),
-the same name set as the contract's `ProblemCode`
+the same set and order as the contract's `ProblemCode`
 (`contracts/commerce/openapi.yaml`, "ProblemCode:").
 
 | Status | Codes |
@@ -80,7 +80,7 @@ the same name set as the contract's `ProblemCode`
 | 404 | `NOT_FOUND` |
 | 409 | `OUT_OF_STOCK`, `QUANTITY_LIMIT`, `PRICE_CHANGED`, `PAYMENT_ALREADY_RESOLVED`, `IDEMPOTENCY_CONFLICT`, `USERNAME_TAKEN`, `ADMIN_SELF_DELETE`, `LAST_ADMIN`, `VARIANT_IN_CART`, `FEATURED_LIMIT`, `CATALOG_CONSTRAINT_CONFLICT` |
 | 410 | `CART_EXPIRED` |
-| 412 | `CART_VERSION_CONFLICT`, `PRODUCT_VERSION_CONFLICT`, `APPEARANCE_VERSION_CONFLICT` |
+| 412 | `CART_VERSION_CONFLICT`, `PRODUCT_VERSION_CONFLICT` |
 | 413 | `PAYLOAD_TOO_LARGE` |
 | 422 | `VALIDATION_FAILED`, `CHECKOUT_INCOMPLETE`, `PAYMENT_DECLINED`, `PAYMENT_PENDING`, `PAYMENT_REQUIRED` |
 | 428 | `PRECONDITION_REQUIRED` |
@@ -88,7 +88,7 @@ the same name set as the contract's `ProblemCode`
 
 `backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java` ("class ErrorCodeTest")
 pins `ErrorCode` and the generated `ProblemCode` to the same names in both
-directions and pins the count to 27.
+directions and pins the count to 26.
 
 ## What ProblemAdvice maps, and to what
 

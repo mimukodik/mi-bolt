@@ -284,18 +284,6 @@ describe('once-only fault scoping', () => {
 });
 
 describe('once-only fault lifetime', () => {
-  it('keeps the catalogue fault armed after the promotion strip probe', async () => {
-    useScenario('fail-once-products');
-    const probe = await fetch('http://localhost/api/v1/products?activePromotion=true&pageSize=12', {
-      headers: { 'X-Mibolt-Promotion-Probe': 'true' },
-    });
-    expect(probe.status).toBe(200);
-    const page = await fetch('http://localhost/api/v1/products?activePromotion=true&pageSize=12');
-    expect(page.status).toBe(503);
-    const retry = await fetch('http://localhost/api/v1/products?activePromotion=true&pageSize=12');
-    expect(retry.status).toBe(200);
-  });
-
   it('answers the first request of a fresh handler list with a 503 again', async () => {
     useScenario('fail-once-products');
     const first = await fetch('http://localhost/api/v1/products');

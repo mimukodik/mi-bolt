@@ -19,7 +19,6 @@ public class ProductDto {
 	private Integer rank;
 	private Integer popularityScore;
 	private boolean featured;
-	private PromotionDto promotion;
 	private List<SpecGroupDto> specGroups;
 	private List<ColorDto> colors;
 	private List<VariantDto> variants;
@@ -126,13 +125,5 @@ public class ProductDto {
 
 	public void setVariants(List<VariantDto> variants) {
 		this.variants = variants;
-	}
-
-	public PromotionDto getPromotion() {
-		return promotion;
-	}
-
-	public void setPromotion(PromotionDto promotion) {
-		this.promotion = promotion;
 	}
 }

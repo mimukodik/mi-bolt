@@ -138,22 +138,17 @@ describe('ShellComponent', () => {
       fixture.detectChanges();
     });
 
-    it('renders the four nav links with the expected hrefs', () => {
+    it('renders the three nav links with the expected hrefs', () => {
       const links: Element[] = Array.from(native.querySelectorAll('a.mat-mdc-list-item'));
       const hrefs = links.map((a) => a.getAttribute('href'));
-      expect(hrefs).toEqual([
-        '/admin/attekintes',
-        '/admin/termekek',
-        '/admin/megjelenes',
-        '/admin/adminok',
-      ]);
+      expect(hrefs).toEqual(['/admin/attekintes', '/admin/termekek', '/admin/adminok']);
     });
 
-    it('labels the four nav links in Hungarian', () => {
+    it('labels the three nav links in Hungarian', () => {
       const labels: string[] = Array.from(native.querySelectorAll('a.mat-mdc-list-item')).map(
         (a) => a.textContent,
       );
-      expect(labels).toEqual(['Áttekintés', 'Termékek', 'Halloween megjelenés', 'Adminok']);
+      expect(labels).toEqual(['Áttekintés', 'Termékek', 'Adminok']);
     });
 
     it('shows the brand text in the top toolbar', () => {

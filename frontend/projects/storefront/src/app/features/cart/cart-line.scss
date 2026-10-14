@@ -22,13 +22,6 @@
   align-items: baseline;
   grid-column: 1 / -1;
   min-width: 0;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.line.halloween-sale-line .totals {
-  flex-direction: column;
-  align-items: flex-start;
 }
 
 .remove {
@@ -60,10 +53,6 @@
     align-items: flex-end;
     justify-content: space-between;
     min-width: 160px;
-  }
-
-  .line.halloween-sale-line .totals {
-    align-items: flex-end;
   }
 }
 

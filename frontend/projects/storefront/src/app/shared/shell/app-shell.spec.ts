@@ -37,8 +37,7 @@ describe('AppShell renders the demo notice above the header', () => {
       const root = render(variant);
       const children = Array.from(root.children).map((el) => el.tagName.toLowerCase());
       expect(children[0]).toBe('app-demo-notice');
-      expect(children[1]).toBe('app-promotion-strip');
-      expect(children[2]).toBe('app-header-nav');
+      expect(children[1]).toBe('app-header-nav');
     });
   }
 });

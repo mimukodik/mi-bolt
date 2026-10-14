@@ -23,7 +23,7 @@ three keys only:
 |---|---|---|
 | `output` | `projects/shop-api/src/generated` | `projects/admin/src/app/api/generated` |
 | `apiService` | `Api` | `AdminApi` |
-| tag filter | `excludeTags` the five admin tags (`frontend/ng-openapi-gen.json`, "excludeTags") | `includeTags` the same five (`frontend/ng-openapi-gen.admin.json`, "includeTags") |
+| tag filter | `excludeTags` the four admin tags (`frontend/ng-openapi-gen.json`, "excludeTags") | `includeTags` the same four (`frontend/ng-openapi-gen.admin.json`, "includeTags") |
 
 The shared keys and what each does here. The option meanings are quoted from
 the generator's own schema, https://github.com/cyclosproject/ng-openapi-gen/blob/master/ng-openapi-gen-schema.json
@@ -32,9 +32,9 @@ installed copy), and its README, https://github.com/cyclosproject/ng-openapi-gen
 
 - `includeTags` / `excludeTags`: "filters the generated services" by tag. The
   tag on an operation therefore decides which client gets it: one of
-  `AdminAuth`, `AdminUsers`, `AdminProducts`, `AdminMedia`, `AdminCampaignSettings` puts it in the admin
+  `AdminAuth`, `AdminUsers`, `AdminProducts`, `AdminMedia` puts it in the admin
   client only, any other tag in the shop SDK only.
-  `frontend/tests/contract/admin-tags.ts` ("export const ADMIN_TAGS") holds the same five names as
+  `frontend/tests/contract/admin-tags.ts` ("export const ADMIN_TAGS") holds the same four names as
   `ADMIN_TAGS`, and `frontend/tests/contract/sdk-split.spec.ts` ("the shop excludeTags, the admin includeTags, and ADMIN_TAGS are equal") fails if
   the three lists stop being equal.
 - `excludeParameters: ["If-Match"]` (`frontend/ng-openapi-gen.json`, "excludeParameters", `frontend/ng-openapi-gen.admin.json`, "excludeParameters"): "ignores on generated

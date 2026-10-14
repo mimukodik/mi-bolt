@@ -1,8 +1,6 @@
-import { toUtcInput, utcTimestampKey } from '../app/core/utc-timestamp';
 import { http, HttpResponse } from 'msw';
 import type { DefaultBodyType, HttpHandler } from 'msw';
 
-import type { Promotion } from '../app/api/generated/models/promotion';
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
 import type { AdminProductColor } from '../app/api/generated/models/admin-product-color';
 import type { AdminProductColorInput } from '../app/api/generated/models/admin-product-color-input';
@@ -70,9 +68,8 @@ type ReadSpecGroup = Omit<Partial<AdminSpecGroup>, 'rows'> & {
 };
 type ReadInput = Omit<
   Partial<AdminProductInput>,
-  'highlights' | 'colors' | 'variants' | 'specGroups' | 'promotion'
+  'highlights' | 'colors' | 'variants' | 'specGroups'
 > & {
-  readonly promotion?: Partial<Promotion>;
   readonly highlights?: readonly (string | undefined)[];
   readonly colors?: readonly (ReadColor | undefined)[];
   readonly variants?: readonly (ReadVariant | undefined)[];
@@ -93,18 +90,9 @@ const TOP_MEMBERS = [
   'colors',
   'variants',
   'specGroups',
-  'promotion',
 ] as const;
 const COLOR_MEMBERS = ['code', 'name', 'swatchHex', 'imageId', 'alt'] as const;
-const VARIANT_MEMBERS = [
-  'slug',
-  'colorCode',
-  'storageGb',
-  'price',
-  'stock',
-  'salePriceHuf',
-  'clearSalePrice',
-] as const;
+const VARIANT_MEMBERS = ['slug', 'colorCode', 'storageGb', 'price', 'stock'] as const;
 const PRICE_MEMBERS = ['amount', 'currency'] as const;
 const SPEC_GROUP_MEMBERS = ['title', 'rows'] as const;
 const SPEC_ROW_MEMBERS = ['label', 'value'] as const;
@@ -273,11 +261,7 @@ function readVariantShape(obj: Record<string, unknown>): ReadVariant | Malformed
   if (price === MALFORMED) return MALFORMED;
   const stock = readInteger(obj['stock']);
   if (stock === MALFORMED) return MALFORMED;
-  const salePriceHuf = readInteger(obj['salePriceHuf']);
-  if (salePriceHuf === MALFORMED) return MALFORMED;
-  const clearSalePrice = readBoolean(obj['clearSalePrice']);
-  if (clearSalePrice === MALFORMED) return MALFORMED;
-  return { slug, colorCode, storageGb, price, stock, salePriceHuf, clearSalePrice };
+  return { slug, colorCode, storageGb, price, stock };
 }
 
 function readSpecRowShape(obj: Record<string, unknown>): ReadSpecRow | Malformed {
@@ -296,40 +280,11 @@ function readSpecGroupShape(obj: Record<string, unknown>): ReadSpecGroup | Malfo
   return { title, rows };
 }
 
-function readPromotionShape(obj: Record<string, unknown>): Partial<Promotion> | Malformed {
-  const enabled = readBoolean(obj['enabled']);
-  const text = readString(obj['text']);
-  const startsAt = readString(obj['startsAt']);
-  const endsAt = readString(obj['endsAt']);
-  if (enabled === MALFORMED || text === MALFORMED || startsAt === MALFORMED || endsAt === MALFORMED)
-    return MALFORMED;
-
-  for (const time of [startsAt, endsAt]) {
-    if (time === undefined) continue;
-    const parts = /^(.*)(Z|[+-][0-9]{2}:[0-9]{2})$/.exec(time);
-    if (parts === null || utcTimestampKey(parts[1]) === null || Number.isNaN(Date.parse(time)))
-      return MALFORMED;
-    const offset = parts[2];
-    if (offset !== 'Z') {
-      const hours = Number(offset.slice(1, 3));
-      const minutes = Number(offset.slice(4, 6));
-      if (hours > 18 || minutes > 59 || (hours === 18 && minutes !== 0)) return MALFORMED;
-    }
-  }
-  return { enabled, text, startsAt, endsAt };
-}
-
 /** The whole body: a JSON object with only declared top-level keys, read member by member. */
 async function readProductInput(request: Request): Promise<ReadInput | Malformed> {
   const body = await readJsonObject(request, TOP_MEMBERS);
   if (body === undefined) return MALFORMED;
 
-  const promotion = readObject(
-    body['promotion'],
-    ['enabled', 'text', 'startsAt', 'endsAt'],
-    readPromotionShape,
-  );
-  if (promotion === MALFORMED) return MALFORMED;
   const slug = readString(body['slug']);
   if (slug === MALFORMED) return MALFORMED;
   const brand = readString(body['brand']);
@@ -358,7 +313,6 @@ async function readProductInput(request: Request): Promise<ReadInput | Malformed
   if (specGroups === MALFORMED) return MALFORMED;
 
   return {
-    promotion,
     slug,
     brand,
     name,
@@ -460,11 +414,6 @@ function variantsErrors(variants: ReadInput['variants']): FieldError[] {
           patternThenSize(v, `${base}/slug`, isValidSlug, 120),
         ),
       );
-      if (variant.salePriceHuf !== undefined && variant.salePriceHuf !== null) {
-        if (variant.salePriceHuf < 1) errors.push(fieldError(`${base}/salePriceHuf`, 'MIN'));
-        if (variant.salePriceHuf > 100_000_000)
-          errors.push(fieldError(`${base}/salePriceHuf`, 'MAX'));
-      }
       errors.push(...requiredOr(variant.colorCode, `${base}/colorCode`, () => []));
       errors.push(...requiredOr(variant.storageGb, `${base}/storageGb`, () => []));
       errors.push(
@@ -545,10 +494,6 @@ function beanValidationErrors(input: ReadInput): FieldError[] {
   errors.push(...requiredOr(input.rank, '/rank', () => []));
   errors.push(...requiredOr(input.popularityScore, '/popularityScore', () => []));
   errors.push(...requiredOr(input.featured, '/featured', () => []));
-  if (input.promotion !== undefined)
-    errors.push(...requiredOr(input.promotion.enabled, '/promotion/enabled', () => []));
-  if (input.promotion?.text !== undefined && input.promotion.text.length > 280)
-    errors.push(fieldError('/promotion/text', 'SIZE'));
   errors.push(...highlightsErrors(input.highlights));
   errors.push(...colorsErrors(input.colors));
   errors.push(...variantsErrors(input.variants));
@@ -655,10 +600,6 @@ function validatorErrors(input: ReadInput): FieldError[] {
 /** Builds the finished `AdminProductInput` once both bean validation and the validator pass. */
 function toAdminProductInput(input: ReadInput): AdminProductInput {
   return {
-    promotion:
-      input.promotion === undefined
-        ? undefined
-        : { ...input.promotion, enabled: requireDefined(input.promotion.enabled) },
     slug: requireDefined(input.slug),
     brand: requireDefined(input.brand),
     name: requireDefined(input.name),
@@ -688,8 +629,6 @@ function toAdminProductInput(input: ReadInput): AdminProductInput {
         storageGb: requireDefined(value.storageGb),
         price: { amount: requireDefined(price.amount), currency: requireDefined(price.currency) },
         stock: requireDefined(value.stock),
-        salePriceHuf: value.salePriceHuf,
-        clearSalePrice: value.clearSalePrice,
       };
     }),
     specGroups: requireDefined(input.specGroups).map((group) => {
@@ -842,56 +781,6 @@ function replaceStage3Errors(
   return errors;
 }
 
-function promotionErrors(input: AdminProductInput, stored?: AdminProduct): FieldError[] {
-  const errors: FieldError[] = [];
-  const promotion = input.promotion ?? stored?.promotion;
-  input.variants.forEach((variant, index) => {
-    const path = `/variants/${String(index)}`;
-    if (variant.salePriceHuf !== undefined && variant.salePriceHuf !== null) {
-      if (variant.clearSalePrice === true)
-        errors.push(fieldError(`${path}/clearSalePrice`, 'SALE_PRICE_CONFLICT'));
-    }
-  });
-  if (promotion === undefined) return errors;
-  input.variants.forEach((variant, index) => {
-    const old = stored?.variants.find(
-      (v) => v.colorCode === variant.colorCode && v.storageGb === variant.storageGb,
-    );
-    const sale =
-      variant.clearSalePrice === true ? undefined : (variant.salePriceHuf ?? old?.salePriceHuf);
-    const reference = referencePrice(variant, promotion, stored?.promotion, old);
-    if (sale !== undefined && sale !== null && sale >= reference)
-      errors.push(fieldError(`/variants/${String(index)}/salePriceHuf`, 'SALE_PRICE_NOT_LOWER'));
-  });
-
-  if (
-    promotion.startsAt !== undefined &&
-    promotion.endsAt !== undefined &&
-    (utcTimestampKey(toUtcInput(promotion.startsAt)) ?? '') >=
-      (utcTimestampKey(toUtcInput(promotion.endsAt)) ?? '')
-  )
-    errors.push(fieldError('/promotion/endsAt', 'PROMOTION_TIME_RANGE'));
-  if (promotion.enabled) {
-    if (promotion.text === undefined || javaIsBlank(promotion.text))
-      errors.push(fieldError('/promotion/text', 'NOTBLANK'));
-    if (promotion.startsAt === undefined)
-      errors.push(fieldError('/promotion/startsAt', 'PROMOTION_TIME_REQUIRED'));
-    if (promotion.endsAt === undefined)
-      errors.push(fieldError('/promotion/endsAt', 'PROMOTION_TIME_REQUIRED'));
-    const hasPrice = input.variants.some((variant) => {
-      const old = stored?.variants.find(
-        (v) => v.colorCode === variant.colorCode && v.storageGb === variant.storageGb,
-      );
-      return (
-        variant.clearSalePrice !== true &&
-        (variant.salePriceHuf ?? old?.salePriceHuf ?? null) !== null
-      );
-    });
-    if (!hasPrice) errors.push(fieldError('/variants', 'PROMOTION_SALE_PRICE_REQUIRED'));
-  }
-  return errors;
-}
-
 // --- Building a stored product ---------------------------------------------------------
 
 function buildColor(input: AdminProductColorInput, db: MockDb): AdminProductColor {
@@ -911,32 +800,8 @@ function buildColor(input: AdminProductColorInput, db: MockDb): AdminProductColo
   };
 }
 
-function referencePrice(
-  input: AdminProductVariantInput,
-  promotion: Promotion | undefined,
-  previous: Promotion | undefined,
-  stored?: AdminProductVariant,
-): number {
-  const rescheduled = promotion?.startsAt !== previous?.startsAt;
-  const future = promotion?.startsAt !== undefined && Date.parse(promotion.startsAt) > Date.now();
-  return rescheduled || future
-    ? input.price.amount
-    : (stored?.referencePriceHuf ?? stored?.price.amount ?? input.price.amount);
-}
-
-function buildVariant(
-  input: AdminProductVariantInput,
-  productSlug: string,
-  promotion: Promotion | undefined,
-  previous: Promotion | undefined,
-  stored?: AdminProductVariant,
-): AdminProductVariant {
+function buildVariant(input: AdminProductVariantInput, productSlug: string): AdminProductVariant {
   return {
-    ...(promotion === undefined
-      ? {}
-      : { referencePriceHuf: referencePrice(input, promotion, previous, stored) }),
-    salePriceHuf:
-      input.clearSalePrice === true ? undefined : (input.salePriceHuf ?? stored?.salePriceHuf),
     id: `${productSlug}--${input.colorCode}--${String(input.storageGb)}`,
     slug: input.slug,
     colorCode: input.colorCode,
@@ -953,14 +818,8 @@ interface ProductMeta {
   readonly archivedAt?: string;
 }
 
-function buildProduct(
-  input: AdminProductInput,
-  db: MockDb,
-  meta: ProductMeta,
-  stored?: AdminProduct,
-): AdminProduct {
+function buildProduct(input: AdminProductInput, db: MockDb, meta: ProductMeta): AdminProduct {
   return {
-    promotion: input.promotion ?? stored?.promotion,
     id: meta.id,
     slug: input.slug,
     brand: javaStrip(input.brand),
@@ -977,17 +836,7 @@ function buildProduct(
     updatedAt: new Date().toISOString(),
     highlights: input.highlights.map(javaStrip),
     colors: input.colors.map((color) => buildColor(color, db)),
-    variants: input.variants.map((variant) =>
-      buildVariant(
-        variant,
-        input.slug,
-        input.promotion ?? stored?.promotion,
-        stored?.promotion,
-        stored?.variants.find(
-          (old) => old.colorCode === variant.colorCode && old.storageGb === variant.storageGb,
-        ),
-      ),
-    ),
+    variants: input.variants.map((variant) => buildVariant(variant, input.slug)),
     specGroups: input.specGroups.map((group) => ({
       title: javaStrip(group.title),
       rows: group.rows.map((row) => ({ label: javaStrip(row.label), value: javaStrip(row.value) })),
@@ -1044,8 +893,6 @@ function createHandler(db: MockDb): HttpHandler {
 
     const body = toAdminProductInput(read.input);
 
-    const promoErrors = promotionErrors(body);
-    if (promoErrors.length > 0) return bodyViolations(promoErrors);
     const stage3 = createStage3Errors(body, db);
     if (stage3.length > 0) return bodyViolations(stage3);
 
@@ -1092,22 +939,15 @@ function replaceHandler(db: MockDb): HttpHandler {
 
     const body = toAdminProductInput(read.input);
 
-    const promoErrors = promotionErrors(body, stored);
-    if (promoErrors.length > 0) return bodyViolations(promoErrors);
     const stage3 = replaceStage3Errors(body, db, stored);
     if (stage3.length > 0) return bodyViolations(stage3);
 
-    const next = buildProduct(
-      body,
-      db,
-      {
-        id: stored.id,
-        status: stored.status,
-        version: stored.version + 1,
-        ...(stored.archivedAt === undefined ? {} : { archivedAt: stored.archivedAt }),
-      },
-      stored,
-    );
+    const next = buildProduct(body, db, {
+      id: stored.id,
+      status: stored.status,
+      version: stored.version + 1,
+      ...(stored.archivedAt === undefined ? {} : { archivedAt: stored.archivedAt }),
+    });
     db.products.set(id, next);
 
     return productResponse(next, 200);

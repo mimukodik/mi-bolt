@@ -41,18 +41,6 @@ export interface Money {
 })
 export class PriceBlock {
   readonly money = input<Money | null>(null);
-  readonly referencePrice = input<Money | null>(null);
-  readonly promotionText = input<string | null>(null);
-  readonly referenceText = computed(() => {
-    const reference = this.referencePrice();
-    const currency: unknown = reference?.currency;
-    return reference !== null &&
-      currency === 'HUF' &&
-      Number.isInteger(reference.amount) &&
-      reference.amount > 0
-      ? PriceBlock.formatHuf(reference.amount)
-      : null;
-  });
   readonly label = input.required<string>();
   readonly status = input<AsyncStatus>('idle');
   /** Amount size: `lg` is the product page's 28 px, `md` the 20 px list-card amount. */

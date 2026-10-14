@@ -62,18 +62,6 @@ public class Product {
 	@Column(name = "updated_at")
 	private OffsetDateTime updatedAt;
 
-	@Column(name = "promotion_enabled")
-	private Boolean promotionEnabled;
-
-	@Column(name = "promotion_text", length = 280)
-	private String promotionText;
-
-	@Column(name = "promotion_starts_at")
-	private OffsetDateTime promotionStartsAt;
-
-	@Column(name = "promotion_ends_at")
-	private OffsetDateTime promotionEndsAt;
-
 	@OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	@OrderBy("position")
 	private List<ProductHighlight> highlights = new ArrayList<>();
@@ -200,37 +188,5 @@ public class Product {
 
 	public List<SpecGroup> getSpecGroups() {
 		return specGroups;
-	}
-
-	public Boolean getPromotionEnabled() {
-		return promotionEnabled;
-	}
-
-	public void setPromotionEnabled(Boolean promotionEnabled) {
-		this.promotionEnabled = promotionEnabled;
-	}
-
-	public String getPromotionText() {
-		return promotionText;
-	}
-
-	public void setPromotionText(String promotionText) {
-		this.promotionText = promotionText;
-	}
-
-	public OffsetDateTime getPromotionStartsAt() {
-		return promotionStartsAt;
-	}
-
-	public void setPromotionStartsAt(OffsetDateTime promotionStartsAt) {
-		this.promotionStartsAt = promotionStartsAt;
-	}
-
-	public OffsetDateTime getPromotionEndsAt() {
-		return promotionEndsAt;
-	}
-
-	public void setPromotionEndsAt(OffsetDateTime promotionEndsAt) {
-		this.promotionEndsAt = promotionEndsAt;
 	}
 }

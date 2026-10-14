@@ -4,7 +4,6 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { appearanceHandlers } from './appearance.handlers';
 import { authHandlers } from './auth.handlers';
 import { createDb } from './db';
 import { adminHandlers } from './handlers';
@@ -18,7 +17,6 @@ describe('adminHandlers', () => {
     const db = createDb();
     const slices = [
       ...authHandlers(db),
-      ...appearanceHandlers(db),
       ...usersHandlers(db),
       ...productsReadHandlers(db),
       ...productsWriteHandlers(db),

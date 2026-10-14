@@ -101,22 +101,14 @@ public class OrderService {
 	/** {@code paymentIntentId} is null for cash on delivery. */
 	public OrderData.Receipt place(ShopSession current, String ifMatch, String paymentMethod,
 			String paymentIntentId, String requestedTermsVersion, boolean acceptedTerms) {
-		return place(current, ifMatch, paymentMethod, paymentIntentId, requestedTermsVersion, acceptedTerms, null);
-	}
-
-	public OrderData.Receipt place(ShopSession current, String ifMatch, String paymentMethod,
-			String paymentIntentId, String requestedTermsVersion, boolean acceptedTerms, String acceptedPriceRevision) {
 
 		// Rule 47: cart and price/stock changes first.
 		CartData.CartView cart = cartService.getCart(current);
-		cartService.acceptPrices(current, cart, acceptedPriceRevision);
 		List<String> noticeCodes = new ArrayList<>();
 		boolean priceChanged = false;
 		for (CartData.Notice n : cart.notices()) {
-			if (!"PRICE_CHANGED".equals(n.code()) || acceptedPriceRevision == null) {
-				noticeCodes.add(n.code());
-			}
-			if ("PRICE_CHANGED".equals(n.code()) && acceptedPriceRevision == null) {
+			noticeCodes.add(n.code());
+			if ("PRICE_CHANGED".equals(n.code())) {
 				priceChanged = true;
 			}
 		}
@@ -148,11 +140,6 @@ public class OrderService {
 
 		// Rule 38's precondition and the contract's checkoutIncomplete example.
 		CheckoutData.Session checkout = checkoutService.getCheckout(current);
-		if (checkout.priceAcceptanceRequired() || (cart.priceRevision() != null
-				&& !cart.priceRevision().equals(checkout.priceRevision()))) {
-			throw new DomainException(ErrorCode.PRICE_CHANGED, "Item prices changed during the server recheck",
-					Map.of("priceRevision", checkout.priceRevision()));
-		}
 		if (!checkout.complete()) {
 			throw new DomainException(ErrorCode.CHECKOUT_INCOMPLETE,
 					"A required checkout section is missing", null,

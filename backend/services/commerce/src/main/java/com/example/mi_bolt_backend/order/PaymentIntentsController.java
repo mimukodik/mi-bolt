@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.mi_bolt_backend.api.PaymentApi;
 import com.example.mi_bolt_backend.api.model.PaymentIntent;
-import com.example.mi_bolt_backend.api.model.CreatePaymentIntentRequest;
 import com.example.mi_bolt_backend.api.model.PaymentOutcomeRequest;
 import com.example.mi_bolt_backend.session.CurrentSession;
 import com.example.mi_bolt_backend.session.ShopSession;
@@ -52,15 +51,15 @@ public class PaymentIntentsController implements PaymentApi {
 
 	@Override
 	@Transactional
-	public ResponseEntity<PaymentIntent> createPaymentIntent(String ifMatch, String idempotencyKey, CreatePaymentIntentRequest acceptance) {
+	public ResponseEntity<PaymentIntent> createPaymentIntent(String ifMatch, String idempotencyKey) {
 		ShopSession session = session();
-		String fingerprint = idempotency.fingerprint(acceptance == null ? EMPTY_BODY : json(acceptance));
+		String fingerprint = idempotency.fingerprint(EMPTY_BODY);
 		Optional<OrderData.StoredResponse> replay = idempotency.replay(session, METHOD, PATH,
 				idempotencyKey, fingerprint);
 		if (replay.isPresent()) {
 			return replayed(replay.get(), PaymentIntent.class);
 		}
-		OrderData.IntentView view = intentService.create(session, ifMatch, acceptance == null ? null : acceptance.getAcceptedPriceRevision());
+		OrderData.IntentView view = intentService.create(session, ifMatch);
 		PaymentIntent body = OrderModels.toPaymentIntent(view);
 		String location = request.getContextPath() + PATH + "/" + view.id();
 		idempotency.store(session, METHOD, PATH, idempotencyKey, fingerprint,

@@ -46,11 +46,6 @@ export type SaveResult =
   | { readonly kind: 'invalid'; readonly fieldErrors: readonly FieldError[] }
   | { readonly kind: 'failed'; readonly problem: Problem | null };
 
-export interface ConflictSnapshot {
-  readonly product: AdminProduct;
-  readonly generation: number;
-}
-
 @Injectable()
 export class ProductEditStore {
   readonly #api = inject(AdminApi);
@@ -152,29 +147,6 @@ export class ProductEditStore {
       }
       return { kind: 'failed', problem: problemOf(error) };
     }
-  }
-
-  /** Read a conflict snapshot without replacing the editable page or losing its input. */
-  async readLatest(): Promise<ConflictSnapshot | null> {
-    const product = this.#product();
-    if (product === null) return null;
-    const generation = this.#generation;
-    try {
-      const latest = await firstValueFrom(
-        this.#api.invoke(getAdminProduct, { productId: product.id }),
-      );
-      if (generation !== this.#generation || this.#product()?.id !== latest.id) return null;
-      return { product: latest, generation };
-    } catch {
-      return null;
-    }
-  }
-
-  /** The administrator has compared the latest values and explicitly kept their own input. */
-  useLatestVersion(snapshot: ConflictSnapshot): void {
-    if (snapshot.generation !== this.#generation || this.#product()?.id !== snapshot.product.id)
-      return;
-    this.#product.set(snapshot.product);
   }
 
   /** Number of `featured + active` products in the catalogue. Stays `null` on failure. */

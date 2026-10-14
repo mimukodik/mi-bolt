@@ -7,16 +7,6 @@ export interface AdminProductVariant {
   colorCode: string;
   id: string;
   price: Money;
-
-  /**
-   * Captured campaign reference price; base edits after campaign start do not change it.
-   */
-  referencePriceHuf?: number;
-
-  /**
-   * Optional sale price in whole HUF. Omission or null preserves the stored value on replace; clearSalePrice explicitly removes it.
-   */
-  salePriceHuf?: (number | null);
   slug: string;
   stock: number;
   storageGb: StorageGb;

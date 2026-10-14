@@ -45,7 +45,6 @@
             <app-product-gallery
               [images]="gallery()"
               [productName]="productName()"
-              [promotional]="selectedVariant()?.priceMetadata?.activePromotion === true"
               [selectedImageId]="selectedImageId()"
               (imageSelected)="onImageSelected($event)"
               (zoomRequested)="onZoomRequested($event)"
@@ -73,9 +72,6 @@
 
           <div class="buy flex flex-col min-w-0">
             <div class="buy-box">
-              @if (selectedVariant()?.priceMetadata?.activePromotion === true) {
-                <span class="halloween-sale-badge">🎃 Halloweeni ajánlat</span>
-              }
               @if (stockMessage()) {
                 <p
                   class="stock m-0"
@@ -87,28 +83,12 @@
                 </p>
               }
 
-              <section
-                aria-label="Árak"
-                class="prices"
-                [class.prices--promotion]="
-                  selectedVariant()?.priceMetadata?.activePromotion === true
-                "
-              >
+              <section aria-label="Árak" class="prices">
                 <app-price-block
                   label="Készülékár"
                   size="lg"
                   [inverse]="true"
                   [money]="devicePrice()"
-                  [promotionText]="
-                    selectedVariant()?.priceMetadata?.activePromotion === true
-                      ? (selectedVariant()?.priceMetadata?.promotionText ?? null)
-                      : null
-                  "
-                  [referencePrice]="
-                    selectedVariant()?.priceMetadata?.activePromotion === true
-                      ? (selectedVariant()?.priceMetadata?.referencePrice ?? null)
-                      : null
-                  "
                   [status]="devicePriceStatus()"
                 />
               </section>
@@ -205,17 +185,7 @@
       [error]="addError()"
       [money]="devicePrice()"
       [pending]="addPending()"
-      [promotionText]="
-        selectedVariant()?.priceMetadata?.activePromotion === true
-          ? (selectedVariant()?.priceMetadata?.promotionText ?? null)
-          : null
-      "
       [reason]="addToCartReason()"
-      [referencePrice]="
-        selectedVariant()?.priceMetadata?.activePromotion === true
-          ? (selectedVariant()?.priceMetadata?.referencePrice ?? null)
-          : null
-      "
       [success]="addSuccessMessage()"
       (addRequested)="onRailAddRequested()"
       (errorDismissed)="addError.set(null)"

@@ -1,23 +1,17 @@
 // tests/contract/admin-tags.ts — shared list of admin-tagged operations
 // (MIM-331, plan F4 D13).
 //
-// The OpenAPI contract 2.3.0 declares 37 operations: 20 shop operations
-// plus 17 admin operations, each admin operation tagged exactly one of
-// `AdminAuth`, `AdminUsers`, `AdminProducts`, `AdminMedia`, `AdminCampaignSettings`. The shop
-// contract suite asserts the 20-operation shape; the shop SDK excludes
-// the five tags; the admin SDK includes them. Keeping the tag list in one
+// The OpenAPI contract 2.2.0 declares 34 operations: 19 shop operations
+// plus 15 admin operations, each admin operation tagged exactly one of
+// `AdminAuth`, `AdminUsers`, `AdminProducts`, `AdminMedia`. The shop
+// contract suite asserts the 19-operation shape; the shop SDK excludes
+// the four tags; the admin SDK includes them. Keeping the tag list in one
 // place lets every spec-load point and the SDK-split spec reference the
 // same constant.
 
 import { isRecord } from '../../projects/shop-mocks/src/is-record';
 
-export const ADMIN_TAGS = [
-  'AdminAuth',
-  'AdminUsers',
-  'AdminProducts',
-  'AdminMedia',
-  'AdminCampaignSettings',
-] as const;
+export const ADMIN_TAGS = ['AdminAuth', 'AdminUsers', 'AdminProducts', 'AdminMedia'] as const;
 
 const ADMIN_TAG_SET: ReadonlySet<string> = new Set<string>(ADMIN_TAGS);
 

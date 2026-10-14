@@ -7,7 +7,6 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { CreatePaymentIntentRequest } from '../../models/create-payment-intent-request';
 import { PaymentIntent } from '../../models/payment-intent';
 
 export interface CreatePaymentIntent$Params {
@@ -16,14 +15,12 @@ export interface CreatePaymentIntent$Params {
  * Scoped to method, path and session, retained for 24 hours. The same key with the same normalised body replays the original result before any state check. The same key with a different body returns 409.
  */
   'Idempotency-Key': string;
-      body?: CreatePaymentIntentRequest
 }
 
 export function createPaymentIntent(http: HttpClient, rootUrl: string, params: CreatePaymentIntent$Params, context?: HttpContext): Observable<StrictHttpResponse<PaymentIntent>> {
   const rb = new RequestBuilder(rootUrl, createPaymentIntent.PATH, 'post');
   if (params) {
     rb.header('Idempotency-Key', params['Idempotency-Key'], {});
-    rb.body(params.body, 'application/json');
   }
 
   return http.request(

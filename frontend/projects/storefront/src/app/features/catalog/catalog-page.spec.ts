@@ -1062,7 +1062,6 @@ describe('FIX-24-AC01 clearing the filters clears the URL', () => {
       inStock: true,
       is5g: true,
       featured: true,
-      activePromotion: true,
       sort: 'price_desc',
       pageSize: 24,
     });
@@ -1084,7 +1083,6 @@ describe('FIX-24-AC01 clearing the filters clears the URL', () => {
       'inStock=',
       'is5g=',
       'featured=',
-      'activePromotion=',
       'sort=',
       'page=',
       'pageSize=',

@@ -351,7 +351,6 @@ describe('T12-AC01 catalog-query codec', () => {
       inStock: true,
       is5g: true,
       featured: true,
-      activePromotion: true,
       sort: 'price_desc',
       page: 3,
       pageSize: 24,

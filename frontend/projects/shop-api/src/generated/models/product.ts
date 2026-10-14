@@ -9,8 +9,6 @@ import { Variant } from '../models/variant';
  * A product with every colour and storage combination.
  */
 export type Product = ProductBase & {
-'serverTime'?: string;
-'nextPriceChangeAt'?: string;
 'description': string;
 'variants': Array<Variant>;
 'specGroups': Array<SpecGroup>;

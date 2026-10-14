@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.hibernate.Hibernate;
 import org.mockito.AdditionalAnswers;
-import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,46 +67,6 @@ class CatalogLoaderTest {
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
-
-
-	@Test
-	void loaderReadsPromotionAndSalePricesWithoutInventingLegacyDefaults(@TempDir Path tmp) throws IOException {
-		copyFixture(tmp);
-		Path file = tmp.resolve("catalog.json");
-		String json = Files.readString(file).replaceFirst("\"featured\": true", "\"featured\": true, \"promotion\": {\"enabled\": true,"
-				+ "\"text\": \" Offer \",\"startsAt\":\"2026-10-10T01:00:00+01:00\",\"endsAt\":\"2026-10-11T00:00:00Z\"}")
-				.replaceFirst("\"priceHuf\": [0-9]+", "\"priceHuf\": 399990, \"salePriceHuf\": 1");
-		Files.writeString(file, json);
-		ProductRepository capturedProducts = Mockito.mock(ProductRepository.class);
-		CatalogImageRepository capturedImages = Mockito.mock(CatalogImageRepository.class);
-		Mockito.when(capturedImages.save(ArgumentMatchers.any(CatalogImage.class))).thenAnswer(AdditionalAnswers.returnsFirstArg());
-		CatalogLoader isolated = new CatalogLoader(capturedProducts, capturedImages, validator, jsonMapper, transactionManager, tmp);
-		isolated.load();
-		ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
-		Mockito.verify(capturedProducts, Mockito.times(3)).save(captor.capture());
-		Product promoted = captor.getAllValues().get(0);
-		assertThat(promoted.getPromotionEnabled()).isTrue();
-		assertThat(promoted.getPromotionText()).isEqualTo("Offer");
-		assertThat(promoted.getPromotionStartsAt().toInstant()).hasToString("2026-10-10T00:00:00Z");
-		assertThat(promoted.getPromotionEndsAt().toInstant()).hasToString("2026-10-11T00:00:00Z");
-		assertThat(promoted.getVariants().get(0).getSalePriceHuf()).isEqualTo(1L);
-		Product legacy = captor.getAllValues().get(1);
-		assertThat(legacy.getPromotionEnabled()).isNull();
-		assertThat(legacy.getVariants().get(0).getSalePriceHuf()).isNull();
-	}
-
-
-	@Test
-	void loaderRejectsFractionalSalePrice(@TempDir Path tmp) throws IOException {
-		copyFixture(tmp);
-		Path file = tmp.resolve("catalog.json");
-		Files.writeString(file, Files.readString(file).replaceFirst("\"priceHuf\": [0-9]+",
-				"\"priceHuf\": 399990, \"salePriceHuf\": 1.5"));
-		CatalogLoader isolated = new CatalogLoader(productRepository, imageRepository, validator, jsonMapper, transactionManager, tmp);
-		assertThatThrownBy(isolated::load).isInstanceOf(CatalogValidationException.class)
-				.hasMessageContaining("cannot parse catalog.json");
-		assertThat(productRepository.count()).isEqualTo(3);
-	}
 
 	@Test
 	void loaderPopulatesFixtureOnSharedContext() {

@@ -30,7 +30,6 @@ import { HttpClient, HttpErrorResponse, type HttpContext } from '@angular/common
 import { DestroyRef, Service, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom, type Observable } from 'rxjs';
 
-import { PriceRefresh } from '../../shared/utils/price-refresh';
 import { Api } from '@mi-bolt/api/api';
 import { ApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { addCartItem, clearCart, getCart, removeCartItem } from '@mi-bolt/api/functions';
@@ -82,9 +81,6 @@ const ZERO_MONEY: Money = { amount: 0, currency: 'HUF' };
 export class CartFacade {
   private readonly api: Api;
   private readonly destroyRef = inject(DestroyRef);
-  private readonly priceRefresh = new PriceRefresh(this.destroyRef, () => {
-    void this.refetch();
-  });
   private readonly queue = new CartMutationQueue();
 
   /** Internal writable snapshot of the authoritative cart state. */
@@ -556,7 +552,6 @@ export class CartFacade {
    */
   private applySuccess(cart: Cart, options: { fromRefetch?: boolean } = {}): void {
     this.cartWritable.set(cart);
-    this.priceRefresh.schedule(cart.serverTime, cart.nextPriceChangeAt);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
     this.errorWritable.set(null);

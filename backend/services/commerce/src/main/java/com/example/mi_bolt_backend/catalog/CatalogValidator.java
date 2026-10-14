@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -45,8 +44,6 @@ public class CatalogValidator {
 	public static final Pattern SLUG = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
 	public static final Pattern SWATCH_HEX = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 	public static final Set<Integer> ALLOWED_STORAGE = Set.of(128, 256, 512);
-	private static final Pattern PROMOTION_TIME = Pattern.compile(
-			"^[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:[Zz]|[+-][0-9]{2}:[0-9]{2})$");
 	private static final Set<String> ALLOWED_EXTENSIONS = Set.of("webp", "jpg", "png");
 	private static final Map<String, String> EXT_TO_CONTENT_TYPE = Map.of(
 			"webp", "image/webp",
@@ -86,7 +83,6 @@ public class CatalogValidator {
 			validateSpecGroups(product);
 			validateColors(product);
 			validateVariants(product);
-			validatePromotion(product);
 			if (product.isFeatured()) {
 				featuredCount++;
 				if (featuredCount > 4) {
@@ -350,59 +346,11 @@ public class CatalogValidator {
 						"product " + product.getSlug() + ": variant '" + variant.getId()
 								+ "' references unknown colorCode '" + variant.getColorCode() + "'");
 			}
-			if (variant.getSalePriceHuf() != null
-					&& (variant.getSalePriceHuf() < 1 || variant.getSalePriceHuf() > 100_000_000)) {
-				throw new CatalogValidationException("product " + product.getSlug() + ": variant "
-						+ variant.getId() + ": salePriceHuf must be between 1 and 100000000");
-			}
 			if (variant.getStock() == null) {
 				throw new CatalogValidationException(
 						"product " + product.getSlug() + ": variant '" + variant.getId()
 								+ "' stock is required");
 			}
-		}
-	}
-
-
-	private static void validatePromotion(ProductDto product) {
-		PromotionDto promotion = product.getPromotion();
-		if (promotion == null) {
-			return;
-		}
-		String prefix = "product " + product.getSlug() + ": promotion ";
-		if (promotion.enabled() == null) {
-			throw new CatalogValidationException(prefix + "enabled is required");
-		}
-		if (promotion.text() != null && promotion.text().length() > 280) {
-			throw new CatalogValidationException(prefix + "text must be at most 280 chars");
-		}
-		OffsetDateTime startsAt = promotionTime(promotion.startsAt(), prefix + "startsAt");
-		OffsetDateTime endsAt = promotionTime(promotion.endsAt(), prefix + "endsAt");
-		if (startsAt != null && endsAt != null && !startsAt.isBefore(endsAt)) {
-			throw new CatalogValidationException(prefix + "startsAt must be before endsAt");
-		}
-		if (Boolean.TRUE.equals(promotion.enabled())) {
-			if (promotion.text() == null || promotion.text().isBlank() || startsAt == null || endsAt == null) {
-				throw new CatalogValidationException(prefix + "enabled requires text, startsAt and endsAt");
-			}
-			if (product.getVariants().stream().noneMatch(variant -> variant.getSalePriceHuf() != null)) {
-				throw new CatalogValidationException(prefix + "enabled requires at least one variant salePriceHuf");
-			}
-		}
-	}
-
-	private static OffsetDateTime promotionTime(String value, String field) {
-		if (value == null) {
-			return null;
-		}
-		if (!PROMOTION_TIME.matcher(value).matches()) {
-			throw new CatalogValidationException(field + " must be a valid date-time with an explicit offset");
-		}
-		try {
-			return OffsetDateTime.parse(value);
-		}
-		catch (DateTimeParseException exception) {
-			throw new CatalogValidationException(field + " must be a valid date-time with an explicit offset", exception);
 		}
 	}
 

@@ -1,4 +1,3 @@
-import { isRecord } from '../is-record';
 /**
  * MIM-212 — payment intent MSW handlers on the 2.0.0 contract.
  *
@@ -101,30 +100,7 @@ export const paymentHandlersEntry: BusinessHandlerEntry = (
         return invalidRequest(options, 'Missing Idempotency-Key header', { received: null });
       }
       const ifMatch = request.headers.get('If-Match');
-      const rawBody = await request.text();
-      let acceptedPriceRevision: string | undefined;
-      if (rawBody.length > 0) {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(rawBody);
-        } catch {
-          return invalidRequest(options, 'Invalid JSON', {});
-        }
-        if (
-          !isRecord(parsed) ||
-          Object.keys(parsed).some((key) => key !== 'acceptedPriceRevision') ||
-          (parsed['acceptedPriceRevision'] !== undefined &&
-            typeof parsed['acceptedPriceRevision'] !== 'string')
-        )
-          return invalidRequest(options, 'Invalid price acceptance', {});
-        acceptedPriceRevision = parsed['acceptedPriceRevision'];
-      }
-      const outcome = requireOrderStore().createPaymentIntent(
-        sessionId,
-        idempotencyKey,
-        ifMatch,
-        acceptedPriceRevision,
-      );
+      const outcome = requireOrderStore().createPaymentIntent(sessionId, idempotencyKey, ifMatch);
       if (!outcome.ok) return problemResponse(outcome);
       options.persist?.(sessionId);
       if (loseResponseOnce(options, 'payment-intent')) return HttpResponse.error();

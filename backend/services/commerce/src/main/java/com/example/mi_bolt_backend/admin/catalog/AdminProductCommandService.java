@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,12 +21,10 @@ import com.example.mi_bolt_backend.api.model.AdminProductVariantInput;
 import com.example.mi_bolt_backend.api.model.AdminSpecGroup;
 import com.example.mi_bolt_backend.api.model.AdminSpecRow;
 import com.example.mi_bolt_backend.api.model.FieldError;
-import com.example.mi_bolt_backend.api.model.Promotion;
 import com.example.mi_bolt_backend.cart.CartItemRepository;
 import com.example.mi_bolt_backend.catalog.CatalogImage;
 import com.example.mi_bolt_backend.catalog.CatalogImageRepository;
 import com.example.mi_bolt_backend.catalog.Product;
-import com.example.mi_bolt_backend.catalog.PriceResolver;
 import com.example.mi_bolt_backend.catalog.ProductColor;
 import com.example.mi_bolt_backend.catalog.ProductHighlight;
 import com.example.mi_bolt_backend.catalog.ProductVariant;
@@ -98,8 +95,6 @@ public class AdminProductCommandService {
 		}
 
 		Product product = toProduct(input, images);
-		PriceResolver.refreshScheduledReference(product, clock, true);
-		validateResolvedSales(product, input);
 		product.setUpdatedAt(OffsetDateTime.now(clock));
 		try {
 			return adminProductRepository.saveAndFlush(product).getId();
@@ -112,9 +107,7 @@ public class AdminProductCommandService {
 	}
 
 	/**
-	 * Replaces editable members (docs/decisions/0020, "Replace"). Missing promotion and sale-price
-	 * members preserve existing configuration for older clients; clearSalePrice explicitly clears
-	 * a variant sale price. Colours are matched by code
+	 * Replaces every editable member (docs/decisions/0020, "Replace"). Colours are matched by code
 	 * and variants by (colour code, storage). Dropped variants are deleted and flushed before any
 	 * other change, so their colours can go and the product row is written once, raising the
 	 * version once. A dropped variant an unexpired cart holds answers 409 VARIANT_IN_CART; lines of
@@ -125,12 +118,8 @@ public class AdminProductCommandService {
 		Product product = find(productId);
 		AdminProductEtags.expectVersion(product, ifMatch);
 		long received = product.getVersion();
-		PriceResolver.prepareBaseWrite(product, clock);
-		Promotion requested = input.getPromotion();
-		boolean newCampaign = requested != null && !Objects.equals(
-				requested.getStartsAt(), product.getPromotionStartsAt());
 
-		List<FieldError> invalid = adminProductValidator.validate(input, product);
+		List<FieldError> invalid = adminProductValidator.validate(input);
 		if (!invalid.isEmpty()) {
 			throw bodyViolations(invalid);
 		}
@@ -166,8 +155,6 @@ public class AdminProductCommandService {
 			dropVariants(product, dropped);
 			adminProductRepository.flush();
 			applyReplace(product, input, images);
-			PriceResolver.refreshScheduledReference(product, clock, newCampaign);
-			validateResolvedSales(product, input);
 			product.setUpdatedAt(now);
 			adminProductRepository.saveAndFlush(product);
 		}
@@ -217,7 +204,6 @@ public class AdminProductCommandService {
 		product.setRank(input.getRank());
 		product.setPopularityScore(input.getPopularityScore());
 		product.setFeatured(Boolean.TRUE.equals(input.getFeatured()));
-		applyPromotion(product, input.getPromotion());
 
 		Map<String, ProductColor> currentColors = new HashMap<>();
 		for (ProductColor c : product.getColors()) {
@@ -260,7 +246,6 @@ public class AdminProductCommandService {
 					variant.setSlug(v.getSlug());
 					variant.setPriceHuf(v.getPrice().getAmount());
 					variant.setStock(v.getStock());
-					applySalePrice(variant, v);
 				}
 				else {
 					variant = new ProductVariant();
@@ -271,7 +256,6 @@ public class AdminProductCommandService {
 					variant.setStorageGb(storageGb);
 					variant.setPriceHuf(v.getPrice().getAmount());
 					variant.setStock(v.getStock());
-					applySalePrice(variant, v);
 					product.getVariants().add(variant);
 				}
 			}
@@ -356,7 +340,6 @@ public class AdminProductCommandService {
 		product.setRank(input.getRank());
 		product.setPopularityScore(input.getPopularityScore());
 		product.setFeatured(Boolean.TRUE.equals(input.getFeatured()));
-		applyPromotion(product, input.getPromotion());
 
 		addHighlights(product, input.getHighlights());
 
@@ -395,7 +378,6 @@ public class AdminProductCommandService {
 				variant.setStorageGb(v.getStorageGb().getValue());
 				variant.setPriceHuf(v.getPrice().getAmount());
 				variant.setStock(v.getStock());
-				applySalePrice(variant, v);
 				product.getVariants().add(variant);
 			}
 		}
@@ -484,46 +466,6 @@ public class AdminProductCommandService {
 		CatalogImage image = input.getImageId() == null ? null : images.get(input.getImageId());
 		color.setImage(image);
 		color.setPosition(position);
-	}
-
-
-	private static void validateResolvedSales(Product product, AdminProductInput input) {
-		Map<String, ProductVariant> variantsByKey = new HashMap<>();
-		for (ProductVariant variant : product.getVariants()) {
-			variantsByKey.put(variant.getColor().getCode() + "--" + variant.getStorageGb(), variant);
-		}
-		List<FieldError> errors = new ArrayList<>();
-		for (int index = 0; index < input.getVariants().size(); index++) {
-			AdminProductVariantInput requested = input.getVariants().get(index);
-			ProductVariant variant = variantsByKey.get(requested.getColorCode() + "--" + requested.getStorageGb().getValue());
-			Long sale = variant.getSalePriceHuf();
-			Long reference = variant.getPromotionReferencePriceHuf();
-			if (sale != null && reference != null && sale >= reference) {
-				errors.add(new FieldError("/variants/" + index + "/salePriceHuf", "SALE_PRICE_NOT_LOWER"));
-			}
-		}
-		if (!errors.isEmpty()) {
-			throw bodyViolations(errors);
-		}
-	}
-
-	private static void applyPromotion(Product product, Promotion promotion) {
-		if (promotion == null) {
-			return;
-		}
-		product.setPromotionEnabled(promotion.getEnabled());
-		product.setPromotionText(strip(promotion.getText()));
-		product.setPromotionStartsAt(promotion.getStartsAt());
-		product.setPromotionEndsAt(promotion.getEndsAt());
-	}
-
-	private static void applySalePrice(ProductVariant variant, AdminProductVariantInput input) {
-		if (Boolean.TRUE.equals(input.getClearSalePrice())) {
-			variant.setSalePriceHuf(null);
-		}
-		else if (input.getSalePriceHuf() != null) {
-			variant.setSalePriceHuf(input.getSalePriceHuf().longValue());
-		}
 	}
 
 	private static String strip(String value) {

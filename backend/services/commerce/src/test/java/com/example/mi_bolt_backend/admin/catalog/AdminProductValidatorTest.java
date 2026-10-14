@@ -3,8 +3,6 @@ package com.example.mi_bolt_backend.admin.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +16,6 @@ import com.example.mi_bolt_backend.api.model.AdminSpecRow;
 import com.example.mi_bolt_backend.api.model.FieldError;
 import com.example.mi_bolt_backend.api.model.Money;
 import com.example.mi_bolt_backend.api.model.StorageGb;
-import com.example.mi_bolt_backend.api.model.Promotion;
 
 /**
  * Unit tests for {@link AdminProductValidator}, the cross-field rules a single
@@ -28,44 +25,6 @@ import com.example.mi_bolt_backend.api.model.Promotion;
 class AdminProductValidatorTest {
 
 	private final AdminProductValidator validator = new AdminProductValidator();
-
-
-	@Test
-	void enabledPromotionRequiresTextTimesAndSalePrice() {
-		AdminProductInput input = validInput();
-		input.setPromotion(new Promotion(true));
-		assertThat(validator.validate(input)).containsExactly(
-				new FieldError("/promotion/text", "NOTBLANK"),
-				new FieldError("/promotion/startsAt", "PROMOTION_TIME_REQUIRED"),
-				new FieldError("/promotion/endsAt", "PROMOTION_TIME_REQUIRED"),
-				new FieldError("/variants", "PROMOTION_SALE_PRICE_REQUIRED"));
-	}
-
-	@Test
-	void promotionUsesStrictInstantOrderAndPositiveWholeForints() {
-		AdminProductInput input = validInput();
-		OffsetDateTime start = OffsetDateTime.parse("2026-10-10T12:00:00Z");
-		input.setPromotion(new Promotion(true).text("Offer").startsAt(start).endsAt(start.plusSeconds(1)));
-		input.getVariants().get(0).setSalePriceHuf(1);
-		assertThat(validator.validate(input)).isEmpty();
-		input.getPromotion().setEndsAt(start.withOffsetSameInstant(ZoneOffset.ofHours(2)));
-		assertThat(validator.validate(input)).containsExactly(new FieldError("/promotion/endsAt", "PROMOTION_TIME_RANGE"));
-		input.getPromotion().setEndsAt(start.minusSeconds(1));
-		assertThat(validator.validate(input)).containsExactly(new FieldError("/promotion/endsAt", "PROMOTION_TIME_RANGE"));
-		input.setPromotion(new Promotion(false));
-		input.getVariants().get(0).setSalePriceHuf(0);
-		assertThat(validator.validate(input)).containsExactly(new FieldError("/variants/0/salePriceHuf", "MIN"));
-		input.getVariants().get(0).setSalePriceHuf(-1);
-		assertThat(validator.validate(input)).containsExactly(new FieldError("/variants/0/salePriceHuf", "MIN"));
-	}
-
-	@Test
-	void salePriceAndClearFlagCannotBeCombined() {
-		AdminProductInput input = validInput();
-		input.getVariants().get(0).setSalePriceHuf(1);
-		input.getVariants().get(0).setClearSalePrice(true);
-		assertThat(validator.validate(input)).containsExactly(new FieldError("/variants/0/clearSalePrice", "SALE_PRICE_CONFLICT"));
-	}
 
 	@Test
 	void validInputProducesNoErrors() {

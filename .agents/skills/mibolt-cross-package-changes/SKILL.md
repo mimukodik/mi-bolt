@@ -75,9 +75,9 @@ skill.
 ## How the shared artefacts connect
 
 - **The contract is the source of truth.** `contracts/commerce/openapi.yaml`
-  is the OpenAPI document, whose `openapi` and `info.version` keys carry its versions, with twelve tags
-  (`contracts/commerce/openapi.yaml`, "- name: Catalog") and 37 operations, 20 for the shop
-  and 17 for the admin. Where a document and the spec disagree the spec wins,
+  is the OpenAPI document, whose `openapi` and `info.version` keys carry its versions, with eleven tags
+  (`contracts/commerce/openapi.yaml`, "- name: Catalog") and 34 operations, 19 for the shop
+  and 15 for the admin. Where a document and the spec disagree the spec wins,
   and neither side may add an endpoint, field or status code the spec lacks
   (`contracts/commerce/kommunikacio.md`, "Source of truth").
 - **`contracts/commerce/kommunikacio.md` carries what the spec cannot:**
@@ -88,8 +88,8 @@ skill.
 
   | Output | Generator and configuration | Committed | Used by |
   |---|---|---|---|
-  | shop SDK, `frontend/projects/shop-api/src/generated/` | ng-openapi-gen, `frontend/ng-openapi-gen.json`: every tag but the five admin ones | yes | storefront, demo-payment and shop-mocks, through `@mi-bolt/api/*` (`frontend/tsconfig.json`, "@mi-bolt/api/*") |
-  | admin client, `frontend/projects/admin/src/app/api/generated/` | ng-openapi-gen, `frontend/ng-openapi-gen.admin.json`: the five admin tags only | yes | the admin app only, by relative import |
+  | shop SDK, `frontend/projects/shop-api/src/generated/` | ng-openapi-gen, `frontend/ng-openapi-gen.json`: every tag but the four admin ones | yes | storefront, demo-payment and shop-mocks, through `@mi-bolt/api/*` (`frontend/tsconfig.json`, "@mi-bolt/api/*") |
+  | admin client, `frontend/projects/admin/src/app/api/generated/` | ng-openapi-gen, `frontend/ng-openapi-gen.admin.json`: the four admin tags only | yes | the admin app only, by relative import |
   | backend interfaces and models, in the Gradle build directory | OpenAPI Generator `spring` (`backend/services/commerce/build.gradle`, "generatorName = 'spring'"), fed the copy `prepareOpenApiSpec` derives (`backend/services/commerce/build.gradle`, "tasks.register('prepareOpenApiSpec')") | no: ignored, regenerated before every compile | one controller per tag implements its `<Tag>Api` |
 
 - **If-Match** is left out of both frontend clients' signatures. The
@@ -342,7 +342,7 @@ One line each; the source named owns the rule.
 | regenerating, or staging the regenerated clients | `api:drift`: it regenerates, then runs `git diff --exit-code` and an untracked-file test over both client directories (`frontend/package.json`, "npm run api:generate && git diff --exit-code") | the `api-drift` CI job (`.github/workflows/frontend.yml`, "API client drift"), `mise run api:drift`, `mise run verify` (`mise.toml`, "[tasks.verify]") |
 | leaving a generated file as hand-edited | the same `api:drift`, since regeneration overwrites the edit | as above |
 | updating a spec example or a sample the change invalidated | examples on a shop operation: `frontend/tests/contract/schema.spec.ts` ("every media-type example on responses and requestBodies validates against its own schema"); samples: `contracts/check-samples.sh` | `npm --prefix frontend run test:contract`; `mise run contracts:check` and the Contracts CI workflow (`.github/workflows/contracts.yml`, "OpenAPI lint, samples, sequences") |
-| moving the operation counts, 17 admin and 20 shop | `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage"), and for an admin operation `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"); for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts`, "REQUIRED_OPERATION_COUNT") and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "const EXPECTED_OPERATION_IDS = [") | `npm --prefix frontend run test:contract` |
+| moving the operation counts, 15 admin and 19 shop | `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage"), and for an admin operation `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"); for a shop operation also `REQUIRED_OPERATION_COUNT` (`frontend/tests/contract/response-validation.ts`, "REQUIRED_OPERATION_COUNT") and `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "const EXPECTED_OPERATION_IDS = [") | `npm --prefix frontend run test:contract` |
 | a shop-mocks handler for a new shop operation | `operation-matrix` parity, "MSW handlers missing for" (`frontend/tests/contract/operation-matrix.spec.ts`, "registers a business handler for every operationId") | `npm --prefix frontend run test:contract` |
 | updating the replacement for an edited discriminator block | `prepareOpenApiSpec`'s exactly-once guard (`backend/services/commerce/build.gradle`, "expected the ${r.name} block to appear exactly") | every backend compile |
 | matching the `ErrorCode` and `ProblemCode` names | `ErrorCodeTest`, which pins the two enums to the same names in both directions and pins the number of `ErrorCode` constants, so a new code also means raising that count (`backend/services/commerce/src/test/java/com/example/mi_bolt_backend/problem/ErrorCodeTest.java`, "class ErrorCodeTest"); nothing fails at compile time, and at run time an `ErrorCode` with no `ProblemCode` would throw `IllegalArgumentException` in the strict `valueOf` (`backend/services/commerce/src/main/java/com/example/mi_bolt_backend/problem/ProblemAdvice.java`, "ProblemCode.valueOf(code.name())", https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Enum.html) | the backend unit tests, `backend/gradlew -p backend :services:commerce:test`, and every backend build |
@@ -405,7 +405,7 @@ decisions `backend/docs/decisions/0001-openapi-generator-and-discriminator-worka
 Update this skill and its references in the same change as any of these:
 
 - the tags in `contracts/commerce/openapi.yaml` ("- name: Catalog"), or the operation counts
-  (37, 20 and 17);
+  (34, 19 and 15);
 - `frontend/ng-openapi-gen.json` or `frontend/ng-openapi-gen.admin.json`;
 - the `api:*` and `fixtures:catalog*` scripts in `frontend/package.json` ("scripts"),
   or the root tasks behind `mise run api:generate`, `mise run api:drift` and

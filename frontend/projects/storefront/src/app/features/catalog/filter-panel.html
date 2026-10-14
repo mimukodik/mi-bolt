@@ -284,19 +284,6 @@
           </span>
         </button>
       </li>
-      <li>
-        <button
-          class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
-          data-testid="filter-activePromotion"
-          type="button"
-          [class.is-selected]="value().activePromotion === true"
-          [disabled]="disabled()"
-          (click)="togglePromotion()"
-        >
-          <span class="check">{{ value().activePromotion === true ? '✓' : '' }}</span>
-          <span class="option__label">Aktív halloweeni ajánlatok</span>
-        </button>
-      </li>
     </ul>
   </fieldset>
 </section>

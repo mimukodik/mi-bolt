@@ -1,4 +1,3 @@
-import { toUtcInput } from '../../../core/utc-timestamp';
 import type { AdminProduct } from '../../../api/generated/models/admin-product';
 import type { AdminProductInput } from '../../../api/generated/models/admin-product-input';
 import type { AdminProductVariantInput } from '../../../api/generated/models/admin-product-variant-input';
@@ -48,13 +47,6 @@ export function toFormModel(product: AdminProduct): ProductFormModel {
   const colorKeyByCode = new Map(colors.map((color) => [color.code, color.key] as const));
 
   return {
-    promotion: {
-      enabled: product.promotion?.enabled ?? false,
-      text: product.promotion?.text ?? '',
-      startsAt:
-        product.promotion?.startsAt === undefined ? '' : toUtcInput(product.promotion.startsAt),
-      endsAt: product.promotion?.endsAt === undefined ? '' : toUtcInput(product.promotion.endsAt),
-    },
     slug: product.slug,
     brand: product.brand,
     name: product.name,
@@ -73,10 +65,6 @@ export function toFormModel(product: AdminProduct): ProductFormModel {
       storageGb: variant.storageGb,
       price: variant.price.amount,
       stock: variant.stock,
-      salePriceHuf: variant.salePriceHuf ?? null,
-      ...(variant.referencePriceHuf === undefined
-        ? {}
-        : { referencePriceHuf: variant.referencePriceHuf }),
     })),
     specGroups: product.specGroups.map((group) => ({
       key: newKey(),
@@ -123,19 +111,10 @@ export function toProductInput(model: ProductFormModel): AdminProductInput {
       storageGb,
       price: { amount: price, currency: 'HUF' },
       stock,
-      ...(variant.salePriceHuf === null
-        ? { clearSalePrice: true }
-        : { salePriceHuf: variant.salePriceHuf }),
     };
   });
 
   return {
-    promotion: {
-      enabled: model.promotion.enabled,
-      text: model.promotion.text,
-      ...(model.promotion.startsAt === '' ? {} : { startsAt: `${model.promotion.startsAt}Z` }),
-      ...(model.promotion.endsAt === '' ? {} : { endsAt: `${model.promotion.endsAt}Z` }),
-    },
     slug: model.slug,
     brand: model.brand,
     name: model.name,

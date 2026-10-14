@@ -25,60 +25,6 @@ class CatalogValidatorTest {
 
 	private final CatalogValidator validator = new CatalogValidator();
 
-
-	@ParameterizedTest
-	@MethodSource("invalidPromotions")
-	void invalidPromotionIsRejected(PromotionDto promotion, String reason, @TempDir Path tmp) {
-		CatalogDto catalog = validCatalog();
-		ProductDto product = catalog.getProducts().get(0);
-		product.setPromotion(promotion);
-		product.getVariants().get(0).setSalePriceHuf(1L);
-		assertThatThrownBy(() -> validator.validate(catalog, tmp.resolve("images")))
-				.isInstanceOf(CatalogValidationException.class).hasMessageContaining(reason);
-	}
-
-	static Stream<Arguments> invalidPromotions() {
-		String start = "2026-10-10T00:00:00Z";
-		String end = "2026-10-11T00:00:00Z";
-		return Stream.of(
-				Arguments.of(new PromotionDto(null, null, null, null), "enabled is required"),
-				Arguments.of(new PromotionDto(false, "x".repeat(281), null, null), "280 chars"),
-				Arguments.of(new PromotionDto(false, null, "2026-10-10T00:00:00", null), "explicit offset"),
-				Arguments.of(new PromotionDto(false, null, start, "invalid"), "explicit offset"),
-				Arguments.of(new PromotionDto(false, null, "2026-10-10T00:00:00+01", null), "explicit offset"),
-				Arguments.of(new PromotionDto(false, null, "2026-02-30T00:00:00Z", null), "explicit offset"),
-				Arguments.of(new PromotionDto(false, null, start, "2026-10-10T02:00:00+02:00"), "before endsAt"),
-				Arguments.of(new PromotionDto(true, "Offer", end, start), "before endsAt"),
-				Arguments.of(new PromotionDto(true, null, start, end), "enabled requires text"),
-				Arguments.of(new PromotionDto(true, "  ", start, end), "enabled requires text"),
-				Arguments.of(new PromotionDto(true, "Offer", null, end), "enabled requires text"),
-				Arguments.of(new PromotionDto(true, "Offer", start, null), "enabled requires text"));
-	}
-
-	@Test
-	void enabledPromotionRequiresVariantSalePrice(@TempDir Path tmp) {
-		CatalogDto catalog = validCatalog();
-		catalog.getProducts().get(0).setPromotion(new PromotionDto(true, "Offer",
-				"2026-10-10T00:00:00Z", "2026-10-11T00:00:00Z"));
-		assertThatThrownBy(() -> validator.validate(catalog, tmp.resolve("images")))
-				.isInstanceOf(CatalogValidationException.class).hasMessageContaining("at least one variant salePriceHuf");
-	}
-
-	@ParameterizedTest
-	@MethodSource("salePriceBounds")
-	void salePriceBoundsAreChecked(long price, boolean valid, @TempDir Path tmp) {
-		CatalogDto catalog = validCatalog();
-		catalog.getProducts().get(0).getVariants().get(0).setSalePriceHuf(price);
-		String reason = valid ? "image file" : "salePriceHuf must be between";
-		assertThatThrownBy(() -> validator.validate(catalog, tmp.resolve("images")))
-				.isInstanceOf(CatalogValidationException.class).hasMessageContaining(reason);
-	}
-
-	static Stream<Arguments> salePriceBounds() {
-		return Stream.of(Arguments.of(-1L, false), Arguments.of(0L, false), Arguments.of(1L, true),
-				Arguments.of(100_000_000L, true), Arguments.of(100_000_001L, false));
-	}
-
 	@Test
 	void duplicateVariantSlugIsRejected(@TempDir Path tmp) throws IOException {
 		CatalogDto catalog = validCatalog();

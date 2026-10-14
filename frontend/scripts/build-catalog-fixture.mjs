@@ -62,22 +62,8 @@ function imageId(file) {
 function buildProducts(source) {
   const products = [];
   const ranking = [];
-  const promotions = [];
   source.forEach((p, index) => {
     const id = String(index + 1);
-    if (p.promotion !== undefined) {
-      promotions.push({
-        productId: id,
-        ...p.promotion,
-        variants: p.variants
-          .filter((variant) => variant.salePriceHuf !== undefined && variant.salePriceHuf !== null)
-          .map((variant) => ({
-            variantId: variant.id,
-            salePriceHuf: variant.salePriceHuf,
-            referencePriceHuf: variant.referencePriceHuf ?? variant.priceHuf,
-          })),
-      });
-    }
 
     // Map every colour once so the variants can pick colorName / swatchHex.
     const colourByCode = new Map();
@@ -151,7 +137,7 @@ function buildProducts(source) {
       colorOrder,
     });
   });
-  return { products, ranking, ...(promotions.length > 0 ? { promotions } : {}) };
+  return { products, ranking };
 }
 
 function main() {
@@ -165,7 +151,8 @@ function main() {
       `[build-catalog-fixture] expected array under 'products' in ${SOURCE_PATH}, got ${typeof source}`,
     );
   }
-  const output = `${JSON.stringify(buildProducts(source), null, 2)}\n`;
+  const { products, ranking } = buildProducts(source);
+  const output = `${JSON.stringify({ products, ranking }, null, 2)}\n`;
 
   if (check) {
     let committed;

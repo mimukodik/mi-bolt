@@ -6,14 +6,12 @@ import { Facets } from '../models/facets';
 export interface ProductPage {
   facets: Facets;
   items: Array<CatalogItem>;
-  nextPriceChangeAt?: string;
 
   /**
    * Echoes the requested page, even when it is beyond the last one.
    */
   page: number;
   pageSize: 12 | 24;
-  serverTime?: string;
 
   /**
    * Number of list entries, that is (product, storage) pairs.

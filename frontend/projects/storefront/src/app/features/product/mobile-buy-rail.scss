@@ -29,23 +29,11 @@
   }
 
   .rail-price {
-    flex: 1 1 auto;
-    min-width: 0;
+    flex: 0 0 auto;
   }
   .rail-cta {
     flex: 1 1 auto;
     display: flex;
     justify-content: flex-end;
-  }
-}
-
-@media (max-width: 599px) {
-  .rail-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .rail-cta {
-    flex: 0 0 auto;
   }
 }

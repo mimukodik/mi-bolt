@@ -24,8 +24,7 @@ import jakarta.servlet.http.Cookie;
  * Catalogue and media never see {@code Set-Cookie}; session paths still get
  * {@code mibolt_session} (and only that cookie); no Spring
  * {@code Cache-Control}, {@code X-Frame-Options}, {@code X-Content-Type-Options},
- * {@code Pragma} or {@code Expires} lands on any shop response; cart responses
- * deliberately use application-level {@code no-store}; cart writes
+ * {@code Pragma} or {@code Expires} lands on any shop response; cart writes
  * still work without a CSRF token; the media cache header is unchanged.
  */
 @IntegrationTest
@@ -83,7 +82,7 @@ class PublicChainUnchangedTest {
 				.andExpect(header().doesNotExist("X-Content-Type-Options"))
 				.andExpect(header().doesNotExist("Pragma"))
 				.andExpect(header().doesNotExist("Expires"))
-				.andExpect(header().string("Cache-Control", "no-store"));
+				.andExpect(header().string("Cache-Control", not(containsString("no-store"))));
 	}
 
 	@Test
@@ -100,7 +99,7 @@ class PublicChainUnchangedTest {
 				.andExpect(header().doesNotExist("X-Content-Type-Options"))
 				.andExpect(header().doesNotExist("Pragma"))
 				.andExpect(header().doesNotExist("Expires"))
-				.andExpect(header().string("Cache-Control", "no-store"))
+				.andExpect(header().string("Cache-Control", not(containsString("no-store"))))
 				.andExpect(jsonPath("$.items[0].variantId").value("samsung-galaxy-s25--navy--128"))
 				.andExpect(validAgainstContract());
 	}

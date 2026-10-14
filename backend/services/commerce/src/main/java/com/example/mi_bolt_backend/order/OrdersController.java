@@ -97,16 +97,13 @@ public class OrdersController implements OrdersApi {
 		String paymentIntentId;
 		String termsVersion;
 		boolean acceptedTerms;
-		String acceptedPriceRevision;
 		if (body instanceof CardOrderRequest card) {
 			paymentIntentId = card.getPaymentIntentId();
-			acceptedPriceRevision = card.getAcceptedPriceRevision();
 			termsVersion = card.getTermsVersion();
 			acceptedTerms = card.getAcceptedTerms();
 		}
 		else if (body instanceof CashOnDeliveryOrderRequest cod) {
 			paymentIntentId = null;
-			acceptedPriceRevision = cod.getAcceptedPriceRevision();
 			termsVersion = cod.getTermsVersion();
 			acceptedTerms = cod.getAcceptedTerms();
 		}
@@ -114,7 +111,7 @@ public class OrdersController implements OrdersApi {
 			throw new DomainException(ErrorCode.INVALID_REQUEST, "unknown payment method");
 		}
 		OrderData.Receipt receipt = orderService.place(session, ifMatch,
-				body.getPaymentMethod(), paymentIntentId, termsVersion, acceptedTerms, acceptedPriceRevision);
+				body.getPaymentMethod(), paymentIntentId, termsVersion, acceptedTerms);
 		OrderReceipt mapped = OrderModels.toOrderReceipt(receipt);
 		String location = request.getContextPath() + PATH + "/" + receipt.id();
 		idempotency.store(session, METHOD, PATH, idempotencyKey, fingerprint,

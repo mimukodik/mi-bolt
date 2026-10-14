@@ -43,7 +43,7 @@ no consumer, and an error code is searched with the `enum` kind.
 ## 2. Contract-side edits every change shares
 
 - `contracts/commerce/openapi.yaml`: the change itself. Every operation
-  carries one of the twelve tags declared at
+  carries one of the eleven tags declared at
   `contracts/commerce/openapi.yaml` ("- name: Catalog"); the tag decides which frontend
   client gets it and which backend interface, `<Tag>Api`, must implement it
   (the codegen reference, sections 1 and 4).
@@ -103,7 +103,7 @@ no consumer, and an error code is searched with the `enum` kind.
      `frontend/tests/contract/operation-matrix.spec.ts` ("spec drift check") and
      `frontend/tests/contract/shop-bad-request.spec.ts` ("it('every shop operation declares 400'");
    - `EXPECTED_OPERATION_IDS` (`frontend/tests/contract/schema.spec.ts`, "const EXPECTED_OPERATION_IDS = [");
-   - the "20 others" count in `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage");
+   - the "19 others" count in `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage");
    - the round trip in `frontend/tests/contract/sdk-transport.spec.ts` ("T04-AC04 every generated operation reaches MSW"),
      which needs a handler in that file's own list (`frontend/tests/contract/sdk-transport.spec.ts`, "const handlers = [") and a
      `callOperation` call, or it reports the operation "not exercised by the
@@ -115,7 +115,7 @@ no consumer, and an error code is searched with the `enum` kind.
      sets at `frontend/tests/contract/schema.spec.ts` ("cart-version-monotonic: every mutating cart operation requires If-Match") and
      `frontend/tests/contract/schema.spec.ts` ("idempotency-key-required-on-mutations").
 
-   The count 20 also sits in test titles and header comments across
+   The count 19 also sits in test titles and header comments across
    `frontend/tests/contract/` and in `frontend/tests/contract/admin-tags.ts` ("shop operations");
    keep them true.
 4. **shop-mocks handler**: `mibolt-shop-frontend`. Skipped: see `SKILL.md`,
@@ -128,7 +128,7 @@ no consumer, and an error code is searched with the `enum` kind.
 ## 5. A new admin operation
 
 1. **Contract.** A path under `/admin` and exactly one of `AdminAuth`,
-   `AdminUsers`, `AdminProducts`, `AdminMedia`, `AdminCampaignSettings`; a wrong path or tag fails
+   `AdminUsers`, `AdminProducts`, `AdminMedia`; a wrong path or tag fails
    `frontend/tests/contract/sdk-split.spec.ts` ("every /admin/ operation carries exactly one admin tag") or `frontend/tests/contract/sdk-split.spec.ts` ("every operation carrying an ADMIN_TAGS tag sits under /admin/"). Product updates take
    the `ProductIfMatch` parameter (`contracts/commerce/openapi.yaml`, "ProductIfMatch:"):
    replace, archive and restore (`contracts/commerce/openapi.yaml`, "operationId: replaceAdminProduct",
@@ -138,7 +138,7 @@ no consumer, and an error code is searched with the `enum` kind.
    `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module") reports the admin
    functions module missing it, besides what `SKILL.md`, "What fails when a step
    is skipped", lists.
-3. **Counts.** 17 admin operations are pinned at
+3. **Counts.** 15 admin operations are pinned at
    `frontend/tests/contract/sdk-split.spec.ts` ("sdk-split: tag lists and admin coverage") and
    `frontend/tests/contract/sdk-split.spec.ts` ("every admin operationId is exported by the admin functions module"), and stated in
    `frontend/tests/contract/admin-tags.ts` ("shared list of admin-tagged operations").
@@ -277,7 +277,7 @@ spec.
 2. Apps import each module by file through `@mi-bolt/core-api/*`
    (`frontend/tsconfig.json`, "@mi-bolt/core-api/*"), for example `@mi-bolt/core-api/api-root`,
    and opt in explicitly: the storefront registers `demoSessionInterceptor`
-   at `frontend/projects/storefront/src/app/app.config.ts` ("withInterceptors([demoSessionInterceptor, priceCacheInterceptor, demoAccessInterceptor])"), demo-payment at
+   at `frontend/projects/storefront/src/app/app.config.ts` ("withInterceptors([demoSessionInterceptor, demoAccessInterceptor])"), demo-payment at
    `frontend/projects/demo-payment/src/app/app.config.ts` ("withInterceptors([demoSessionInterceptor])"). The admin takes
    only `resolveApiRoot` and `dismissSplash`, keeps its own interceptors
    (`frontend/projects/admin/src/app/app.config.ts`, "withInterceptors([ifMatchInterceptor"), and gets a new

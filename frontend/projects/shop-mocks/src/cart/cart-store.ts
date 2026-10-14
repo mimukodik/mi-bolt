@@ -23,7 +23,6 @@
 import type { Cart, CartItem, CartNotice, Problem, ProblemCode } from '@mi-bolt/api/models';
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { VariantLookup } from '../catalog/catalog-store';
-import { hashPayload } from '../idempotency';
 import type { PersistedCart } from '../persistence';
 
 export const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -32,7 +31,6 @@ export const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 interface StoredLine {
   variantId: string;
   quantity: number;
-  acceptedUnitPrice?: number;
 }
 
 /** The session-keyed cart, with the bare fields the contract carries. */
@@ -42,9 +40,6 @@ interface StoredCart {
   createdAt: string;
   expiresAt: string;
   lines: StoredLine[];
-  priceAcceptanceRequired?: boolean;
-  priceRevision?: string;
-  priceFingerprint?: string;
 }
 
 export type CartOutcome = { ok: true; cart: Cart } | { ok: false; problem: Problem };
@@ -133,7 +128,7 @@ export class CartStore {
     if (existing !== undefined) {
       existing.quantity = merged;
     } else {
-      cart.cart.lines.push({ variantId, quantity, acceptedUnitPrice: hit.variant.price.amount });
+      cart.cart.lines.push({ variantId, quantity });
     }
     return this.bumpAndView(sessionId);
   }
@@ -227,10 +222,7 @@ export class CartStore {
       version: persisted.version,
       createdAt: persisted.createdAt,
       expiresAt: persisted.expiresAt,
-      lines: persisted.items.map((i) => ({ ...i })),
-      priceAcceptanceRequired: persisted.priceAcceptanceRequired,
-      priceRevision: persisted.priceRevision,
-      priceFingerprint: persisted.priceFingerprint,
+      lines: persisted.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
     });
   }
 
@@ -249,10 +241,7 @@ export class CartStore {
       version: cart.version,
       createdAt: cart.createdAt,
       expiresAt: cart.expiresAt,
-      items: cart.lines.map((l) => ({ ...l })),
-      priceAcceptanceRequired: cart.priceAcceptanceRequired,
-      priceRevision: cart.priceRevision,
-      priceFingerprint: cart.priceFingerprint,
+      items: cart.lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
     };
   }
 
@@ -391,23 +380,8 @@ export class CartStore {
         line.quantity = cap;
         changed = true;
       }
-      line.acceptedUnitPrice ??= hit.variant.price.amount;
-      if (line.acceptedUnitPrice !== hit.variant.price.amount) cart.priceAcceptanceRequired = true;
       kept.push(toCartItem(hit, line.quantity));
       nextLines.push(line);
-    }
-    const fingerprint = hashPayload(
-      kept.map((item) => ({
-        id: item.variantId,
-        quantity: item.quantity,
-        price: item.unitPrice.amount,
-      })),
-    );
-    if (cart.priceFingerprint !== fingerprint) {
-      if (cart.priceFingerprint !== undefined && cart.priceAcceptanceRequired === true)
-        changed = true;
-      cart.priceFingerprint = fingerprint;
-      cart.priceRevision = this.options.ids.uuid();
     }
     if (changed) {
       cart.lines = nextLines;
@@ -431,42 +405,8 @@ export class CartStore {
       subtotal: { amount: subtotalAmount, currency: 'HUF' },
       expiresAt: cart.expiresAt,
       notices,
-      priceRevision: cart.priceRevision,
-      priceAcceptanceRequired: cart.priceAcceptanceRequired === true,
-      serverTime: this.options.clock.now(),
-      nextPriceChangeAt: kept
-        .map((item) => item.priceMetadata?.nextPriceChangeAt)
-        .filter((value): value is string => value !== undefined)
-        .sort()[0],
     };
     return { ok: true, cart: wire };
-  }
-
-  pricesMatch(sessionId: string, revision: string | undefined): boolean {
-    const result = this.get(sessionId);
-    return (
-      result.ok &&
-      (revision === undefined
-        ? result.cart.priceAcceptanceRequired !== true
-        : result.cart.priceRevision === revision)
-    );
-  }
-
-  acceptPrices(sessionId: string, revision: string | undefined): boolean {
-    const result = this.get(sessionId);
-    if (!result.ok) return false;
-    if (
-      revision === undefined
-        ? result.cart.priceAcceptanceRequired === true
-        : result.cart.priceRevision !== revision
-    )
-      return false;
-    const stored = this.carts.get(sessionId);
-    if (stored === undefined) return false;
-    for (const line of stored.lines)
-      line.acceptedUnitPrice = this.lookup(line.variantId)?.variant.price.amount;
-    stored.priceAcceptanceRequired = false;
-    return true;
   }
 
   /** Build a Problem body with a kebab `type` URI matching the contract. */
@@ -507,7 +447,6 @@ function toCartItem(hit: VariantLookup, quantity: number): CartItem {
     image: firstImage,
     quantity,
     unitPrice: hit.variant.price,
-    priceMetadata: hit.variant.priceMetadata,
     lineTotal: {
       amount: hit.variant.price.amount * quantity,
       currency: 'HUF',

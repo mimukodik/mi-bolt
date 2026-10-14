@@ -5,16 +5,7 @@
   tabindex="-1"
   (keydown)="onKeydown($event)"
 >
-  <div
-    aria-label="Termékképek"
-    class="frame"
-    data-testid="gallery-main"
-    tabindex="0"
-    [class.halloween-sale-gallery]="promotional()"
-  >
-    @if (promotional()) {
-      <app-halloween-product-art />
-    }
+  <div aria-label="Termékképek" class="frame" data-testid="gallery-main" tabindex="0">
     @if (hasSeveral()) {
       <button
         aria-label="Előző kép"

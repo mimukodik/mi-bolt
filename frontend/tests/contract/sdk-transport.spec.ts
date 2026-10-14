@@ -2,7 +2,7 @@
 //
 // Every operation declared in contracts/commerce/openapi.yaml must reach MSW through the
 // generated SDK, which itself uses Angular's real HttpClient. The test asserts
-// (1) the 20 operations are present and each one round-trips with the
+// (1) the 19 operations are present and each one round-trips with the
 // documented URL, method, body and headers; (2) repeated brand[] and
 // storageGb[] query-array parameters are encoded with style=form,
 // explode=true (the spec-mandated encoding); (3) `If-Match` and
@@ -120,10 +120,6 @@ function capture(request: Request, bodyText: string): void {
  * implementation detail of the test bed.
  */
 const handlers = [
-  http.get(`${BASE_URL}/shop-appearance`, ({ request }) => {
-    capture(request, '');
-    return HttpResponse.json({ halloweenActive: false, serverTime: '2026-10-10T12:00:00Z' });
-  }),
   http.get(`${BASE_URL}/products`, ({ request }) => {
     capture(request, '');
     return HttpResponse.json(EMPTY_PRODUCT_PAGE);
@@ -367,12 +363,11 @@ function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfig } {
 // ---------------------------------------------------------------------------
 
 describe('T04-AC04 every generated operation reaches MSW', () => {
-  it('exercises all 20 operations end-to-end through the real HttpClient', async () => {
+  it('exercises all 19 operations end-to-end through the real HttpClient', async () => {
     const { api } = makeSdk();
     expect(TestBed.inject(ApiConfig).rootUrl).toBe(BASE_URL);
 
     // catalog (public; no If-Match) — contracts/commerce/openapi.yaml:54-244
-    await callOperation(api, 'getShopAppearance');
     await callOperation(api, 'listProducts');
     await callOperation(api, 'getProduct', { slug: 'demo-one-5g' });
     await callOperation(api, 'listRelatedProducts', { slug: 'demo-one-5g' });

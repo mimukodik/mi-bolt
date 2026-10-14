@@ -6,7 +6,6 @@
    token-to-theme mapping is docs/design/yettel.md §9. */
 
 @import 'tailwindcss';
-@import './styles/halloween.css';
 
 @theme {
   /* Colour — docs/design/yettel.md §2. */

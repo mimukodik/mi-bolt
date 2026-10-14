@@ -74,7 +74,7 @@ function outcomeResponse(
   etag: string | null,
 ): HttpResponse<DefaultBodyType> {
   if (outcome.ok) {
-    const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
+    const headers: Record<string, string> = {};
     if (etag !== null) headers['ETag'] = etag;
     return HttpResponse.json(outcome.session, { status: 200, headers });
   }
@@ -86,10 +86,7 @@ function optionsResponse(
   outcome: ReturnType<CheckoutStore['options']>,
 ): HttpResponse<DefaultBodyType> {
   if (outcome.ok) {
-    return HttpResponse.json(outcome.options, {
-      status: 200,
-      headers: { 'Cache-Control': 'no-store' },
-    });
+    return HttpResponse.json(outcome.options, { status: 200 });
   }
   return problemResponse(outcome);
 }

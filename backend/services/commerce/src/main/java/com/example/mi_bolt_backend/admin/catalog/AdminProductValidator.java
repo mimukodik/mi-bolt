@@ -14,9 +14,6 @@ import com.example.mi_bolt_backend.api.model.AdminSpecGroup;
 import com.example.mi_bolt_backend.api.model.AdminSpecRow;
 import com.example.mi_bolt_backend.api.model.FieldError;
 import com.example.mi_bolt_backend.api.model.StorageGb;
-import com.example.mi_bolt_backend.api.model.Promotion;
-import com.example.mi_bolt_backend.catalog.Product;
-import com.example.mi_bolt_backend.catalog.ProductVariant;
 import com.example.mi_bolt_backend.catalog.CatalogValidator;
 
 /**
@@ -51,10 +48,6 @@ import com.example.mi_bolt_backend.catalog.CatalogValidator;
 public class AdminProductValidator {
 
 	public List<FieldError> validate(AdminProductInput input) {
-		return validate(input, null);
-	}
-
-	public List<FieldError> validate(AdminProductInput input, Product existing) {
 		List<FieldError> errors = new ArrayList<>();
 		if (input == null) {
 			return errors;
@@ -65,74 +58,7 @@ public class AdminProductValidator {
 		validateColors(input, errors);
 		validateVariants(input, errors);
 		validateSpecGroups(input, errors);
-		validatePromotion(input, existing, errors);
 		return errors;
-	}
-
-
-	private static void validatePromotion(AdminProductInput input, Product existing, List<FieldError> errors) {
-		Promotion promotion = input.getPromotion();
-		if (promotion == null && existing != null && existing.getPromotionEnabled() != null) {
-			promotion = new Promotion(existing.getPromotionEnabled())
-					.text(existing.getPromotionText()).startsAt(existing.getPromotionStartsAt())
-					.endsAt(existing.getPromotionEndsAt());
-		}
-		boolean hasSalePrice = false;
-		List<AdminProductVariantInput> variants = input.getVariants();
-		if (variants != null) {
-			for (int i = 0; i < variants.size(); i++) {
-				AdminProductVariantInput variant = variants.get(i);
-				if (variant == null) {
-					continue;
-				}
-				Integer sale = variant.getSalePriceHuf();
-				boolean clear = Boolean.TRUE.equals(variant.getClearSalePrice());
-				if (clear && sale != null) {
-					errors.add(new FieldError("/variants/" + i + "/clearSalePrice", "SALE_PRICE_CONFLICT"));
-				}
-				if (sale != null && sale < 1) {
-					errors.add(new FieldError("/variants/" + i + "/salePriceHuf", "MIN"));
-				}
-				if (!clear && (sale != null && sale > 0 || storedSalePrice(existing, variant))) {
-					hasSalePrice = true;
-				}
-			}
-		}
-		if (promotion == null) {
-			return;
-		}
-		if (promotion.getStartsAt() != null && promotion.getEndsAt() != null
-				&& !promotion.getStartsAt().isBefore(promotion.getEndsAt())) {
-			errors.add(new FieldError("/promotion/endsAt", "PROMOTION_TIME_RANGE"));
-		}
-		if (Boolean.TRUE.equals(promotion.getEnabled())) {
-			if (promotion.getText() == null || promotion.getText().isBlank()) {
-				errors.add(new FieldError("/promotion/text", "NOTBLANK"));
-			}
-			if (promotion.getStartsAt() == null) {
-				errors.add(new FieldError("/promotion/startsAt", "PROMOTION_TIME_REQUIRED"));
-			}
-			if (promotion.getEndsAt() == null) {
-				errors.add(new FieldError("/promotion/endsAt", "PROMOTION_TIME_REQUIRED"));
-			}
-			if (!hasSalePrice) {
-				errors.add(new FieldError("/variants", "PROMOTION_SALE_PRICE_REQUIRED"));
-			}
-		}
-	}
-
-	private static boolean storedSalePrice(Product existing, AdminProductVariantInput input) {
-		if (existing == null || input.getSalePriceHuf() != null || input.getStorageGb() == null) {
-			return false;
-		}
-		for (ProductVariant variant : existing.getVariants()) {
-			if (variant.getColor().getCode().equals(input.getColorCode())
-					&& variant.getStorageGb().equals(input.getStorageGb().getValue())
-					&& variant.getSalePriceHuf() != null) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private static void addBlank(List<FieldError> errors, String path, String value) {

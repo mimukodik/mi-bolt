@@ -352,7 +352,6 @@ export class ReviewPage {
    *  only way to reach the CTA after a 409. */
   onPriceChangeConfirmed(): void {
     this.checkoutFacade.confirmPriceChange();
-    this.submitFailure.set(null);
   }
 
   /** 412: replay the write that conflicted, with the current version. */

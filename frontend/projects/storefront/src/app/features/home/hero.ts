@@ -1,5 +1,4 @@
 import { Component, input } from '@angular/core';
-import { HalloweenScenery } from '../../shared/halloween/halloween-scenery';
 import { RouterLink } from '@angular/router';
 
 /**
@@ -11,7 +10,7 @@ import { RouterLink } from '@angular/router';
  */
 @Component({
   selector: 'app-hero',
-  imports: [RouterLink, HalloweenScenery],
+  imports: [RouterLink],
   templateUrl: './hero.html',
   styleUrl: './hero.scss',
 })

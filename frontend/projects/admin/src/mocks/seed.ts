@@ -1,4 +1,3 @@
-import type { Promotion } from '../app/api/generated/models/promotion';
 import catalogSource from '../../../../../data/catalog/catalog.json';
 
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
@@ -105,20 +104,6 @@ function variant(value: unknown): AdminProductVariant {
     storageGb: storage(num(source, 'storageGb')),
     price: { amount: num(source, 'priceHuf'), currency: 'HUF' },
     stock: num(source, 'stock'),
-    ...(source['salePriceHuf'] === undefined || source['salePriceHuf'] === null
-      ? {}
-      : { salePriceHuf: num(source, 'salePriceHuf') }),
-  };
-}
-
-function promotion(value: unknown): Promotion | undefined {
-  if (value === undefined || value === null) return undefined;
-  const source = rec(value, 'promotion');
-  return {
-    enabled: flag(source, 'enabled'),
-    ...(source['text'] === undefined ? {} : { text: text(source, 'text') }),
-    ...(source['startsAt'] === undefined ? {} : { startsAt: text(source, 'startsAt') }),
-    ...(source['endsAt'] === undefined ? {} : { endsAt: text(source, 'endsAt') }),
   };
 }
 
@@ -155,7 +140,6 @@ export function seedCatalog(source: unknown = catalogSource): SeedCatalog {
       rank: num(product, 'rank'),
       popularityScore: num(product, 'popularityScore'),
       featured: flag(product, 'featured'),
-      promotion: promotion(product['promotion']),
       colors: list(product, 'colors').map((entry) => color(entry, images)),
       variants: list(product, 'variants').map(variant),
       specGroups: list(product, 'specGroups').map(specGroup),

@@ -4,7 +4,6 @@
 import { AdminProductColorInput } from '../models/admin-product-color-input';
 import { AdminProductVariantInput } from '../models/admin-product-variant-input';
 import { AdminSpecGroup } from '../models/admin-spec-group';
-import { Promotion } from '../models/promotion';
 export interface AdminProductInput {
   brand: string;
   colors: Array<AdminProductColorInput>;
@@ -18,7 +17,6 @@ export interface AdminProductInput {
   is5g: boolean;
   name: string;
   popularityScore: number;
-  promotion?: Promotion;
   rank: number;
   releasedAt: string;
 

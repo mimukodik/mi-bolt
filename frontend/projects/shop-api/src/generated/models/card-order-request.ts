@@ -4,11 +4,6 @@
 export interface CardOrderRequest {
 
   /**
-   * Explicit acceptance of the latest displayed server price revision. Rechecked before payment or order submission.
-   */
-  acceptedPriceRevision?: string;
-
-  /**
    * False is rejected with 422 and a field error on /acceptedTerms, so the user interface can highlight the checkbox.
    */
   acceptedTerms: boolean;

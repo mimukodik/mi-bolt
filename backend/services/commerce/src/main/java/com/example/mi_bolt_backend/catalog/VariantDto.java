@@ -11,7 +11,6 @@ public class VariantDto {
 	private String colorCode;
 	private Integer storageGb;
 	private long priceHuf;
-	private Long salePriceHuf;
 	private Integer stock;
 
 	public String getId() {
@@ -60,13 +59,5 @@ public class VariantDto {
 
 	public void setStock(Integer stock) {
 		this.stock = stock;
-	}
-
-	public Long getSalePriceHuf() {
-		return salePriceHuf;
-	}
-
-	public void setSalePriceHuf(Long salePriceHuf) {
-		this.salePriceHuf = salePriceHuf;
 	}
 }

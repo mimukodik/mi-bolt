@@ -112,8 +112,8 @@ compile time as well.
   exception: a copy of `data/catalog/images/` that belongs to
   `mibolt-cross-package-changes`.
 
-**State.** Seven root services hold it: `CatalogFacade`, `ProductFacade`,
-`CartFacade`, `CheckoutFacade`, `OrderSubmission`, `DemoAccess` and `ShopAppearanceFacade`, each a
+**State.** Six root services hold it: `CatalogFacade`, `ProductFacade`,
+`CartFacade`, `CheckoutFacade`, `OrderSubmission` and `DemoAccess`, each a
 `@Service()` class taking its dependencies through `inject()`, the form
 `mibolt-frontend-code-standards` ("Angular") gives a new singleton. A facade
 keeps `private readonly xWritable = signal(...)` and exposes
@@ -501,12 +501,3 @@ of the `mibolt-verification`, `mibolt-frontend-code-standards` or
 occurs nowhere in the file or skill cited. It cannot tell whether a part that
 kept its name still says what this skill uses it for, so re-read each part
 this skill or its references cite from the edited file.
-
-## Independent Halloween appearance
-
-`frontend/projects/storefront/src/app/shared/shell/shop-appearance.facade.ts` reads
-`getShopAppearance` and drives every `AppShell` from the server decoration window.
-Server-relative start/end timers, visibility/pageshow and a maximum 30-second poll
-refresh open tabs; request failures hide stale decoration and retry. Product prices
-and the active-offer strip retain their own independent server schedule.
-`/primitives/halloween` explicitly forces the theme for preview only.

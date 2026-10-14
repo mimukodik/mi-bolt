@@ -74,7 +74,7 @@ API answers on port 8080 under `/api/v1` (`backend/README.md`, "The service answ
 |---|---|
 | `admin` | `catalog`: admin product reads and writes, media upload; `security`: the two filter chains, CSRF, the live-admin check; `user`: sign-in, admin users, first-admin bootstrap, password policy |
 | `cart` | the cart and its lines, reconciliation, the shared version check |
-| `catalog` | the catalogue read model, facets and sort, media serving, the startup loader and independent Halloween decoration settings |
+| `catalog` | the catalogue read model, facets and sort, media serving, the startup loader |
 | `checkout` | the draft, delivery and payment options, fees, the summary |
 | `demo` | the demo gate: filter, sign-in, demo-user bootstrap |
 | `order` | orders, payment intents, idempotency records |
@@ -84,10 +84,10 @@ API answers on port 8080 under `/api/v1` (`backend/README.md`, "The service answ
 **Generated interfaces.** The `api` and `api.model` packages are generated
 from the contract into `build/generated/openapi/` inside
 `backend/services/commerce/` before every compile, wiped each run and never
-committed (`backend/services/commerce/build.gradle`, "openApiGenerate {"). Twelve
+committed (`backend/services/commerce/build.gradle`, "openApiGenerate {"). Eleven
 controllers each implement one generated `*Api` interface, one per contract
 tag (`useTags`, `backend/services/commerce/build.gradle`, "useTags"), and declare no route, method or status of their own
-(`backend/docs/02-backend.md`, "deklarál saját útvonalat"); a thirteenth, `ProblemErrorController`,
+(`backend/docs/02-backend.md`, "deklarál saját útvonalat"); a twelfth, `ProblemErrorController`,
 serves `/error`. `prepareOpenApiSpec` rewrites four single-value discriminator
 enums before generation and fails, naming the block, when the contract's text
 for one of them changes (`backend/services/commerce/build.gradle`, "tasks.register('prepareOpenApiSpec')",
@@ -165,14 +165,6 @@ no line there; its default is in the loader (see
 [references/data-and-migrations.md](references/data-and-migrations.md)).
 Name environment variables, never their values: several defaults are
 passwords.
-
-**Independent decoration settings.** `HalloweenAppearanceService` owns the
-Halloween singleton and its enabled start/end interval, independent of product
-promotions. The public demo-gated shop appearance response contains serverTime
-and the nearest future start/end boundary, with no-store cache control.
-Admin settings retain existing session/CSRF security, ETag/If-Match and atomic
-validation. The additive table starts disabled without dates. Source:
-`backend/docs/decisions/0025-independent-halloween-appearance.md` ("Decision").
 
 ## 3. Where to start
 
@@ -357,7 +349,7 @@ Owned by this skill:
 - Follow the changeset pattern in section 4; the script warns on a departure.
 - **Record every decision** a later reader would ask "why this way?" about,
   when it is made, not afterwards (`backend/docs/02-backend.md`, "8. A fejlesztés alatti döntések dokumentálása"):
-  - one numbered file under `backend/docs/decisions/`, the next being `0026`;
+  - one numbered file under `backend/docs/decisions/`, the next being `0024`;
   - the five sections §8 names, in the English form the records use:
     Situation, Options, Decision, Consequences, Date and status, as in
     `backend/docs/decisions/0002-liquibase-changelog-and-portable-constraints.md`
@@ -495,7 +487,7 @@ Update this skill in the same change when any of these moves:
 - a new domain package, or a class named here moving or being renamed;
 - a new changeset (the changeset count, and the next number stated in
   section 7 and in the references' output excerpts);
-- `ErrorCode` (the count of 27) or the handlers in `ProblemAdvice`;
+- `ErrorCode` (the count of 26) or the handlers in `ProblemAdvice`;
 - the three filters or `AdminSecurityConfig`;
 - `backend/services/commerce/scripts/smoke.sh`;
 - the changelog layout, which makes the script exit 2 with `layout changed`.

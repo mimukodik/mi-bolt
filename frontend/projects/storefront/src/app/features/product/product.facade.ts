@@ -42,7 +42,6 @@ import {
   tap,
 } from 'rxjs';
 
-import { PriceRefresh } from '../../shared/utils/price-refresh';
 import { Api } from '@mi-bolt/api/api';
 import { getProduct } from '@mi-bolt/api/fn/catalog/get-product';
 import { listRelatedProducts } from '@mi-bolt/api/fn/catalog/list-related-products';
@@ -119,10 +118,6 @@ export function isProductNotFound(err: unknown): boolean {
 export class ProductFacade {
   private readonly api = inject(Api);
   private readonly destroyRef = inject(DestroyRef);
-
-  private readonly priceRefresh = new PriceRefresh(this.destroyRef, () => {
-    this.refreshProduct();
-  });
 
   private readonly routeChange$ = new Subject<{
     kind: 'load' | 'retry';
@@ -322,7 +317,6 @@ export class ProductFacade {
           return;
         }
         this.productSignal.set(product);
-        this.priceRefresh.schedule(product.serverTime, product.nextPriceChangeAt);
       });
   }
 
@@ -426,7 +420,6 @@ export class ProductFacade {
       return;
     }
     this.productSignal.set(product);
-    this.priceRefresh.schedule(product.serverTime, product.nextPriceChangeAt);
     this.statusSignal.set('success');
     this.selectedColorCodeSignal.set(initial.variant.colorCode);
     this.selectedStorageGbSignal.set(initial.variant.storageGb);

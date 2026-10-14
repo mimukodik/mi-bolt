@@ -23,14 +23,12 @@ import type {
   StorageGb,
   Variant,
 } from '@mi-bolt/api/models';
-import { resolvePromotion, type MockPromotion } from './promotion-pricing';
 import { isRecord } from '../is-record';
 
 /** Fixture shape produced by `scripts/build-catalog-fixture.mjs`. */
 export interface CatalogFixture {
   products: readonly Product[];
   ranking: readonly ProductRanking[];
-  promotions?: readonly MockPromotion[];
 }
 
 /** Per-product fields the store carries alongside the `Product`. */
@@ -124,8 +122,6 @@ function colorOptionFor(
     variantSlug: v.slug,
     price: v.price,
     availability: v.availability,
-    priceMetadata: v.priceMetadata,
-    image: v.images[0],
   };
 }
 
@@ -243,7 +239,7 @@ export function load(fixture: CatalogFixture): CatalogStore {
     }
   }
 
-  return new CatalogStore(productsBySlug, rankingBySlug, entries, fixture.promotions ?? []);
+  return new CatalogStore(productsBySlug, rankingBySlug, entries);
 }
 
 function numericId(id: string): number {
@@ -265,7 +261,6 @@ export class CatalogStore {
     productsBySlug: Map<string, Product>,
     rankingBySlug: Map<string, ProductRanking>,
     entries: readonly CatalogEntry[],
-    private readonly promotions: readonly MockPromotion[] = [],
   ) {
     this.productsBySlug = productsBySlug;
     this.rankingBySlug = rankingBySlug;
@@ -274,15 +269,8 @@ export class CatalogStore {
   }
 
   /** Look up a product by slug. */
-  getProduct(slug: string, now = new Date().toISOString()): Product | undefined {
-    const product = this.productsBySlug.get(slug);
-    return product === undefined
-      ? undefined
-      : resolvePromotion(
-          product,
-          this.promotions.find((p) => p.productId === product.id),
-          now,
-        );
+  getProduct(slug: string): Product | undefined {
+    return this.productsBySlug.get(slug);
   }
 
   /** Look up a product's ranking record by slug. */
@@ -291,12 +279,8 @@ export class CatalogStore {
   }
 
   /** Look up a variant by id and return the product it belongs to. */
-  getVariant(variantId: string, now = new Date().toISOString()): VariantLookup | undefined {
-    const hit = this.variantsById.get(variantId);
-    if (hit === undefined) return undefined;
-    const product = this.getProduct(hit.product.slug, now);
-    const variant = product?.variants.find((v) => v.id === variantId);
-    return product === undefined || variant === undefined ? undefined : { product, variant };
+  getVariant(variantId: string): VariantLookup | undefined {
+    return this.variantsById.get(variantId);
   }
 
   /** Every product, source order. */
@@ -305,16 +289,8 @@ export class CatalogStore {
   }
 
   /** Every `(product, storage)` entry, in the order the store iterates them. */
-  listEntries(now = new Date().toISOString()): readonly CatalogEntry[] {
-    return this.entries.map((entry) => {
-      const product = this.getProduct(entry.product.slug, now) ?? entry.product;
-      const variant = product.variants.find((v) => v.id === entry.variant.id) ?? entry.variant;
-      const colors = entry.ranking.colorOrder.flatMap((code) => {
-        const option = colorOptionFor(product.variants, code, entry.storageGb);
-        return option === null ? [] : [option];
-      });
-      return { ...entry, product, variant, colors };
-    });
+  listEntries(): readonly CatalogEntry[] {
+    return this.entries;
   }
 }
 
@@ -343,7 +319,6 @@ export function toCatalogItem(entry: CatalogEntry): CatalogItem {
     variantId: entry.variant.id,
     variantSlug: entry.variant.slug,
     price: entry.variant.price,
-    priceMetadata: entry.variant.priceMetadata,
     availability: entry.variant.availability,
     maxQuantity: entry.variant.maxQuantity,
     image,

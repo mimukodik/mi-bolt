@@ -21,7 +21,6 @@ import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
 import { withoutAdminOperations } from './admin-tags';
-import { isRecord } from '../../projects/shop-mocks/src/is-record';
 
 const SPEC_PATH = resolve(__dirname, '../../../contracts/commerce/openapi.yaml');
 const CATALOG_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog.json');
@@ -100,7 +99,6 @@ const EXPECTED_OPERATION_IDS = [
   'getOrder',
   'getPaymentIntent',
   'getProduct',
-  'getShopAppearance',
   'listProducts',
   'listRelatedProducts',
   'removeCartItem',
@@ -133,7 +131,7 @@ beforeAll(async () => {
 });
 
 describe('T03-AC01 operationIds', () => {
-  it('declares exactly the 20 shop operationIds of the 2.3.0 contract', () => {
+  it('declares exactly the 19 shop operationIds of the 2.2.0 contract', () => {
     const ids: string[] = [];
     for (const pathItem of Object.values(spec.paths)) {
       for (const op of Object.values(pathItem)) {
@@ -628,29 +626,5 @@ describe('package.json contract — api:generate is declared (T04 wiring)', () =
     ).toBe(false);
     expect(declaresApiGenerate({})).toBe(false);
     expect(declaresApiGenerate(undefined)).toBe(false);
-  });
-});
-
-describe('independent shop appearance contract', () => {
-  it('requires active state and a valid server instant, permits an absent boundary', () => {
-    const schema = dereferenced.components.schemas['ShopAppearance'];
-    if (!isRecord(schema)) throw new Error('Missing ShopAppearance schema');
-    const validate = ajv.compile(schema);
-    expect(validate({ halloweenActive: false, serverTime: '2026-10-10T12:00:00Z' })).toBe(true);
-    expect(
-      validate({ halloweenActive: true, serverTime: '2026-10-10T12:00:00Z', nextChangeAt: null }),
-    ).toBe(true);
-    expect(validate({ halloweenActive: false })).toBe(false);
-    expect(validate({ halloweenActive: false, serverTime: 'tomorrow' })).toBe(false);
-  });
-
-  it('requires enabled and version while disabled settings can omit or clear dates', () => {
-    const schema = dereferenced.components.schemas['HalloweenAppearance'];
-    if (!isRecord(schema)) throw new Error('Missing HalloweenAppearance schema');
-    const validate = ajv.compile(schema);
-    expect(validate({ enabled: false, version: 0 })).toBe(true);
-    expect(validate({ enabled: false, version: 0, startsAt: null, endsAt: null })).toBe(true);
-    expect(validate({ enabled: false })).toBe(false);
-    expect(validate({ enabled: false, version: -1 })).toBe(false);
   });
 });

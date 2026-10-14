@@ -12,7 +12,6 @@ import com.example.mi_bolt_backend.api.model.AdminProductVariant;
 import com.example.mi_bolt_backend.api.model.AdminSpecGroup;
 import com.example.mi_bolt_backend.api.model.AdminSpecRow;
 import com.example.mi_bolt_backend.api.model.Money;
-import com.example.mi_bolt_backend.api.model.Promotion;
 import com.example.mi_bolt_backend.api.model.StorageGb;
 import com.example.mi_bolt_backend.catalog.CatalogModels;
 import com.example.mi_bolt_backend.catalog.CatalogService;
@@ -90,20 +89,13 @@ final class AdminProductModels {
 
 		List<AdminProductVariant> variants = new ArrayList<>();
 		for (ProductVariant v : p.getVariants()) {
-			AdminProductVariant variant = new AdminProductVariant(
+			variants.add(new AdminProductVariant(
 					v.getId(),
 					v.getSlug(),
 					v.getColor().getCode(),
 					StorageGb.fromValue(v.getStorageGb()),
 					money((int) v.getPriceHuf()),
-					v.getStock());
-			if (v.getSalePriceHuf() != null) {
-				variant.setSalePriceHuf(Math.toIntExact(v.getSalePriceHuf()));
-			}
-			if (p.getPromotionStartsAt() != null && v.getPromotionReferencePriceHuf() != null) {
-				variant.setReferencePriceHuf(Math.toIntExact(v.getPromotionReferencePriceHuf()));
-			}
-			variants.add(variant);
+					v.getStock()));
 		}
 
 		List<AdminSpecGroup> specGroups = new ArrayList<>();
@@ -132,12 +124,6 @@ final class AdminProductModels {
 				colors,
 				variants,
 				specGroups);
-		if (p.getPromotionEnabled() != null) {
-			detail.setPromotion(new Promotion(p.getPromotionEnabled())
-					.text(p.getPromotionText())
-					.startsAt(p.getPromotionStartsAt())
-					.endsAt(p.getPromotionEndsAt()));
-		}
 		detail.setArchivedAt(p.getArchivedAt());
 		detail.setUpdatedAt(p.getUpdatedAt());
 		return detail;

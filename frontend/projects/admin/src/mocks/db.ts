@@ -1,5 +1,4 @@
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
-import type { HalloweenAppearance } from '../app/api/generated/models/halloween-appearance';
 import type { AdminUser } from '../app/api/generated/models/admin-user';
 import type { ScenarioName } from './scenario';
 import { SEED_ADMIN, SEED_ADMIN_PASSWORD, seedCatalog, type MockImage } from './seed';
@@ -23,7 +22,6 @@ export interface MockDb {
   /** Keyed by product id; `version`, `status` and `archivedAt` live on the product. */
   readonly products: Map<number, AdminProduct>;
   nextProductId: number;
-  appearance: HalloweenAppearance;
   /** Keyed by image id (the SHA-256 hex of the bytes for an upload). */
   readonly images: Map<string, MockImage>;
   readonly scenario: ScenarioName;
@@ -41,7 +39,6 @@ export function createDb(scenario: ScenarioName = 'default'): MockDb {
     xsrfToken: null,
     products,
     nextProductId: seed.products.length + 1,
-    appearance: { enabled: false, version: 0 },
     images: new Map(seed.images),
     scenario,
   };

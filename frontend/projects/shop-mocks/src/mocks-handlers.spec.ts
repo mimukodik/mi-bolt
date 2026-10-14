@@ -835,9 +835,7 @@ describe('CartStore seed / persist round-trip (MIM-212 Unit 1)', () => {
     const persisted = store.toPersistedCart('sess-rt');
     expect(persisted).toBeDefined();
     if (persisted === undefined) return;
-    expect(persisted.items).toEqual([
-      { variantId: 'demo-one-5g-graphite-256', quantity: 2, acceptedUnitPrice: 339990 },
-    ]);
+    expect(persisted.items).toEqual([{ variantId: 'demo-one-5g-graphite-256', quantity: 2 }]);
 
     // Second store, seeded from the first store's persisted snapshot.
     const store2 = new CartStore(options, lookup);
