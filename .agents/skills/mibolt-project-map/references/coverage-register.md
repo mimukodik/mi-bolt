@@ -131,7 +131,7 @@ root, except `SKILL.md`, which is this skill's own file.
 | Area | Responsibility | Owner | Depth | Unknowns |
 |---|---|---|---|---|
 | `deploy/compose.yaml`, `deploy/compose.sh`, `deploy/stack.sh`, `deploy/.env.example`, `deploy/helm/mi-bolt/`, `deploy/candidate/`, `deploy/tests/` | the container stack, the per-worktree stack, the Helm chart, candidate build and release | `mibolt-workspace-ops` | documents and compose full | the Helm templates, `deploy/helm/mi-bolt/values.schema.json`, the Python bodies under `deploy/candidate/` and `deploy/tests/`, `deploy/stack.sh` beyond its header |
-| `.github/components.yml`, `.github/workflows/` | CI pipeline and path filters | `mibolt-workspace-ops` for the content; `mibolt-verification` maps jobs to local commands | 7 of 9 workflow files full | `.github/workflows/smoke.yml` beyond its first job; `.github/workflows/stable-smoke.yml` read for its triggers only |
+| `.github/components.yml`, `.github/workflows/` | CI pipeline and path filters | `mibolt-workspace-ops` for the content; `mibolt-verification` maps jobs to local commands | 9 of 11 workflow files full | `.github/workflows/smoke.yml` beyond its first job; `.github/workflows/stable-smoke.yml` read for its triggers only |
 | `tools/dev-server/`, `tools/mise.toml`, `tools/package.json`, `tools/package-lock.json`, `tools/tsconfig.json` | the dev-server helper and its test, and the tools workspace, which installs the dependencies of that test and of the catalogue importer, typechecks both and runs that test; the importer has no tests | `mibolt-workspace-ops`, the manifest, lockfile and tsconfig as files | full / partial | — |
 
 ## Excluded areas

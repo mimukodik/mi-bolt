@@ -151,12 +151,13 @@ Ingress that sends every path, `/api/v1` included, to `web`.
 
 ## The deploy checks
 
-`deploy/tests/` holds five Python checks. CI runs all five, and its commands are
+`deploy/tests/` holds six Python checks. CI runs all six, and its commands are
 at `.github/workflows/candidate.yml` ("Check candidate provenance and app chart"),
-`.github/workflows/candidate.yml` ("Test the worktree stack script") and
-`.github/workflows/candidate.yml` ("Test the preview wait command"); `check-chart.py`,
-`test-candidate.py`, `test-stack.py` and `test-preview-wait.py` also state theirs
-in their docstring.
+`.github/workflows/candidate.yml` ("Test the worktree stack script"),
+`.github/workflows/candidate.yml` ("Test the preview wait command") and
+`.github/workflows/candidate.yml` ("Test the preview deployment reporter");
+`check-chart.py`, `test-candidate.py`, `test-stack.py`, `test-preview-wait.py`
+and `test-github-deployment.py` also state theirs in their docstring.
 
 - `check-chart.py` is the only one with a mise task: `mise run deploy:check`
   (`mise.toml`, "Lint and inspect the MiBolt Helm app chart"). It runs `helm lint` and `helm template` with synthetic
@@ -170,6 +171,9 @@ in their docstring.
   `deploy/candidate/`; `deploy/candidate/build_metadata.py` has no test.
 - `test-preview-wait.py` drives `deploy/candidate/preview_wait.py` against
   scripted GitHub and preview answers, and makes no network call.
+- `test-github-deployment.py` drives `deploy/candidate/github_deployment.py`
+  against an in-memory GitHub deployment API with `preview_wait`'s wait
+  replaced, and makes no network call.
 - `test-stack.py` covers `deploy/stack.sh` in a throwaway git repository with a
   fake Compose wrapper, and never runs Docker
   (`deploy/tests/test-stack.py`, "Focused checks for deploy/stack.sh").

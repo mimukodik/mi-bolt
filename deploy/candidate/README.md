@@ -101,8 +101,10 @@ Run local checks with:
 
 ```sh
 uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-candidate.py
+uv run --no-project python deploy/tests/test-github-deployment.py
 actionlint -ignore 'label "blacksmith-2vcpu-ubuntu-2404" is unknown' \
-  .github/workflows/candidate.yml .github/workflows/publish-candidate.yml
+  .github/workflows/candidate.yml .github/workflows/publish-candidate.yml \
+  .github/workflows/preview-deployment.yml
 ```
 
 PR CI runs the PR's own E2E and real-stack smoke with the PR's tests. A preview
@@ -115,9 +117,23 @@ receipt-producing publisher workflow.
 
 ## Waiting for a preview
 
-Adding the label is what deploys the preview; nothing reports the rollout back
-to the PR, because the Berek coordinator holds only a read-only GitHub token.
-To wait for it:
+Adding the label is what deploys the preview. The Berek coordinator holds only
+a read-only GitHub token, so the `Preview Deployment` workflow
+(`.github/workflows/preview-deployment.yml`) reports the rollout on the PR as
+the `preview-pr-<PR-number>` deployment: in progress from the label or a push,
+then the preview URL once the host serves the head, or the reason it did not.
+Removing the label or closing the PR marks it inactive. It runs
+`deploy/candidate/github_deployment.py` from the default branch, which waits
+with `preview_wait.py`. A preview that was running before the workflow saw
+its label or push gets its deployment from a manual run, and the same run
+reports a preview again after its CI was re-run or a wait timed out, since
+neither starts the workflow:
+
+```sh
+gh workflow run preview-deployment.yml -R mimukodik/mi-bolt -f pr=<PR-number>
+```
+
+To wait for the preview from a shell:
 
 ```sh
 gh pr edit <PR-number> --add-label bolt-preview
