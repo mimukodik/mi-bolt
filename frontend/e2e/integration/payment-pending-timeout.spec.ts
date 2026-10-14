@@ -8,6 +8,8 @@ test.describe('Card payment: a pending result is polled', () => {
     '[E095] a card payment still pending after ten checks is reported as unknown, with no receipt and no new payment',
     { tag: '@integration' },
     async ({ page }) => {
+      await page.clock.install();
+
       // The purchase control is laid out differently on either side of the
       // 1024px breakpoint the integration widths straddle: below it the
       // product page's desktop CTA column is `display: none` and the sticky
@@ -328,12 +330,14 @@ test.describe('Card payment: a pending result is polled', () => {
       // clears `review-payment-polling` and renders the exhausted sentence
       // above the manual check control.
       await test.step('Wait for the tenth read of the still-pending intent to end the poll. The mock answers every read with `pending`, so the storefront clears `review-payment-polling` and renders the exhausted sentence above the manual check control.', async () => {
-        // One cold start plus ten poll reads a second apart: the tenth read is
-        // what ends the budget, so this wait is longer than the default.
-        await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveText(
-          'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
-          { timeout: 20000 },
-        );
+        // The page clock (page.clock, BOLT-7) is advanced a second at a time until the poll's reads end.
+        await expect(async () => {
+          await page.clock.fastForward(1000);
+          await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveText(
+            'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
+            { timeout: 200 },
+          );
+        }).toPass({ timeout: 15_000 });
 
         await expect(page.getByTestId('review-payment-polling')).toHaveCount(0);
         await expect(page.getByTestId('review-payment-status')).toHaveText(
@@ -373,8 +377,8 @@ test.describe('Card payment: a pending result is polled', () => {
 
       // 12. Confirm no receipt page opens: tick `review-consent-terms-input`
       // (a no-op) and force-press the disabled inner button of `review-submit`,
-      // then leave the page open for a few seconds.
-      await test.step('Confirm no receipt page opens: tick `review-consent-terms-input` (a no-op) and force-press the disabled inner button of `review-submit`, then leave the page open for a few seconds.', async () => {
+      // then leave the page open for half a second.
+      await test.step('Confirm no receipt page opens: tick `review-consent-terms-input` (a no-op) and force-press the disabled inner button of `review-submit`, then leave the page open for half a second.', async () => {
         const submitsBefore = paymentRequests.length;
 
         const termsConsent = page.getByTestId('review-consent-terms-input');
@@ -390,14 +394,14 @@ test.describe('Card payment: a pending result is polled', () => {
         // asks for.
         await submitButton.click({ force: true });
 
-        // The page is then left open a few seconds, which is a bounded wait for
-        // the order POST that must never arrive: `null` here is the wait
-        // running out, the passing case, so the absence is asserted over the
-        // window rather than at one instant.
+        // The page is then left open half a second, a bounded wait for the
+        // order POST that must never arrive: `null` here is the wait running
+        // out, the passing case. The button is natively disabled, so a short
+        // window is enough (BOLT-7).
         const strayOrderPost = await page
           .waitForRequest(
             (request) => request.method() === 'POST' && request.url().endsWith(ordersPath),
-            { timeout: 3000 },
+            { timeout: 500 },
           )
           .catch(() => null);
         expect(strayOrderPost).toBeNull();

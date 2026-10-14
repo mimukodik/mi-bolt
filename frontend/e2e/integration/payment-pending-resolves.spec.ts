@@ -8,6 +8,8 @@ test.describe('Card payment: a pending result is polled', () => {
     '[E094] a pending card payment is polled until it succeeds and exactly one order is placed',
     { tag: '@integration' },
     async ({ page }) => {
+      await page.clock.install();
+
       // The purchase control is laid out differently on either side of the
       // 1024px breakpoint the integration widths straddle: below it the
       // product page's desktop CTA column is `display: none` and the sticky
@@ -326,15 +328,14 @@ test.describe('Card payment: a pending result is polled', () => {
       // and persists, and the storefront clears `review-payment-polling` and
       // `review-payment-check` and renders the success branch.
       await test.step("Wait for the poll to stop on success: the mock's third read of the still-pending intent within this page load resolves it as `succeeded` and persists, and the storefront clears `review-payment-polling` and `review-payment-check` and renders the success branch.", async () => {
-        // The third read lands about two seconds after the load (one cold start
-        // plus two poll reads a second apart), and the budget the poll's ten
-        // reads would need fits inside this wider deadline.
-        await expect(page.getByTestId('review-payment-status')).toHaveText(
-          'A fizetés jóváhagyva.',
-          {
-            timeout: 20000,
-          },
-        );
+        // The page clock (page.clock, BOLT-7) is advanced a second at a time until the poll's reads end.
+        await expect(async () => {
+          await page.clock.fastForward(1000);
+          await expect(page.getByTestId('review-payment-status')).toHaveText(
+            'A fizetés jóváhagyva.',
+            { timeout: 200 },
+          );
+        }).toPass({ timeout: 15_000 });
         await expect(page.getByTestId('review-payment-polling')).toHaveCount(0);
         await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveCount(0);
         await expect(page.getByTestId('review-payment-check')).toHaveCount(0);

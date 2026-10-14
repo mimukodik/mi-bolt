@@ -8,6 +8,8 @@ test.describe('Checkout: edge paths', () => {
     "the review step's return from an unfinished and from a pending payment",
     { tag: '@integration' },
     async ({ page }) => {
+      await page.clock.install();
+
       // The purchase control is laid out differently at the two integration
       // viewports: below 1024px the product page's desktop CTA column is
       // `display: none` and the sticky `purchase-rail` carries the same
@@ -239,13 +241,14 @@ test.describe('Checkout: edge paths', () => {
           ),
         ).toBe(true);
 
-        // The tenth read still pending is what ends the poll. It arrives about
-        // ten seconds after the return, so this one expectation waits longer
-        // than the default.
-        await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveText(
-          'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
-          { timeout: 20000 },
-        );
+        // The page clock (page.clock, BOLT-7) is advanced a second at a time until the poll's reads end.
+        await expect(async () => {
+          await page.clock.fastForward(1000);
+          await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveText(
+            'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
+            { timeout: 200 },
+          );
+        }).toPass({ timeout: 15_000 });
 
         // Exactly the poll's ten reads, one a second, and nothing more on top.
         expect(intentReads.length).toBe(readsBeforePoll + 10);
