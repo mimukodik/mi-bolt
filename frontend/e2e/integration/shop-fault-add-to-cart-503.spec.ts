@@ -17,10 +17,9 @@ const BUY_BREAKPOINT_PX = 1024;
 const ADD_REFUSAL = 'A termék hozzáadása nem sikerült; a kosár változatlan.';
 
 test.describe('Shop: service faults', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): shop-retry-cart-add-after-fail.spec.ts covers the add-to-cart refusal.
   test(
     'adding to the cart is refused, so the product page reports it and the cart stays empty',
-    { tag: ['@integration', '@ci-skip'] },
+    { tag: '@integration' },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= BUY_BREAKPOINT_PX;
       const cards = page.getByTestId('product-card');

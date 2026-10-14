@@ -12,10 +12,9 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): checkout-retry-contact-save-once.spec.ts covers the contact save refusal.
   test(
     'a refused checkout step save keeps the shopper on the contact step',
-    { tag: ['@integration', '@ci-skip'] },
+    { tag: '@integration' },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

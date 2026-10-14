@@ -10,10 +10,9 @@ import { test, expect } from '../fixtures/coverage';
 const SIDEBAR_MIN_WIDTH = 1024;
 
 test.describe('Shop: service faults', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): shop-fault-product-list-503.spec.ts covers the same steps with a 503.
   test(
     "the phone list is unreachable, so the home page's featured row and the catalogue show the same error states as the 503",
-    { tag: ['@integration', '@ci-skip'] },
+    { tag: '@integration' },
     async ({ page }) => {
       const featuredSection = page.getByTestId('featured-section');
       const featuredError = featuredSection.getByRole('status');

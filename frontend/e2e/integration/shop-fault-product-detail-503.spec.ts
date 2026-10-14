@@ -4,10 +4,9 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Shop: service faults', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): shop-retry-product-after-fail.spec.ts covers the product page error.
   test(
     "one product's request answers 503, so its product page shows the error state and its retry keeps failing",
-    { tag: ['@integration', '@ci-skip'] },
+    { tag: '@integration' },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       const resultCount = page.getByTestId('result-count');
