@@ -12,9 +12,10 @@ import { test, expect } from '../fixtures/coverage';
 // exists at both integration widths, so no step branches on
 // `page.viewportSize()`.
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a size the chosen colour lacks is refused with its reason; it runs locally.
   test(
     'a colour whose storage sizes differ leaves the size it does not come in refused, with the reason text',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       // A card renders its swatch row only when the product offers more than

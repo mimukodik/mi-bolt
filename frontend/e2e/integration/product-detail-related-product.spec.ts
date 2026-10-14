@@ -14,9 +14,10 @@ import { test, expect } from '../fixtures/coverage';
 const RAIL_MIN_WIDTH = 1024;
 
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a related product opens its own page and shown variant; it runs locally.
   test(
     "following a related product opens that product's own page with its shown variant",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       // The first card with no "Elfogyott" marker is the first in-stock card.

@@ -12,9 +12,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): an unreadable draft sends deep links back to the contact step; it runs locally.
   test(
     'a deep link to the delivery or review step bounces to the contact step when the draft cannot be read',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

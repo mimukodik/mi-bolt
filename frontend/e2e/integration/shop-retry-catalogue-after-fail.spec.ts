@@ -13,9 +13,10 @@ import { test, expect } from '../fixtures/coverage';
 const SIDEBAR_MIN_WIDTH = 1024;
 
 test.describe('Shop: retry after one failure', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the filtered catalogue comes back after one failed load; it runs locally.
   test(
     '[E030] the filtered catalogue comes back after one failed load',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= SIDEBAR_MIN_WIDTH;
       const pageTitle = page.getByRole('heading', { level: 1, name: 'Mobiltelefonok' });

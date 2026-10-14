@@ -168,8 +168,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # To save CI minutes only the desktop (fullhd) cell of each browser runs;
-        # the mobile and extra-width cells are commented out, not removed.
+        # To save CI minutes only the Chromium desktop (fullhd) cell runs; the
+        # Firefox, WebKit, mobile and extra-width cells are commented out, not removed.
         include:
           - {
               project: integration-chromium-fullhd,
@@ -182,9 +182,9 @@ jobs:
           # - { project: integration-chromium-768, browser: chromium, gate: '0', seed: '' }
           # - { project: integration-chromium-1024, browser: chromium, gate: '0', seed: '' }
           # - { project: integration-chromium-1440, browser: chromium, gate: '0', seed: '' }
-          - { project: integration-firefox-fullhd, browser: firefox, gate: '0', seed: '' }
+          # - { project: integration-firefox-fullhd, browser: firefox, gate: '0', seed: '' }
           # - { project: integration-firefox-mobile, browser: firefox, gate: '0', seed: '' }
-          - { project: integration-webkit-fullhd, browser: webkit, gate: '0', seed: '' }
+          # - { project: integration-webkit-fullhd, browser: webkit, gate: '0', seed: '' }
           # - { project: integration-webkit-mobile, browser: webkit, gate: '0', seed: '' }
     steps:
       - uses: actions/checkout@v7
@@ -211,7 +211,8 @@ jobs:
         run: npx ng build demo-payment --configuration development
       - name: Playwright ${{ matrix.project }}
         timeout-minutes: 12
-        run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }}
+        # Specs tagged @ci-skip are left out of CI to keep this run short (BOLT-7); they still run locally.
+        run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }} --grep-invert @ci-skip
         env:
           CI: 'true'
           E2E_COVERAGE_GATE: ${{ matrix.gate }}

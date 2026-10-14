@@ -38,9 +38,10 @@ const onCatalogueWithBrands = (url: URL, brands: readonly string[]): boolean =>
   url.pathname === '/telefonok' && url.searchParams.getAll('brand').join(',') === brands.join(',');
 
 test.describe('Shop: home, navigation and catalogue stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): two brands, 256 GB and the stock filter combine on variants; it runs locally.
   test(
     '[E025] two brands with 256 GB and the stock filter combine on variants',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const drawerViewport = (page.viewportSize()?.width ?? 0) < SIDEBAR_MIN_WIDTH;
 

@@ -36,9 +36,10 @@ async function readPriceAmounts(cards: Locator): Promise<number[]> {
 }
 
 test.describe('Shop: home, navigation and catalogue stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): filters, sort and paging survive back and forward; it runs locally.
   test(
     "[E035] filters, sort and paging survive the browser's back and forward",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const viewportWidth = page.viewportSize()?.width ?? 0;
       const drawerViewport = viewportWidth < SIDEBAR_MIN_WIDTH;

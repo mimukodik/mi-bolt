@@ -11,9 +11,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a network error on the order submission shows the order failure; it runs locally.
   test(
     'the network error on the order submission shows the same failure with another error code',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

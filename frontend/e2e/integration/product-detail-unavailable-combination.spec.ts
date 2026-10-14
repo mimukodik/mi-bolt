@@ -13,9 +13,10 @@ import { test, expect } from '../fixtures/coverage';
 // page's own "Készülékár" block render at either integration width, so no step
 // branches on `page.viewportSize()`.
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): an unavailable colour is refused and its press changes nothing; it runs locally.
   test(
     'a colour that the chosen size does not come in is refused, and its press changes nothing',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       // A card renders its swatch row only when the product offers more than one

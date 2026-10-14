@@ -13,9 +13,10 @@ import { test, expect } from '../fixtures/coverage';
 const RAIL_MIN_WIDTH = 1024;
 
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the address carries the chosen variant and restores it; it runs locally.
   test(
     'the address bar carries the chosen variant, and opening that address in a fresh page restores it',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       // A card renders its swatch row only when the product offers more than

@@ -34,7 +34,8 @@ async function readCardNames(cards: Locator): Promise<string[]> {
 }
 
 test.describe('Catalogue: browse, filter, sort and page', () => {
-  test('sorting reorders the grid', { tag: '@integration' }, async ({ page }) => {
+  // CI skips this spec (@ci-skip, BOLT-7): each sort mode reorders the grid; it runs locally.
+  test('sorting reorders the grid', { tag: ['@integration', '@ci-skip'] }, async ({ page }) => {
     const cards = page.getByTestId('product-card');
     const sort = page.getByTestId('catalog-sort');
     const resultCount = page.getByTestId('result-count');

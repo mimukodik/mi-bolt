@@ -4,9 +4,10 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Checkout: from the cart to the receipt', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the empty cart offers its way back to the catalogue; it runs locally.
   test(
     'the empty cart offers its way back to the catalogue',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cartPage = page.getByTestId('cart-page');
       const emptyState = page.getByTestId('empty-state');

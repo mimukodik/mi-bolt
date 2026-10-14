@@ -54,7 +54,7 @@ and the caller names it as `uses: ./.github/workflows/<file>`
   (`npm run test`, `npm run test:contract`, one coverage summary per project,
   one `coverage-unit` artifact), `build` (the build, dist and boot checks,
   `.github/workflows/frontend.yml`, "Production build"), `api-drift` (`npm run api:drift`),
-  `e2e` (a matrix of three cells, `.github/workflows/frontend.yml`, "E2E ${{ matrix.project }}") and
+  `e2e` (a matrix of one cell, `.github/workflows/frontend.yml`, "E2E ${{ matrix.project }}") and
   `e2e-report`, which merges the cells' blob reports.
 - **`.github/workflows/backend.yml`** runs in `backend/` on Java 21 from
   `actions/setup-java` with `gradle/actions/setup-gradle`: `unit-tests` and
@@ -184,7 +184,7 @@ files; `deploy/candidate/README.md` ("Run local checks with:") runs `actionlint`
 - `README.md` ("What CI runs") names four reusable workflows; `.github/components.yml`
   has five, the fifth being `smoke`.
 - `frontend/README.md` ("one job per browser and viewport") describes a ten-cell `e2e` matrix;
-  `.github/workflows/frontend.yml` ("To save CI minutes only the desktop (fullhd) cell of each browser runs") runs three cells and keeps the
+  `.github/workflows/frontend.yml` ("To save CI minutes only the Chromium desktop (fullhd) cell runs") runs one cell and keeps the
   others commented out.
 
 ## When a workflow does not run

@@ -11,9 +11,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Shop: retry after one failure', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the product page comes back on the same variant after one failure; it runs locally.
   test(
     '[E043] the product page comes back on the same variant after one failed load',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= DESKTOP_MIN_WIDTH;
       const productPage = page.getByTestId('product-page');

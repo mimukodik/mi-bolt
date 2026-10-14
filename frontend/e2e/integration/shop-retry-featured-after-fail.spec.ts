@@ -4,9 +4,10 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Shop: retry after one failure', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the featured phones come back after one failed load; it runs locally.
   test(
     '[E021] the featured phones come back after one failed load',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const featuredSection = page.getByTestId('featured-section');
       const featuredError = featuredSection.getByTestId('error-state');

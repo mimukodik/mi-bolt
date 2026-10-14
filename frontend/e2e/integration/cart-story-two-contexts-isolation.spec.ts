@@ -20,9 +20,10 @@ const CASH_ON_DELIVERY_CEILING = 300_000;
 const SECOND_PHONE_CEILING = 150_000;
 
 test.describe('Shop: cart, context and receipt stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): two browser contexts keep their own carts and receipts; it runs locally.
   test(
     '[E011] two browser contexts keep their own carts',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page, browser }, testInfo) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
 

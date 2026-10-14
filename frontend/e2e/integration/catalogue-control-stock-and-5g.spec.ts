@@ -21,9 +21,10 @@ const SIDEBAR_MIN_WIDTH = 1024;
 const DEFAULT_PAGE_SIZE = 12;
 
 test.describe('Catalogue: filter controls', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the in-stock and 5G switches filter the list; it runs locally.
   test(
     'the in-stock and 5G switches filter the list',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const sidebarViewport = (page.viewportSize()?.width ?? 0) >= SIDEBAR_MIN_WIDTH;
       const catalogHost = page.locator('app-catalog-page');

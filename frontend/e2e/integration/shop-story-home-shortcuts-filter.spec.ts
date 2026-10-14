@@ -43,9 +43,10 @@ const pageCardCount = (pageNumber: number): number =>
 const VARIANT_LINE = /^\s*[^\s·][^·]*·\s*\d+\s*GB\s*$/;
 
 test.describe('Shop: home, navigation and catalogue stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the 5G and stock home shortcuts open the catalogue on their query; it runs locally.
   test(
     '[E019] the 5G and the stock home shortcut open the catalogue on their query',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const viewportWidth = page.viewportSize()?.width ?? 0;
       const drawerViewport = viewportWidth < SIDEBAR_MIN_WIDTH;

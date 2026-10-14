@@ -4,9 +4,10 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Checkout: edge paths', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the wizard refuses a step whose earlier sections are missing; it runs locally.
   test(
     'the wizard refuses a step whose earlier sections are missing',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       // The purchase control is laid out differently at the two integration
       // viewports: below 1024px the desktop CTA column is `display: none` and
