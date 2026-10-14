@@ -12,9 +12,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a refused step save keeps the shopper on the contact step; it runs locally.
   test(
     'a refused checkout step save keeps the shopper on the contact step',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

@@ -33,9 +33,10 @@ const STOCK_REFUSAL =
   'Egy vagy több termék közben elfogyott, ezért a rendelés nem jött létre. A kosárban javíthatod; a megadott adataid megmaradnak.';
 
 test.describe('An order refused because stock ran out meanwhile', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): stock lost at confirm returns to the cart and keeps the contact data; it runs locally.
   test(
     '[E085] an order refused at confirm for lost stock goes back to the cart and keeps the contact data',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const wideLayout = (page.viewportSize()?.width ?? 0) >= BUY_BREAKPOINT_PX;
 

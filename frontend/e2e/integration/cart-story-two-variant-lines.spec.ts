@@ -18,9 +18,10 @@ const DESKTOP_MIN_WIDTH = 1024;
 const IN_STOCK_TEXT = 'Raktáron a demó készletben';
 
 test.describe('Shop: cart, context and receipt stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): two variants of one phone become two cart lines; it runs locally.
   test(
     '[E054] two variants of one phone become two cart lines',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
 

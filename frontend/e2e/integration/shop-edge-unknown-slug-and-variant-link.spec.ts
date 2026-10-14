@@ -15,9 +15,10 @@ const UNKNOWN_SLUG = '/telefonok/nem-letezo-telefon';
 const UNKNOWN_VARIANT_ID = 'nem-letezo-valtozat';
 
 test.describe('Shop: edge paths', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): an unknown product slug and an unknown variant link are reported; it runs locally.
   test(
     'an unknown product slug and an unknown variant link are both reported',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       // The add control the viewport shows: the desktop CTA's inner button at

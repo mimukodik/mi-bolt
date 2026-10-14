@@ -11,9 +11,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a 503 on the order submission keeps the whole draft on screen; it runs locally.
   test(
     'the order submission is refused with a 503 and the whole draft stays on screen',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

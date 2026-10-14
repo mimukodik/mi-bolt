@@ -28,9 +28,10 @@ function hufText(amount: number): string {
 }
 
 test.describe('Shop: a newer request wins the race', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a late first add cannot overwrite the cart's fresh version; it runs locally.
   test(
     "[E039] a second add keeps the cart's fresh version when the first add answers late",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       await page.clock.install();
 

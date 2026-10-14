@@ -11,7 +11,7 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): checkout-fault-order-submission-503.spec.ts covers the same failure with a 503.
+  // CI skips this spec (@ci-skip, BOLT-7): a network error on the order submission shows the order failure; it runs locally.
   test(
     'the network error on the order submission shows the same failure with another error code',
     { tag: ['@integration', '@ci-skip'] },

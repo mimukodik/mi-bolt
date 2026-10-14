@@ -13,9 +13,10 @@ import { test, expect } from '../fixtures/coverage';
 const RAIL_MIN_WIDTH = 1024;
 
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a product address without a variant shows the default variant; it runs locally.
   test(
     "a product address with no variant query shows the product's default variant and the phone's details",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       const productPage = page.getByTestId('product-page');

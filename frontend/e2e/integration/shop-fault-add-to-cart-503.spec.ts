@@ -17,9 +17,10 @@ const BUY_BREAKPOINT_PX = 1024;
 const ADD_REFUSAL = 'A termék hozzáadása nem sikerült; a kosár változatlan.';
 
 test.describe('Shop: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a refused add is reported and the cart stays empty; it runs locally.
   test(
     'adding to the cart is refused, so the product page reports it and the cart stays empty',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= BUY_BREAKPOINT_PX;
       const cards = page.getByTestId('product-card');

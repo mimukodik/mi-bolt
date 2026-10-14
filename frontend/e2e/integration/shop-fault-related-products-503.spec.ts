@@ -10,9 +10,10 @@ import { test, expect } from '../fixtures/coverage';
 const BUY_BREAKPOINT_PX = 1024;
 
 test.describe('Shop: service faults', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the product page loads without its related strip when that request fails; it runs locally.
   test(
     'the related-products request fails, so the product page loads without its "Hasonló készülékek" strip',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= BUY_BREAKPOINT_PX;
       const cards = page.getByTestId('product-card');

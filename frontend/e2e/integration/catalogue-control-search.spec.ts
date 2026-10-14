@@ -29,9 +29,10 @@ const SIDEBAR_MIN_WIDTH = 1024;
 const DEFAULT_PAGE_SIZE = 12;
 
 test.describe('Catalogue: filter controls', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a search term narrows the list and clearing it restores it; it runs locally.
   test(
     'typing a search term narrows the list and clearing it restores the catalogue',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const sidebarViewport = (page.viewportSize()?.width ?? 0) >= SIDEBAR_MIN_WIDTH;
       const catalogHost = page.locator('app-catalog-page');

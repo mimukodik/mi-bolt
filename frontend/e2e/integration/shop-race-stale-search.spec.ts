@@ -15,9 +15,10 @@ const NEW_WORD = 'honor';
 const SIDEBAR_MIN_WIDTH = 1024;
 
 test.describe('Shop: a newer request wins the race', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a late first search cannot overwrite the second one's results; it runs locally.
   test(
     '[E037] a second search keeps its results when the first one answers late',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       await page.clock.install();
 

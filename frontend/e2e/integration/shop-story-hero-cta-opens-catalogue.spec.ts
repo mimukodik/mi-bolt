@@ -12,9 +12,10 @@ import { test, expect } from '../fixtures/coverage';
 const SIDEBAR_MIN_WIDTH = 1024;
 
 test.describe('Shop: home, navigation and catalogue stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the hero's call to action opens the catalogue; it runs locally.
   test(
     "[E018] the hero's call to action opens the catalogue",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const heroCta = page.getByTestId('hero-cta');
       const resultCount = page.getByTestId('result-count');

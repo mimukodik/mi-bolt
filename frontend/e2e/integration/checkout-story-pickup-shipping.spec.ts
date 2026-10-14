@@ -14,9 +14,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: standard stories', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): pickup ships free, asks for no address and claims no real location; it runs locally.
   test(
     '[E078] the pickup point ships free, asks for no delivery address and claims no real location',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

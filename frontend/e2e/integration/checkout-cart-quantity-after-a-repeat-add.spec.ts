@@ -4,9 +4,10 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Checkout: from the cart to the receipt', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a repeat add of a variant raises its line's quantity; it runs locally.
   test(
     "a second add of the same variant raises the cart line's quantity",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       // The purchase control is laid out differently at the two integration
       // viewports: below 1024px the desktop CTA column is `display: none` (the

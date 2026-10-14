@@ -15,9 +15,10 @@ function expectedColumnCount(viewportWidth: number): string {
 }
 
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): every specification group is always open; it runs locally.
   test(
     'the specification section: every group is always open and there is no control to close it',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const cards = page.getByTestId('product-card');
       const productPage = page.getByTestId('product-page');

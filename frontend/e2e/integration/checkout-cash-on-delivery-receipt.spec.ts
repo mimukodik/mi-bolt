@@ -4,7 +4,7 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Checkout: from the cart to the receipt', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): cart-story-new-shopping-after-receipt.spec.ts covers a cash-on-delivery order to a receipt.
+  // CI skips this spec (@ci-skip, BOLT-7): a cash-on-delivery purchase reaches the receipt; it runs locally.
   test(
     'cash on delivery purchase reaches the receipt',
     { tag: ['@integration', '@ci-skip'] },

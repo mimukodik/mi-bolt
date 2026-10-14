@@ -12,7 +12,7 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: service faults', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): checkout-retry-receipt-read-once.spec.ts covers the receipt read error.
+  // CI skips this spec (@ci-skip, BOLT-7): a receipt that cannot be read back shows its error state; it runs locally.
   test(
     'the receipt cannot be read back from the server',
     { tag: ['@integration', '@ci-skip'] },

@@ -4,7 +4,7 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Checkout: from the cart to the receipt', () => {
-  // CI skips this spec (@ci-skip, BOLT-7): checkout-lost-intent-retry.spec.ts covers a card payment to a receipt.
+  // CI skips this spec (@ci-skip, BOLT-7): a card payment round trip reaches the receipt; it runs locally.
   test(
     'card payment round trip reaches the receipt',
     { tag: ['@integration', '@ci-skip'] },

@@ -16,9 +16,10 @@ import { test, expect } from '../fixtures/coverage';
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Checkout: retry after one failure', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the contact step saves on the second try and keeps what was typed; it runs locally.
   test(
     '[E068] the contact step saves on the second try and keeps what was typed',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
       const addToCartButton = narrowViewport

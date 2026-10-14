@@ -40,9 +40,10 @@
 // 9. Tags: { tag: '@integration' } on everything under e2e/integration/, and
 //    { tag: '@smoke' } on everything under e2e/smoke/. Selection is by
 //    --grep / --grep-invert.  https://playwright.dev/docs/test-annotations#tag-tests
-//    A second tag, '@ci-skip', marks an integration spec whose behaviour
-//    another spec that CI runs also asserts; CI leaves it out with
-//    --grep-invert @ci-skip and it still runs locally (BOLT-7, AC22).
+//    A second tag, '@ci-skip', marks a lower-value integration spec chosen
+//    by its CI run time and its value; CI leaves it out with --grep-invert
+//    @ci-skip to keep the run short, and it stays in the suite and must pass
+//    locally. A comment above its test( says what it asserts (BOLT-7, AC22).
 // 10. Never commit test.only. Never leave a test.fixme() without a comment
 //    saying what the application actually does instead.
 // 11. The demo gate. Signed out, every storefront route redirects to

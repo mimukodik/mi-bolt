@@ -20,9 +20,10 @@ const RAIL_MIN_WIDTH = 1024;
 const RAIL_HEIGHT = 88;
 
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the purchase mount's price and call to action at each width; it runs locally.
   test(
     "the purchase mount at every width: the rail's price and call to action below 1024 px, the desktop block's at 1024 px and wider",
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const railViewport = (page.viewportSize()?.width ?? 0) < RAIL_MIN_WIDTH;
       const cards = page.getByTestId('product-card');

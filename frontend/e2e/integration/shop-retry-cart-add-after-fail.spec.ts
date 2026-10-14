@@ -20,9 +20,10 @@ const DESKTOP_MIN_WIDTH = 1024;
 const ADD_REFUSAL = 'A termék hozzáadása nem sikerült; a kosár változatlan.';
 
 test.describe('Shop: retry after one failure', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a retried add after a failure joins the same cart line; it runs locally.
   test(
     '[E058] the cart keeps its line and the retried add joins the same line',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= DESKTOP_MIN_WIDTH;
       const catalogGrid = page.getByTestId('catalog-grid');

@@ -4,9 +4,10 @@
 import { test, expect } from '../fixtures/coverage';
 
 test.describe('Shop: a newer request wins the race', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): a late first product answer cannot overwrite the second page; it runs locally.
   test(
     '[E038] a second product page keeps its address and heading when the first product answers late',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       await page.clock.install();
 

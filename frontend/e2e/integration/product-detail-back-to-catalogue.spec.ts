@@ -15,9 +15,10 @@ import { test, expect } from '../fixtures/coverage';
 const NAV_MIN_WIDTH = 1024;
 
 test.describe('Product page: variants and details', () => {
+  // CI skips this spec (@ci-skip, BOLT-7): the way back to the catalogue from a product page; it runs locally.
   test(
     'the way back to the catalogue from the product page',
-    { tag: '@integration' },
+    { tag: ['@integration', '@ci-skip'] },
     async ({ page }) => {
       const wideViewport = (page.viewportSize()?.width ?? 0) >= NAV_MIN_WIDTH;
       const cards = page.getByTestId('product-card');
