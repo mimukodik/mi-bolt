@@ -121,12 +121,10 @@ export default defineConfig({
   // https://playwright.dev/docs/test-configuration (read 2026-09-22).
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
-  // At most two workers on a developer machine (the owner's rule). CI runs one,
-  // the integration and the smoke runs alike: on the 2 vCPU runner more workers
-  // only slowed the suite (BOLT-7, PR #421: one worker 242-274 s, two 349 s,
-  // four 449 s with three checkout specs timed out).
+  // At most two workers on a developer machine (the owner's rule); CI takes
+  // Playwright's default, half of the logical CPU cores:
   // https://playwright.dev/docs/api/class-testconfig#test-config-workers
-  workers: process.env['CI'] ? 1 : 2,
+  workers: process.env['CI'] ? undefined : 2,
   reporter: [
     ...(process.env['CI'] ? [['blob'] as const] : []),
     ['list'],
