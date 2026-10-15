@@ -103,7 +103,7 @@ Both `e2e` and `e2e:all` serve the `development` configuration on port 4400 by d
 
 The deployed web image serves the storefront at `/`, admin at `/admin/`, and
 the payment app at `/demo-fizetes/`. All three use `/api/v1` on the same HTTPS
-origin. A PR preview is enabled by the `bolt-preview` label at
+origin. A PR preview is enabled by the `preview` label at
 `https://bolt-pr-<PR-number>.mimukodik.hu`; the stable
 demo uses `https://bolt.mimukodik.hu`. Hosted builds use the real commerce
 backend, including the payment redirect and return flow.

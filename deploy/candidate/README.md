@@ -101,13 +101,15 @@ Run local checks with:
 
 ```sh
 uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-candidate.py
+uv run --no-project python deploy/tests/test-github-deployment.py
 actionlint -ignore 'label "blacksmith-2vcpu-ubuntu-2404" is unknown' \
-  .github/workflows/candidate.yml .github/workflows/publish-candidate.yml
+  .github/workflows/candidate.yml .github/workflows/publish-candidate.yml \
+  .github/workflows/preview-deployment.yml
 ```
 
 PR CI runs the PR's own E2E and real-stack smoke with the PR's tests. A preview
 is available at `https://bolt-pr-<PR-number>.mimukodik.hu` once the
-`bolt-preview` label is on and the published candidate is ready. The existing
+`preview` label is on and the published candidate is ready. The existing
 MIM-271 suite remains available for optional manual checks against that URL.
 Stable acceptance continues through `Stable Smoke` after merge.
 PR-controlled npm lifecycle hooks and modified tests never execute in the
@@ -115,12 +117,26 @@ receipt-producing publisher workflow.
 
 ## Waiting for a preview
 
-Adding the label is what deploys the preview; nothing reports the rollout back
-to the PR, because the Berek coordinator holds only a read-only GitHub token.
-To wait for it:
+Adding the label is what deploys the preview. The Berek coordinator holds only
+a read-only GitHub token, so the `Preview Deployment` workflow
+(`.github/workflows/preview-deployment.yml`) reports the rollout on the PR as
+the `preview-pr-<PR-number>` deployment: in progress from the label or a push,
+then the preview URL once the host serves the head, or the reason it did not.
+Removing the label or closing the PR marks it inactive. It runs
+`deploy/candidate/github_deployment.py` from the default branch, which waits
+with `preview_wait.py`. A preview that was running before the workflow saw
+its label or push gets its deployment from a manual run, and the same run
+reports a preview again after its CI was re-run or a wait timed out, since
+neither starts the workflow:
 
 ```sh
-gh pr edit <PR-number> --add-label bolt-preview
+gh workflow run preview-deployment.yml -R mimukodik/mi-bolt -f pr=<PR-number>
+```
+
+To wait for the preview from a shell:
+
+```sh
+gh pr edit <PR-number> --add-label preview
 python3 deploy/candidate/preview_wait.py <PR-number>
 ```
 
@@ -143,7 +159,7 @@ why a PR waits.
 
 Label on means a preview, label off means none:
 
-- Adding `bolt-preview` deploys the PR's preview once its candidate is
+- Adding the `preview` label deploys the PR's preview once its candidate is
   published.
 - Removing it drops the preview and its database.
 - Merging or closing the PR removes the label: the `Preview Label` workflow
@@ -164,7 +180,7 @@ The first rollout needs an open same-repository PR after the publisher workflow
 has landed on `main`. A successful build of `main`, or of a PR that has already
 closed, does not publish a preview candidate. Keep the verification PR open
 while checking its preview. Add the
-`bolt-preview` label on the PR to enable its preview at
+`preview` label on the PR to enable its preview at
 `https://bolt-pr-<PR-number>.mimukodik.hu`. Remove the label to clean up the
 release and its database; adding it again creates a fresh empty database.
 Closing the PR also requests cleanup and removes the label.

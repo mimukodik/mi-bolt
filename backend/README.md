@@ -221,10 +221,10 @@ The bootstrap username is `admin`. Stable receives its initial password from
 1Password. All previews share a separate preview-only admin password and a
 separate preview-only database password, both stored in the `berek` 1Password
 vault (`MIBOLT_PREVIEW_ADMIN_PASSWORD` and `MIBOLT_PREVIEW_DB_PASSWORD`).
-To rotate, update the item, wait for External Secrets to sync, then let existing
-previews expire or recreate them by removing and re-adding `bolt-preview` after
-teardown. Existing accounts and database roles keep their copied password until
-that preview is destroyed.
+To rotate, update the item, wait for External Secrets to sync, then recreate
+existing previews: remove the `preview` label, wait for the teardown, and add it
+again. Previews do not expire. Existing accounts and database roles keep their
+copied password until that preview is destroyed.
 
 Changes under the Liquibase migrations or `data/catalog/` require a new approved
 template fingerprint before preview admission. See the

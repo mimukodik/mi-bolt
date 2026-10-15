@@ -1,6 +1,6 @@
 name: Preview Label
 
-# The bolt-preview label is the only switch for a PR preview (MIM-487): the
+# The preview label is the only switch for a PR preview (MIM-487): the
 # Berek coordinator deploys while an open PR carries it, drops the preview when
 # it goes, and never expires one on its own. A merged or closed PR loses the
 # label here, so the label always matches the preview. pull_request_target
@@ -14,20 +14,20 @@ permissions:
 
 jobs:
   remove-label:
-    if: contains(github.event.pull_request.labels.*.name, 'bolt-preview')
+    if: contains(github.event.pull_request.labels.*.name, 'preview')
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
-      - name: Remove bolt-preview from the merged or closed PR
+      - name: Remove the preview label from the merged or closed PR
         env:
           GH_TOKEN: ${{ github.token }}
           LABELS: repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels
         run: |
           # A 404 means someone already removed it; the check below decides,
           # and a failed read fails the step instead of passing it.
-          gh api -X DELETE "$LABELS/bolt-preview" --silent || true
+          gh api -X DELETE "$LABELS/preview" --silent || true
           names=$(gh api --paginate "$LABELS?per_page=100" --jq '.[].name')
-          if grep -qx bolt-preview <<<"$names"; then
-            echo "bolt-preview is still on the PR" >&2
+          if grep -qx preview <<<"$names"; then
+            echo "the preview label is still on the PR" >&2
             exit 1
           fi
