@@ -20,7 +20,7 @@ OLD, HEAD, NEWER = 'a' * 40, 'b' * 40, 'c' * 40
 URL = 'https://bolt-pr-7.mimukodik.hu'
 
 
-def pr(head=HEAD, labels=('bolt-preview',), state='open', repo=REPO):
+def pr(head=HEAD, labels=('preview',), state='open', repo=REPO):
     return {'number': 7, 'state': state, 'merged_at': None,
             'head': {'sha': head, 'repo': {'full_name': repo}},
             'labels': [{'name': name} for name in labels]}
@@ -127,7 +127,7 @@ class ReportTests(unittest.TestCase):
 
     def test_a_label_removed_while_waiting_goes_inactive(self):
         fake = Fake(self, [pr()])
-        code, _, _ = self.report(preview_wait.Stop(2, 'PR #7 has no bolt-preview label'))
+        code, _, _ = self.report(preview_wait.Stop(2, 'PR #7 has no preview label'))
         self.assertEqual(code, 0)
         self.assertEqual(fake.states(1), ['in_progress', 'inactive'])
 
@@ -230,7 +230,7 @@ class InactiveTests(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(github_deployment.inactive(7), 0)
         self.assertEqual(fake.posted, [])
-        self.assertIn('bolt-preview is on the PR again', out.getvalue())
+        self.assertIn('The preview label is on the PR again', out.getvalue())
 
 
 class MainTests(unittest.TestCase):

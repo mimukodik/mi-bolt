@@ -22,7 +22,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 REPO = 'mimukodik/mi-bolt'
-LABEL = 'bolt-preview'
+LABEL = 'preview'
 # Berek apps/bolt-preview-coordinator/config.json, "capacity".
 CAPACITY = 8
 WORKFLOWS = {'ci.yml': 'CI', 'candidate.yml': 'Candidate Build'}

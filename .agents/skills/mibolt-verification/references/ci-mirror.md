@@ -83,7 +83,7 @@ The changed-paths script does not list these.
   run after other workflows, on a pull request's label, push or close, or by
   hand (`workflow_dispatch`). None has a local mirror;
   `mibolt-workspace-ops` owns them. PR previews become available at
-  `https://bolt-pr-<PR-number>.mimukodik.hu` when the `bolt-preview` label is on
+  `https://bolt-pr-<PR-number>.mimukodik.hu` when the `preview` label is on
   and the published candidate is ready;
   `python3 deploy/candidate/preview_wait.py <PR-number>` waits for that
   (`SKILL.md`, "A running preview"). Optional browser checks run manually.

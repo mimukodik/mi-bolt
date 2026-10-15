@@ -127,7 +127,7 @@ def follow(number, head, deployment, timeout_minutes):
 def inactive(number):
     pr = api(f'pulls/{number}')
     if pr['state'] == 'open' and preview_wait.labelled(pr):
-        print(f'{preview_wait.LABEL} is on the PR again; its deployment stays')
+        print(f'The {preview_wait.LABEL} label is on the PR again; its deployment stays')
         return 0
     retire(number)
     return 0

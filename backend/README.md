@@ -222,7 +222,7 @@ The bootstrap username is `admin`. Stable receives its initial password from
 separate preview-only database password, both stored in the `berek` 1Password
 vault (`MIBOLT_PREVIEW_ADMIN_PASSWORD` and `MIBOLT_PREVIEW_DB_PASSWORD`).
 To rotate, update the item, wait for External Secrets to sync, then let existing
-previews expire or recreate them by removing and re-adding `bolt-preview` after
+previews expire or recreate them by removing and re-adding the `preview` label after
 teardown. Existing accounts and database roles keep their copied password until
 that preview is destroyed.
 

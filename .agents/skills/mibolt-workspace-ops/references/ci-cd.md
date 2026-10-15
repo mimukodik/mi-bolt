@@ -97,8 +97,8 @@ promoted; this is only the wiring.
 | `.github/workflows/candidate.yml` ("Candidate Build") | pull request, push to `main` | installs uv and Helm, computes the image input hashes (`deploy/candidate/inputs.py`), runs the six `deploy/tests/*.py` checks, builds both images with `docker buildx bake -f compose.yaml`, keeps a `candidate-build` artifact for 7 days (`.github/workflows/candidate.yml`, "Build both images from the Compose definition") |
 | `.github/workflows/publish-candidate.yml` ("Publish Candidate") | `workflow_run` of `CI` and `Candidate Build`, completed | checks out the default branch as `trusted`, runs `deploy/candidate/publish.py` from there against the tested source, pushes images and the chart to GHCR, uploads `candidate-receipt` or `stable-release-receipt` (`.github/workflows/publish-candidate.yml`, "Verify inputs, publish immutable images and chart, write receipt") |
 | `.github/workflows/stable-smoke.yml` ("Stable Smoke") | `workflow_run` of `Publish Candidate`, `workflow_dispatch` | waits for the stable demo and runs both purchase flows against it (`.github/workflows/stable-smoke.yml`, "Existing smoke tests against the stable demo") |
-| `.github/workflows/preview-label.yml` ("Preview Label") | `pull_request_target` closed, when the PR carries `bolt-preview` | removes the label from the merged or closed PR, so the label always matches the preview; the coordinator never expires a preview (`deploy/candidate/README.md`, "The label is the only switch") |
-| `.github/workflows/preview-deployment.yml` ("Preview Deployment") | `pull_request_target` labeled, unlabeled, synchronize, closed, for `bolt-preview`; `workflow_dispatch` with a PR number | runs `deploy/candidate/github_deployment.py`, which shows the preview on the PR as the `preview-pr-<N>` deployment: in progress, then the URL once `preview_wait.py` sees the host serve the head; inactive when the label goes or the PR closes (`deploy/candidate/README.md`, "Waiting for a preview") |
+| `.github/workflows/preview-label.yml` ("Preview Label") | `pull_request_target` closed, when the PR carries the `preview` label | removes the label from the merged or closed PR, so the label always matches the preview; the coordinator never expires a preview (`deploy/candidate/README.md`, "The label is the only switch") |
+| `.github/workflows/preview-deployment.yml` ("Preview Deployment") | `pull_request_target` labeled, unlabeled, synchronize, closed, for the `preview` label; `workflow_dispatch` with a PR number | runs `deploy/candidate/github_deployment.py`, which shows the preview on the PR as the `preview-pr-<N>` deployment: in progress, then the URL once `preview_wait.py` sees the host serve the head; inactive when the label goes or the PR closes (`deploy/candidate/README.md`, "Waiting for a preview") |
 
 **Everything after `.github/workflows/candidate.yml` runs the default branch's
 copy.** A `workflow_run` workflow triggers only when its file exists on the
@@ -198,10 +198,10 @@ files; `deploy/candidate/README.md` ("Run local checks with:") runs `actionlint`
 | an edited `workflow_run`, `schedule` or `pull_request_target` workflow behaves as before | the default branch's copy ran | "The candidate and deployment chain" above |
 | `Publish Candidate` is green but published nothing | an eligibility check did not match, which is a deliberate no-op; the receipt artifact is the evidence of publication | `deploy/candidate/README.md` ("deliberate no-op") |
 | the PR shows no deployment, or a failed one, while its preview serves | the preview ran before `Preview Deployment` saw the label, or the head's CI was re-run or the wait timed out; neither starts the workflow again | `deploy/candidate/README.md` ("gets its deployment from a manual run") |
-| no preview deployment for a pull request | the pull request lacks the `bolt-preview` label, or comes from a fork | `deploy/candidate/README.md` ("label on the PR to enable its preview"), `deploy/candidate/README.md` ("fork PRs have no automatic candidate receipt") |
+| no preview deployment for a pull request | the pull request lacks the `preview` label, or comes from a fork | `deploy/candidate/README.md` ("label on the PR to enable its preview"), `deploy/candidate/README.md` ("fork PRs have no automatic candidate receipt") |
 
 PR previews are available at `https://bolt-pr-<PR-number>.mimukodik.hu` once
-the `bolt-preview` label is on and the published candidate is ready; the PR
+the `preview` label is on and the published candidate is ready; the PR
 shows it as the `preview-pr-<PR-number>` deployment.
 `python3 deploy/candidate/preview_wait.py <PR-number>` follows the head's runs
 and the preview host until then (`deploy/candidate/README.md`, "Waiting for a

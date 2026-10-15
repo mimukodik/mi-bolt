@@ -109,7 +109,7 @@ actionlint -ignore 'label "blacksmith-2vcpu-ubuntu-2404" is unknown' \
 
 PR CI runs the PR's own E2E and real-stack smoke with the PR's tests. A preview
 is available at `https://bolt-pr-<PR-number>.mimukodik.hu` once the
-`bolt-preview` label is on and the published candidate is ready. The existing
+`preview` label is on and the published candidate is ready. The existing
 MIM-271 suite remains available for optional manual checks against that URL.
 Stable acceptance continues through `Stable Smoke` after merge.
 PR-controlled npm lifecycle hooks and modified tests never execute in the
@@ -136,7 +136,7 @@ gh workflow run preview-deployment.yml -R mimukodik/mi-bolt -f pr=<PR-number>
 To wait for the preview from a shell:
 
 ```sh
-gh pr edit <PR-number> --add-label bolt-preview
+gh pr edit <PR-number> --add-label preview
 python3 deploy/candidate/preview_wait.py <PR-number>
 ```
 
@@ -159,7 +159,7 @@ why a PR waits.
 
 Label on means a preview, label off means none:
 
-- Adding `bolt-preview` deploys the PR's preview once its candidate is
+- Adding the `preview` label deploys the PR's preview once its candidate is
   published.
 - Removing it drops the preview and its database.
 - Merging or closing the PR removes the label: the `Preview Label` workflow
@@ -180,7 +180,7 @@ The first rollout needs an open same-repository PR after the publisher workflow
 has landed on `main`. A successful build of `main`, or of a PR that has already
 closed, does not publish a preview candidate. Keep the verification PR open
 while checking its preview. Add the
-`bolt-preview` label on the PR to enable its preview at
+`preview` label on the PR to enable its preview at
 `https://bolt-pr-<PR-number>.mimukodik.hu`. Remove the label to clean up the
 release and its database; adding it again creates a fresh empty database.
 Closing the PR also requests cleanup and removes the label.

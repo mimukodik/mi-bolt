@@ -342,12 +342,12 @@ rather than in a browser (https://angular.dev/cli/test, option `browsers`).
 **A running preview.** When the task needs the deployed app rather than a
 local server, such as a demo recording, a browser check a reviewer will
 repeat, or screenshots for a recap, deploy the pull request's preview yourself
-as soon as the pull request exists: adding the `bolt-preview` label is what
+as soon as the pull request exists: adding the `preview` label is what
 deploys it (`deploy/candidate/README.md`, "label on the PR to enable its
 preview"). Then wait with the command, never with a fixed sleep:
 
 ```sh
-gh pr edit <PR-number> --add-label bolt-preview
+gh pr edit <PR-number> --add-label preview
 python3 deploy/candidate/preview_wait.py <PR-number>
 ```
 

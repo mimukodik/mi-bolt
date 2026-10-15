@@ -2,9 +2,9 @@ name: Preview Deployment
 
 # Shows a labelled PR's Bolt preview as a GitHub deployment on the PR (MIM-505).
 # The Berek coordinator deploys previews with a read-only GitHub token, so this
-# reports for it: in progress when bolt-preview goes on or a labelled PR gets a
-# push, the preview URL once it serves the head, inactive when the label goes
-# or the PR closes. A dispatch reports a preview that is already running.
+# reports for it: in progress when the preview label goes on or a labelled PR
+# gets a push, the preview URL once it serves the head, inactive when the label
+# goes or the PR closes. A dispatch reports a preview that is already running.
 # pull_request_target runs the default branch's copy and nothing here checks
 # out PR code.
 on:
@@ -26,9 +26,9 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
        github.event.pull_request.state == 'open' &&
-       ((github.event.action == 'labeled' && github.event.label.name == 'bolt-preview') ||
+       ((github.event.action == 'labeled' && github.event.label.name == 'preview') ||
         (github.event.action == 'synchronize' &&
-         contains(github.event.pull_request.labels.*.name, 'bolt-preview'))))
+         contains(github.event.pull_request.labels.*.name, 'preview'))))
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 50
     # Job-level, so an unrelated label event skips without cancelling: a push,
@@ -58,8 +58,8 @@ jobs:
       github.event_name == 'pull_request_target' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       ((github.event.action == 'closed' &&
-        contains(github.event.pull_request.labels.*.name, 'bolt-preview')) ||
-       (github.event.action == 'unlabeled' && github.event.label.name == 'bolt-preview'))
+        contains(github.event.pull_request.labels.*.name, 'preview')) ||
+       (github.event.action == 'unlabeled' && github.event.label.name == 'preview'))
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     concurrency:

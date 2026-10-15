@@ -18,7 +18,7 @@ OLD, HEAD = 'a' * 40, 'b' * 40
 URL = 'https://bolt-pr-7.mimukodik.hu'
 
 
-def pr(head=HEAD, labels=('bolt-preview',), state='open', repo=REPO, merged=False):
+def pr(head=HEAD, labels=('preview',), state='open', repo=REPO, merged=False):
     return {'number': 7, 'state': state, 'merged_at': '2026-10-07T00:00:00Z' if merged else None,
             'head': {'sha': head, 'repo': {'full_name': repo} if repo else None},
             'labels': [{'name': name} for name in labels]}
@@ -120,7 +120,7 @@ class PreviewWaitTests(unittest.TestCase):
         Fake(self, [{'pr': pr(labels=())}])
         code, out = self.wait()
         self.assertEqual(code, 2)
-        self.assertIn('gh pr edit 7 -R mimukodik/mi-bolt --add-label bolt-preview', out)
+        self.assertIn('gh pr edit 7 -R mimukodik/mi-bolt --add-label preview', out)
 
     def test_closed_and_fork_prs_stop(self):
         for kwargs, text in (({'state': 'closed', 'merged': True}, 'is merged'),
@@ -180,7 +180,7 @@ class PreviewWaitTests(unittest.TestCase):
         Fake(self, [{'pr': pr()}, {'pr': pr(labels=())}])
         code, out = self.wait()
         self.assertEqual(code, 2)
-        self.assertIn('has no bolt-preview label', out)
+        self.assertIn('has no preview label', out)
 
     def test_timeout_reports_the_last_state_and_where_to_look(self):
         Fake(self, [{'pr': pr(), 'runs': green()}])
