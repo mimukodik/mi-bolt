@@ -6,9 +6,10 @@
 .card {
   height: 100%;
   padding: var(--space-4);
-  background: var(--color-surface-light);
-  border: 2px solid var(--color-line-card);
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-line-strong);
   border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 35, 64, 0.08);
   color: var(--color-text-on-primary);
 }
 
@@ -16,10 +17,9 @@
   display: block;
   text-decoration: none;
   color: inherit;
-  /* The card already sits on the light surface, so the photo needs no
-   * plate of its own: hand the light token down to product-image and let
-   * the grey default stay for every other call site. */
-  --product-image-surface: var(--color-surface-light);
+  /* The photo needs no plate of its own: hand the card's surface down to
+   * product-image and let the default stay for every other call site. */
+  --product-image-surface: var(--color-surface-alt);
 }
 
 .body {
