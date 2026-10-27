@@ -39,7 +39,7 @@ These belong elsewhere:
 - **Ports, proxy files, `frontend/angular.json` build and serve options and
   mise tasks** belong to `mibolt-workspace-ops`.
 - **Colour, type, radius, spacing and recipe values** come from
-  `frontend/docs/design/yettel.md`, as Design authority under Local
+  `frontend/docs/design/telekom.md`, as Design authority under Local
   conventions says. This skill carries none of them.
 - **Writing end-to-end specs** is outside the MiBolt skills. The suite under
   `frontend/e2e/` is configured by `frontend/playwright.config.ts`, states its
@@ -96,7 +96,7 @@ compile time as well.
   the one `@theme` block, so templates lay out and space with Tailwind
   utilities and a component's `.scss` carries the
   rest. `frontend/projects/storefront/src/styles/tokens.css` names the design
-  tokens, mapped row by row in `frontend/docs/design/yettel.md` §9; its
+  tokens, mapped row by row in `frontend/docs/design/telekom.md` §6; its
   colour, radius and font names resolve to those theme variables.
   `frontend/projects/storefront/src/styles/primitives.css` holds the font
   faces, the page reset and the shared focus ring. The three are the build's
@@ -206,7 +206,7 @@ Copy these when you need a pattern:
    collision before building rather than settling it either way, because
    whether the recorded decision or the new request stands is the product
    owner's call. Take no colour, type, radius, spacing or recipe value from
-   the spec: those come from `frontend/docs/design/yettel.md` (Design
+   the spec: those come from `frontend/docs/design/telekom.md` (Design
    authority, under Local conventions), which
    `frontend/docs/spec/screens.md` ("as the design reference at execution AND
    verification") names too.
@@ -337,20 +337,21 @@ because they are easy to break in this area.
 
 ### Design authority
 
-`frontend/docs/design/yettel.md` is the design reference for every rendered
+`frontend/docs/design/telekom.md` is the design reference for every rendered
 surface (`frontend/docs/spec/execution-rules.md`, "is the design reference for
-every implementation and every verification or review of a rendered surface"): colour tokens, typography,
-radii, spacing, the component recipes with the yettel.hu selectors they came
-from, the list- and device-page feature inventories, and in §9 the
-storefront's token mapping. Take every colour, type, radius, spacing and
-recipe value from it and name its section beside the value in a comment, as
-`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss` ("(docs/design/yettel.md §5")
-does; most component stylesheets do not.
-A value it lacks is measured on `frontend/docs/design/yettel/css/portal.css`,
-the captured yettel.hu stylesheet, and added to the document, with its
-selector, before any code uses it. It also records values that are the
-project's own, marked as such: the skeleton loaders (§5), and the three
-`-soft` status grounds and the dashed disabled look (§9).
+every implementation and every verification or review of a rendered surface"):
+colour tokens, typography, radii, the component recipes measured on
+telekom.hu, and in §6 the storefront's token mapping. Take every colour, type,
+radius, spacing and recipe value from it and name its section beside the value
+in a comment, as
+`frontend/projects/storefront/src/app/core/navigation/footer-nav.scss` ("(docs/design/telekom.md §5")
+does. `frontend/docs/design/yettel.md` remains the structural reference (screen
+layouts and feature inventories) and the record of the previous theme; a new
+value is measured on the live page, captured under
+`frontend/docs/design/telekom/screenshots/`, and added to the document with
+its evidence before any code uses it. The document also records values that
+are the project's own, marked as such: the skeleton loaders (§5), the three
+`-soft` status grounds and the dashed disabled look.
 
 The payment app takes the shop's numeric scales and a few colours from the
 document but keeps its own palette and typeface
@@ -481,8 +482,9 @@ references that describes it, in the same change:
 - the `storefront`, `demo-payment` and `shop-mocks` targets in
   `frontend/angular.json`, and the installed `@angular/build` version, which
   decides the `--include` form above;
-- `frontend/docs/design/yettel.md`, whose sections this skill and its
-  references cite by number (§2, §5, §9);
+- `frontend/docs/design/telekom.md`, whose sections this skill and its
+  references cite by number (§2, §5, §6), and `frontend/docs/design/yettel.md`
+  as the structural reference;
 - any file this skill or its references cite: a citation names its target
   (a heading, function, constant, key or distinctive phrase) and never gives
   a line number, so a change that renames or rewrites the named part can

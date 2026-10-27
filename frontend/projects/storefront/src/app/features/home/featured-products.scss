@@ -1,5 +1,8 @@
+/* telekom.hu's recommendation row sits on white under its banner, with the
+   grey only inside the device photos (docs/design/telekom.md §5 "Device
+   row"). */
 .featured {
-  background: var(--color-surface-section);
+  background: var(--color-surface);
   color: var(--color-text-primary);
 }
 
@@ -17,9 +20,10 @@
   color: var(--color-text-secondary);
 }
 
-/* .btn-outline-navy — the yettel 48px .btn box with 1px off each padding
-   edge for the hairline (docs/design/yettel.md §5). The box itself is
-   utilities on the element: inline-flex, min-h-12, min-w-12. */
+/* The outlined black pill of telekom.hu's secondary button, 1px off each
+   padding edge for the hairline (docs/design/telekom.md §5 "Pill button").
+   The box itself is utilities on the element: inline-flex, min-h-12,
+   min-w-12. */
 .featured__all-link {
   padding: 11px 23px;
   background: transparent;
@@ -32,7 +36,8 @@
 }
 
 .featured__all-link:hover {
-  background: var(--color-brand-accent-soft);
+  background: var(--color-brand-ink);
+  color: var(--color-text-inverse);
 }
 
 .featured__grid-error {

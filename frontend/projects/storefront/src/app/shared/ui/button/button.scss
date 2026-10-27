@@ -1,8 +1,9 @@
-/* MiBolt Button primitive — docs/design/yettel.md §5 and §9 button recipes.
-   The invariant box and type (inline-flex, 12px 24px padding, 16/24) are
-   Tailwind utilities on the template; this sheet holds what utilities cannot
-   express: the variant colours behind the .is-* state classes, the states,
-   and the spinner. */
+/* MiBolt Button primitive — docs/design/telekom.md §5 "Pill button": every
+   variant is a full pill, the filled CTA is magenta with white text and the
+   black pill is telekom.hu's strong secondary. The invariant box and type
+   (inline-flex, 12px 24px padding, 16/24) are Tailwind utilities on the
+   template; this sheet holds what utilities cannot express: the variant
+   colours behind the .is-* state classes, the states, and the spinner. */
 
 .root {
   min-height: var(--button-height);
@@ -10,7 +11,7 @@
   border: 0;
   border-radius: var(--button-radius);
   font-family: var(--font-family-bold);
-  color: var(--color-primary);
+  color: var(--color-text-inverse);
   background: var(--color-accent);
   transition:
     background-color var(--motion-fast) ease,
@@ -19,29 +20,30 @@
 }
 
 /* The two outlined variants carry a 1px border, so each padding edge loses
-   the same pixel and the box stays the 48px .btn box (§5). */
+   the same pixel and the box stays the 48px pill (§5). */
 .root.is-secondary,
 .root.is-secondary-on-dark {
   border: 1px solid;
   padding: 11px 23px;
 }
 
-/* secondary — the outlined navy button (.btn-outline-navy) */
+/* secondary — the outlined black pill on white (docs/design/telekom.md §5) */
 .root.is-secondary {
   color: var(--color-primary);
   background: var(--color-surface);
   border-color: var(--color-primary);
 }
 
-/* secondary on dark — .btn-outline-lime, yettel's outlined button for a navy
-   ground: lime text and hairline on a transparent fill */
+/* secondary on dark — the white outlined pill telekom.hu puts on its black
+   summary card: white text and hairline on a transparent fill */
 .root.is-secondary-on-dark {
-  color: var(--color-accent);
+  color: var(--color-text-inverse);
   background: transparent;
-  border-color: var(--color-accent);
+  border-color: var(--color-text-inverse);
 }
 
-/* navy — the filled .btn--primary, white on #002340 */
+/* navy — the filled black pill, white text (telekom.hu's "Belépés" and its
+   summary-card actions; docs/design/telekom.md §5) */
 .root.is-navy {
   color: var(--color-text-inverse);
   background: var(--color-primary);
@@ -57,7 +59,7 @@
 
 .root.is-secondary-on-dark:hover:not(:disabled) {
   color: var(--color-primary);
-  background: var(--color-accent);
+  background: var(--color-text-inverse);
 }
 
 .root.is-navy:hover:not(:disabled) {
@@ -68,23 +70,23 @@
   transform: translateY(1px);
 }
 
-/* The pill sits on a navy surface, where both the navy ring and a lime one
-   (the pill's own colour) disappear; white is the only ring that reads there
-   (docs/design/yettel.md §9). */
+/* The pill sits on a black surface, where both the black ring and a magenta
+   one disappear; white is the only ring that reads there (docs/design/
+   telekom.md §6). */
 .root.is-secondary-on-dark:focus-visible {
   outline-color: var(--color-text-inverse);
 }
 
-/* primary on dark — the lime pill on a navy surface (the product page's buy
-   box, the cart summary): the base lime fill and hover, with the same white
-   ring. */
+/* primary on dark — the magenta pill on a black surface (the product page's
+   buy box, the cart summary): the base magenta fill and hover, with the same
+   white ring. */
 .root.is-primary-on-dark:focus-visible {
   outline-color: var(--color-text-inverse);
 }
 
 /* Disabled: a dashed outline on a transparent fill, never a paler twin
-   of the enabled button (owner's ask; docs/design/yettel.md records the
-   departure from .btn--primary[disabled]). The 2px edge takes 2px off
+   of the enabled button (owner's ask; docs/design/telekom.md records the
+   departure from telekom.hu's own disabled pills). The 2px edge takes 2px off
    each padding side, so the box stays 48px. A button busy with its own
    request (aria-busy) keeps its variant look and shows the spinner. */
 .root:disabled:not([aria-busy]) {
