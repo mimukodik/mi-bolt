@@ -163,7 +163,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     await TestBed.compileComponents();
   });
 
-  it('MarketingLayout header is the lime bar with navy on it (docs/design/yettel.md §5)', () => {
+  it('MarketingLayout header is the white bar with black on it (docs/design/telekom.md §5)', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
@@ -176,14 +176,14 @@ describe('T11-AC02 brand-consistent header and footer', () => {
       .replace(/\[[^\]]*\]/g, '')
       .replace(/\s+/g, ' ')
       .replace(/\s*([{}:;,])\s*/g, '$1');
-    // .portal-header__bar{height:72px;background:#b4ff00} with navy text —
-    // the header no longer takes the navy shell token, which still grounds
-    // the footer, the hero and the drawer.
+    // telekom.hu's header is a white bar with black text and a magenta
+    // logo block (docs/design/telekom.md §5); the header no longer takes
+    // the black shell token, which still grounds the footer and the hero.
     const at = css.indexOf('.header{');
     expect(at).toBeGreaterThan(-1);
     const bar = css.slice(at, css.indexOf('}', at));
-    expect(bar).toContain('background:var(--color-accent)');
-    expect(bar).toContain('color:var(--color-primary)');
+    expect(bar).toContain('background:var(--color-surface)');
+    expect(bar).toContain('color:var(--color-text-primary)');
     expect(css.includes('color-shell-dark')).toBe(false);
   });
 

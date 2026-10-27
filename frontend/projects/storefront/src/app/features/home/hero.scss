@@ -14,7 +14,8 @@
   overflow: hidden;
   background:
     radial-gradient(ellipse 70% 90% at 100% 0%, rgb(226 0 116 / 55%) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 70% at 85% 100%, rgb(226 0 116 / 28%) 0%, transparent 65%), #000;
+    radial-gradient(ellipse 55% 70% at 85% 100%, rgb(226 0 116 / 28%) 0%, transparent 65%),
+    var(--color-shell-hero);
   color: var(--color-text-inverse);
 }
 
@@ -34,7 +35,7 @@
 }
 
 .hero__title-accent {
-  color: var(--color-accent);
+  color: var(--color-brand-accent);
 }
 
 .hero__message {
@@ -61,12 +62,12 @@
 .hero__cta {
   padding: 12px var(--space-6);
   border: 0;
-  background: var(--color-accent);
+  background: var(--color-brand-accent);
   color: var(--color-text-inverse);
 }
 
 .hero__cta:hover {
-  background: var(--color-accent-hover);
+  background: var(--color-brand-accent-hover);
 }
 
 .hero__cta-secondary {
