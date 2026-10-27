@@ -1,36 +1,84 @@
-/* MiBolt primitives — the three yettel faces, the page-level reset and the
+/* MiBolt primitives — the three shop faces, the page-level reset and the
    shared focus ring. Components own their own styling via component-scoped
    CSS referencing the tokens in tokens.css and the theme in styles.css.
    This file is intentionally minimal: only what every primitive needs from
    the host page. */
 
-/* The three yettel faces, docs/design/yettel.md §3. The captured CSS lists
-   woff before woff2, and the files are served from public/fonts/. */
+/* The three shop faces, docs/design/telekom.md §3. telekom.hu sets every
+   surface in TeleNeo Var, a proprietary face; the shop ships Inter (SIL
+   OFL 1.1) as the closest freely available grotesque and declares it three
+   times so the existing `--font-family-bold`/`-light` rules keep their
+   weight without touching every component. The variable file carries
+   400-700; the bold and light faces pin the weight the family name asks
+   for. Hungarian ő/ű live in the latin-ext subset, so both subsets are
+   loaded. The files are served from public/fonts/. */
 @font-face {
-  font-family: 'portal-font-regular';
-  src:
-    url('/fonts/font-regular.woff') format('woff'),
-    url('/fonts/font-regular.woff2') format('woff2');
+  font-family: 'shop-font-regular';
+  src: url('/fonts/inter-var-latin.woff2') format('woff2');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: 'portal-font-bold';
-  src:
-    url('/fonts/font-bold.woff') format('woff'),
-    url('/fonts/font-bold.woff2') format('woff2');
+  font-family: 'shop-font-regular';
+  src: url('/fonts/inter-var-latin-ext.woff2') format('woff2');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
 }
 
 @font-face {
-  font-family: 'portal-font-light';
-  src:
-    url('/fonts/font-light.woff') format('woff'),
-    url('/fonts/font-light.woff2') format('woff2');
+  font-family: 'shop-font-bold';
+  src: url('/fonts/inter-var-latin.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'shop-font-bold';
+  src: url('/fonts/inter-var-latin-ext.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'shop-font-light';
+  src: url('/fonts/inter-var-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'shop-font-light';
+  src: url('/fonts/inter-var-latin-ext.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
 }
 
 *,
@@ -102,9 +150,9 @@ h6 {
   outline: none;
 }
 
-/* Text fields follow yettel's `.form-control` recipe (docs/design/yettel.md
-   §5 "Text field"): on focus the border turns #0069c0, with no outline and no
-   ring. An invalid field keeps its red border and shows yettel's red "!" icon
+/* Text fields follow telekom.hu's field recipe (docs/design/telekom.md §5
+   "Text field"): on focus the border turns magenta, with no outline and no
+   ring. An invalid field keeps its red border and shows the red "!" icon
    at its right edge; focused, it adds a soft red halo and stays red. A field
    without a border (`border-0`, the header search boxes) keeps the outline
    ring above, because a border colour on it would show nothing.

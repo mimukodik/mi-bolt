@@ -1,60 +1,66 @@
-/* Global stylesheet and the single central Tailwind theme. Every yettel.hu
+/* Global stylesheet and the single central Tailwind theme. Every Telekom
    value the build uses is declared once in the theme block below, so
    utilities exist for it: --color-* gives the bg, text and border utilities,
    --radius-* gives rounded-*, --font-* gives font-*. The colour, radius and
    font token names in src/styles/tokens.css resolve to these variables; the
-   token-to-theme mapping is docs/design/yettel.md §9. */
+   token-to-theme mapping is docs/design/telekom.md §6. Values are measured on
+   telekom.hu (lakossági home and webshop/csomag-osszeallitas), captured
+   2026-10-27; the previous yettel register stays in docs/design/yettel.md as
+   the structural reference. */
 
 @import 'tailwindcss';
 @import './styles/halloween.css';
 
 @theme {
-  /* Colour — docs/design/yettel.md §2. */
-  --color-primary: #002340;
-  --color-primary-hover: #01385e;
-  --color-accent: #b4ff00;
-  --color-accent-hover: #c5ff64;
+  /* Colour — docs/design/telekom.md §2. */
+  --color-primary: #000;
+  --color-primary-hover: #202020;
+  --color-accent: #e20074;
+  --color-accent-hover: #ad0a5d;
 
-  --color-text: #002340;
-  --color-text-muted: #80919f;
-  --color-text-light: #9194a0;
-  --color-text-on-primary: #232841;
-  --color-text-body: #4e4e4e;
-  --color-text-strong: #212529;
+  --color-text: #000;
+  --color-text-muted: #626262;
+  --color-text-light: #626262;
+  --color-text-on-primary: #000;
+  --color-text-body: #202020;
+  --color-text-strong: #000;
 
   --color-surface: #fff;
-  --color-surface-alt: #f2f4f5;
-  --color-surface-sky: #c4dfe9;
+  --color-surface-alt: #f1f1f1;
+  --color-surface-sky: #f9cce3;
 
-  --color-line: #e5e9ec;
-  --color-line-strong: #dddfe1;
+  --color-line: #e5e5e5;
+  --color-line-strong: #d6d6d6;
 
-  --color-success: #5cb85c;
-  --color-error: #d9534f;
-  --color-warning: #ffd500;
-  --color-warning-text: #332b00;
+  --color-success: #2e7d32;
+  --color-error: #d0021b;
+  --color-warning: #efdc34;
+  --color-warning-text: #000;
 
   /* Disabled: a dashed outline on a transparent fill (owner's ask; a
-     departure from yettel's .btn--primary[disabled], recorded in
-     docs/design/yettel.md). The on-dark pair serves the navy buy box. */
+     departure from telekom.hu's own disabled pills, recorded in
+     docs/design/telekom.md §5). The on-dark pair serves the black summary
+     surfaces. */
   --color-disabled-bg: transparent;
-  --color-disabled-border: #80919f;
-  --color-disabled-text: #4e4e4e;
+  --color-disabled-border: #b6b6b6;
+  --color-disabled-text: #626262;
   --color-disabled-on-dark-border: rgb(255 255 255 / 60%);
   --color-disabled-on-dark-text: rgb(255 255 255 / 80%);
 
-  /* Radii — docs/design/yettel.md §4. */
+  /* Radii — docs/design/telekom.md §4. Cards are 16px tiles and 24px section
+     panels; every control is a full pill (999px). */
   --radius-input: 8px;
   --radius-card: 16px;
-  --radius-pill: 24px;
+  --radius-pill: 999px;
 
-  /* Type faces — docs/design/yettel.md §3. Only the regular face is a theme
-     variable: Tailwind's --font-* namespace generates the font-family
-     utilities, so a --font-bold here would turn `font-bold` into a
-     font-family class and take away the weight utility 16 templates use.
-     The bold and light faces are plain custom properties in
+  /* Type faces — docs/design/telekom.md §3. TeleNeo is proprietary, so the
+     shop ships Inter (SIL OFL) as the closest freely available grotesque.
+     Only the regular face is a theme variable: Tailwind's --font-* namespace
+     generates the font-family utilities, so a --font-bold here would turn
+     `font-bold` into a font-family class and take away the weight utility 16
+     templates use. The bold and light faces are plain custom properties in
      src/styles/tokens.css (--font-family-bold, --font-family-light). */
-  --font-sans: 'portal-font-regular', sans-serif, arial;
+  --font-sans: 'shop-font-regular', 'Inter', sans-serif, arial;
 }
 
 /* Headings and paragraphs take the primary text colour here, in Tailwind's

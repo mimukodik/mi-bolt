@@ -227,7 +227,7 @@ describe('Button primitive', () => {
     expect(css).toContain(':focus-visible');
   });
 
-  it('wires the yettel button recipe into its stylesheet (docs/design/yettel.md §5, §9)', () => {
+  it('wires the telekom button recipe into its stylesheet (docs/design/telekom.md §5, §6)', () => {
     if (!hasComponentStyles(Button)) {
       throw new Error('Expected Button component styles');
     }
@@ -237,12 +237,11 @@ describe('Button primitive', () => {
     // structural characters with them, so the declaration pairs below match
     // the source's inner spacing (`1px solid`, not `1pxsolid`).
     const css = normaliseComponentCss(Button.ɵcmp.styles.join('\n'));
-    // primary: the .btn--primary-inverse recipe, navy #002340 on lime
-    // #b4ff00 — the lime pill is yettel's CTA on every captured screen.
+    // primary: the filled magenta pill with white text, telekom.hu's CTA.
     const primary = declarations(css, '.root');
-    expect(primary).toContain('color:var(--color-primary)');
+    expect(primary).toContain('color:var(--color-text-inverse)');
     expect(primary).toContain('background:var(--color-accent)');
-    // the 24px pill radius (§4), the 48px box (12 + 24 + 12) and the bold
+    // the 999px pill radius (§4), the 48px box (12 + 24 + 12) and the bold
     // face, reached through the token that is not a Tailwind theme variable
     // so `font-bold` keeps its weight. A filled .btn carries `border:0`.
     expect(primary).toContain('border-radius:var(--button-radius)');
@@ -258,19 +257,19 @@ describe('Button primitive', () => {
     const outlined = declarations(css, '.root.is-secondary,.root.is-secondary-on-dark');
     expect(outlined).toContain('border:1px solid');
     expect(outlined).toContain('padding:11px 23px');
-    // secondary: the navy outline on white (.btn-outline-navy).
+    // secondary: the black outline on white.
     const secondary = declarations(css, '.root.is-secondary');
     expect(secondary).toContain('color:var(--color-primary)');
     expect(secondary).toContain('background:var(--color-surface)');
     expect(secondary).toContain('border-color:var(--color-primary)');
-    // secondary-on-dark: .btn-outline-lime — lime text and hairline on a
-    // transparent fill, with the white ring the navy ground needs.
+    // secondary-on-dark: the white outline pill on black, with the white
+    // ring the black ground needs.
     const onDark = declarations(css, '.root.is-secondary-on-dark');
-    expect(onDark).toContain('color:var(--color-accent)');
+    expect(onDark).toContain('color:var(--color-text-inverse)');
     expect(onDark).toContain('background:transparent');
-    expect(onDark).toContain('border-color:var(--color-accent)');
+    expect(onDark).toContain('border-color:var(--color-text-inverse)');
     expect(declarations(css, '.root.is-secondary-on-dark:hover:not(:disabled)')).toContain(
-      'background:var(--color-accent)',
+      'background:var(--color-text-inverse)',
     );
     expect(declarations(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
       'outline-color:var(--color-text-inverse)',

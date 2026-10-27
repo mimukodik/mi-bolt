@@ -20,6 +20,8 @@
   font-weight: var(--weight-bold);
   line-height: var(--line-height-heading);
   font-variant-numeric: tabular-nums;
+  /* telekom.hu prints device prices in magenta (docs/design/telekom.md §2). */
+  color: var(--color-brand-price);
 }
 
 .root[data-size='md'] .amount {
@@ -44,8 +46,10 @@
   color: var(--color-text-inverse-muted);
 }
 
+/* On the black summary card the price stays white and only a saving gets a
+   magenta tint (docs/design/telekom.md §5 "Summary card"). */
 .root[data-inverse] .amount {
-  color: var(--color-accent);
+  color: var(--color-text-inverse);
 }
 
 .amount--error,
@@ -62,7 +66,11 @@
 .currency {
   font-size: var(--type-helper);
   margin-left: var(--space-1);
-  color: var(--color-text-primary);
+  color: var(--color-brand-price);
+}
+
+.root[data-inverse] .currency {
+  color: var(--color-text-inverse-muted);
 }
 
 .row {
@@ -111,18 +119,20 @@
   line-height: 1.5;
   color: var(--color-text-primary);
 }
+/* Promotion copy and the promotional amount use telekom.hu's dark magenta
+   on light and its light pink on black (docs/design/telekom.md §2). */
 .promotion-copy {
   font-size: var(--type-helper);
   line-height: 1.5;
-  color: #7c3aed;
+  color: var(--color-accent-hover);
   overflow-wrap: anywhere;
 }
 .promotional .amount {
-  color: #7c3aed;
+  color: var(--color-accent-hover);
 }
 .root[data-inverse].promotional .amount,
 .root[data-inverse] .promotion-copy {
-  color: #ffb56b;
+  color: #ffbddf;
 }
 .root[data-inverse] .reference {
   color: var(--color-text-inverse-muted);

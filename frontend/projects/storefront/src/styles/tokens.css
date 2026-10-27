@@ -1,4 +1,4 @@
-/* Token names used by the component styles. The colour, radius and font entries resolve to the yettel theme variables declared in src/styles.css; the spacing, size, typography, layout and motion entries are declared here as values. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
+/* Token names used by the component styles. The colour, radius and font entries resolve to the Telekom theme variables declared in src/styles.css; the spacing, size, typography, layout and motion entries are declared here as values. The mapping, row by row with its telekom.hu source, is docs/design/telekom.md §6. */
 
 :root {
   /* color brand */
@@ -6,6 +6,9 @@
   --color-brand-accent-hover: var(--color-accent-hover);
   --color-brand-accent-soft: var(--color-surface-sky);
   --color-brand-ink: var(--color-primary);
+  /* Price figures on a light surface: telekom.hu sets the device price in
+     magenta (docs/design/telekom.md §2 "Magenta"). */
+  --color-brand-price: var(--color-accent);
 
   /* color surface */
   --color-surface-light: var(--color-surface);
@@ -23,26 +26,25 @@
   /* color border */
   --color-border-subtle: var(--color-line);
   --color-border-control: var(--color-text-muted);
-  /* Card border on the catalogue list (docs/design/yettel.md §5
-     "Product card on the list page"). */
-  --color-line-card: #f3f3f3;
-  /* Pager prev/next ring (docs/design/yettel.md §5 "Sort control and pager"). */
-  --color-pager-ring: #003f73;
-  /* Thumbnail and variant-chip ring on the device page (docs/design/yettel.md §5
-     "Gallery" and "Variant chips"). */
-  --color-line-thumb: #e5e9ec;
+  /* Card border on the catalogue list (docs/design/telekom.md §5
+     "Device card"). */
+  --color-line-card: #e5e5e5;
+  /* Pager prev/next ring (docs/design/telekom.md §5 "Pager"). */
+  --color-pager-ring: #000;
+  /* Thumbnail and variant-chip ring on the device page (docs/design/telekom.md
+     §5 "Gallery" and "Variant chips"). */
+  --color-line-thumb: #e5e5e5;
 
   /* color status */
   --color-status-success: var(--color-success);
-  /* Yettel's success mark: check-circle-32px.svg fills both paths #76D18B
-     (measured on yettel.hu, 2026-09-22). */
-  --color-success-mark: #76d18b;
+  /* Success mark: a solid green check, telekom.hu's positive status colour. */
+  --color-success-mark: #2e7d32;
   --color-status-error: var(--color-error);
   --color-status-warning: var(--color-warning);
   --color-status-warning-text: var(--color-warning-text);
   --color-status-info: var(--color-surface-sky);
   /* Alert grounds (MIM-240): each status colour mixed onto the light surface.
-     yettel's alerts use solid grounds; these mixes are this project's own. */
+     telekom.hu's alerts use solid grounds; these mixes are this project's own. */
   --color-status-success-soft: color-mix(
     in srgb,
     var(--color-status-success) 12%,
@@ -62,12 +64,11 @@
   /* color focus */
   --color-focus-light: var(--color-primary);
   --color-focus-dark: var(--color-accent);
-  /* Border of a focused text field: yettel's `.form-control:focus`
-     (docs/design/yettel.md §5 "Text field"). */
-  --color-focus-input: #0069c0;
-  /* Halo around a focused invalid field: yettel's
-     `.form-control.is-invalid:focus` box-shadow. */
-  --color-error-halo: rgb(217 83 79 / 25%);
+  /* Border of a focused text field: the brand magenta on the field edge
+     (docs/design/telekom.md §5 "Text field"). */
+  --color-focus-input: var(--color-accent);
+  /* Halo around a focused invalid field. */
+  --color-error-halo: rgb(208 2 27 / 25%);
 
   /* spacing scale: 8pt rhythm, 4pt sub-step */
   --space-1: 4px;
@@ -88,39 +89,39 @@
   --rail-height: 5.5rem;
 
   /* radius. --radius-card is not redeclared here: the theme variable of that
-     name is already the yettel 16px card radius, and a self-referencing
-     custom property would resolve to nothing. */
+     name is already the 16px card radius, and a self-referencing custom
+     property would resolve to nothing. Chips use telekom.hu's 6px label
+     radius (docs/design/telekom.md §4). */
   --radius-control: var(--radius-input);
-  --radius-badge: var(--radius-input);
+  --radius-badge: 6px;
 
   /* size */
   --size-control: 44px;
   --size-control-comfortable: 48px;
-  /* Desktop height of the header bar — .portal-header__bar{height:72px}
-     (docs/design/yettel.md §5 "Header"). */
-  --size-header: 72px;
+  /* Desktop height of the header bar. */
+  --size-header: 80px;
   --size-icon: 20px;
   --size-icon-large: 24px;
 
-  /* typography */
+  /* typography. telekom.hu sets its page titles at 56px, section titles at
+     32px and its main-menu items at 20px/24px (docs/design/telekom.md §3). */
   --font-family-base: var(--font-sans);
   /* The bold and light faces are declared here rather than in the @theme
      block: Tailwind's --font-* namespace would turn them into font-family
-     utilities named font-bold and font-light. docs/design/yettel.md §3. */
-  --font-family-bold: 'portal-font-bold', sans-serif, arial;
-  --font-family-light: 'portal-font-light', sans-serif, arial;
+     utilities named font-bold and font-light. docs/design/telekom.md §3. */
+  --font-family-bold: 'shop-font-bold', 'Inter', sans-serif, arial;
+  --font-family-light: 'shop-font-light', 'Inter', sans-serif, arial;
   --type-body: 16px;
-  /* Header menu link — .portal-header-menu__link{font-size:20px;line-height:28px}
-     (docs/design/yettel.md §5 "Header"). */
+  /* Header menu link. */
   --type-nav: 20px;
-  --leading-nav: 28px;
+  --leading-nav: 24px;
   --type-card-title: 18px;
-  --type-section-title: 28px;
-  --type-section-title-mobile: 24px;
-  --type-page-title: 36px;
-  --type-page-title-mobile: 28px;
-  --type-hero: 52px;
-  --type-hero-mobile: 34px;
+  --type-section-title: 32px;
+  --type-section-title-mobile: 26px;
+  --type-page-title: 40px;
+  --type-page-title-mobile: 30px;
+  --type-hero: 56px;
+  --type-hero-mobile: 36px;
   --type-helper: 14px;
   --type-meta: 12px;
   --type-price: 28px;
@@ -129,7 +130,7 @@
   --weight-medium: 500;
   --weight-bold: 700;
   --line-height-body: 1.5;
-  --line-height-heading: 1.15;
+  --line-height-heading: 1.05;
 
   /* motion */
   --motion-fast: 120ms;
@@ -138,8 +139,8 @@
 
   /* button specifics */
   --button-radius: var(--radius-pill);
-  /* The yettel .btn box is 12px + 24px line-height + 12px = 48px
-     (docs/design/yettel.md §5 "Primary button"). */
+  /* The pill box is 12px + 24px line-height + 12px = 48px
+     (docs/design/telekom.md §5 "Pill button"). */
   --button-height: var(--size-control-comfortable);
 }
 

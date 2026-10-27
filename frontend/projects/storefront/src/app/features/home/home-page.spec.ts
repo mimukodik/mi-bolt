@@ -256,7 +256,7 @@ function pageFrom(items: readonly CatalogItem[]): ProductPage {
 // ---------------------------------------------------------------------------
 
 describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => {
-  it('hero uses the navy shell token and the brand accent token, and its CTA is the lime pill (docs/design/yettel.md §9)', async () => {
+  it('hero uses the dark shell token and the brand accent token, and its CTA is the magenta pill (docs/design/telekom.md §5, §6)', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -266,12 +266,12 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const css = getComponentStyles(Hero).join(' ');
-    expect(css.includes('color-shell-dark')).toBe(true);
+    expect(css.includes('color-shell-hero')).toBe(true);
     expect(css.includes('color-brand-accent')).toBe(true);
-    // The browser pass caught .hero__cta rendering navy text on a navy
-    // ground with an 8px radius. --color-brand-accent now resolves to the
-    // lime #b4ff00, so the pair below is the lime pill with navy text, and
-    // the radius is the 24px --radius-pill every yettel .btn carries (§4).
+    // The hero is telekom.hu's inset dark banner with a magenta pill
+    // (docs/design/telekom.md §5): --color-brand-accent resolves to the
+    // brand magenta #E20074, the label is white, and the radius is the
+    // 999px --radius-pill every control carries (§4).
     const normalised = css
       .replaceAll('%NS%', '')
       .replace(/\[[^\]]*\]/g, '')
@@ -281,10 +281,10 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(at).toBeGreaterThan(-1);
     const cta = normalised.slice(at, normalised.indexOf('}', at));
     expect(cta).toContain('background:var(--color-brand-accent)');
-    expect(cta).toContain('color:var(--color-text-primary)');
+    expect(cta).toContain('color:var(--color-text-inverse)');
     expect(cta).toContain('padding:12px var(--space-6)');
-    // Both CTAs share the yettel .btn box: portal-font-bold, 16/24 and the
-    // 24px pill (docs/design/yettel.md §5).
+    // Both CTAs share the telekom.hu pill: shop-font-bold, 16/24 and the
+    // 999px pill (docs/design/telekom.md §5).
     const boxAt = normalised.indexOf('.hero__cta,.hero__cta-secondary{');
     expect(boxAt).toBeGreaterThan(-1);
     const box = normalised.slice(boxAt, normalised.indexOf('}', boxAt));
@@ -292,14 +292,14 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(box).toContain('font-family:var(--font-family-bold)');
     expect(box).toContain('font-size:var(--type-body)');
     expect(box).toContain('line-height:24px');
-    // .btn-outline-lime on the navy hero: lime text and hairline, no fill.
-    // The selector has to sit at a rule boundary, or it would match inside
-    // the grouped `.hero__cta,.hero__cta-secondary` box rule above.
+    // The white outline pill on the black hero: white text and hairline, no
+    // fill. The selector has to sit at a rule boundary, or it would match
+    // inside the grouped `.hero__cta,.hero__cta-secondary` box rule above.
     const secAt = normalised.indexOf('}.hero__cta-secondary{');
     expect(secAt).toBeGreaterThan(-1);
     const secondary = normalised.slice(secAt + 1, normalised.indexOf('}', secAt + 1));
-    expect(secondary).toContain('color:var(--color-brand-accent)');
-    expect(secondary).toContain('border:1px solid var(--color-brand-accent)');
+    expect(secondary).toContain('color:var(--color-text-inverse)');
+    expect(secondary).toContain('border:1px solid var(--color-text-inverse)');
     expect(secondary).toContain('background:transparent');
   });
 

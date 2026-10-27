@@ -2,11 +2,10 @@
   display: block;
 }
 
-/* .portal-footer{border-top:0;background-color:#002340}
-   (docs/design/yettel.md §5 "Footer"), with white text on the navy ground
-   (§9 "Text colour is decided per surface"). The box and the spacing are
+/* telekom.hu closes the page with a black band and white text
+   (docs/design/telekom.md §5 "Footer"). The box and the spacing are
    Tailwind utilities on footer-nav.html; this sheet holds the colours and
-   the .btn-outline-lime recipe. */
+   the magenta outline pill. */
 .footer {
   background: var(--color-shell-dark);
   color: var(--color-text-inverse);
@@ -23,9 +22,9 @@
   font-size: var(--type-helper);
 }
 
-/* .btn-outline-lime on the navy footer — the yettel .btn box
-   (portal-font-bold 16/24, 12px 24px, 24px pill; docs/design/yettel.md §5),
-   with 1px off each padding edge for the hairline so it stays 48px. */
+/* The magenta outline pill on the black footer — 16/24 bold, 12px 24px,
+   999px radius (docs/design/telekom.md §5 "Pill button"), with 1px off each
+   padding edge for the hairline so it stays 48px. */
 .footer__cta {
   padding: 11px 23px;
   background: transparent;
@@ -42,10 +41,10 @@
 
 .footer__cta:hover {
   background: var(--color-brand-accent);
-  color: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 
-/* Lime on a navy ground: only a white ring reads there (§9). */
+/* Magenta on a black ground: only a white ring reads there (§6). */
 .footer__cta:focus-visible {
   outline: 2px solid var(--color-text-inverse);
   outline-offset: 2px;

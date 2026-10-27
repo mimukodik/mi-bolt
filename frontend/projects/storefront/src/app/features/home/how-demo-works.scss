@@ -8,10 +8,14 @@
        * mention of tariffs / internet / services / payments / bank cards.
        */
 
+/* An inset grey panel with 24px corners, telekom.hu's section-card shape
+   (docs/design/telekom.md §5 "Section panel"). */
 .how {
   background: var(--color-surface-section);
   color: var(--color-text-primary);
   padding: var(--space-9) var(--space-4);
+  margin: 0 var(--space-4) var(--space-4);
+  border-radius: 24px;
   scroll-margin-top: var(--space-10);
 }
 
@@ -89,7 +93,7 @@
   justify-content: center;
   width: var(--size-icon-large);
   height: var(--size-icon-large);
-  color: var(--color-brand-ink);
+  color: var(--color-accent);
 }
 
 .how__tile-title {
@@ -111,6 +115,7 @@
 @media (min-width: 1024px) {
   .how {
     padding: var(--space-10) var(--space-9);
+    margin: 0 var(--space-9) var(--space-6);
   }
 }
 

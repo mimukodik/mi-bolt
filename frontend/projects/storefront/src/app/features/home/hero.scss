@@ -1,24 +1,31 @@
-/* hero.scss — the navy hero and the shortcut band under it.
-   The box, the flex and grid layout, the spacing and the weights are
-   Tailwind utilities on hero.html; this sheet holds what utilities cannot
-   express: the alias colour and type tokens, the two CTA recipes
-   (docs/design/yettel.md §5) and the white focus ring those two take on a
-   navy ground (§9). Mobile and desktop share one column; from 720px the
-   three shortcut cards form their own row on the navy band
-   (docs/design/yettel.md §9, line 724). */
+/* hero.scss — the Telekom campaign hero and the shortcut band under it.
+   telekom.hu opens with a large rounded banner card inset in the white page
+   and a magenta accent over a dark image (docs/design/telekom.md §5 "Hero";
+   docs/design/telekom/screenshots/home-1440.png). The box, the flex layout,
+   the spacing and the weights are Tailwind utilities on hero.html; this
+   sheet holds what utilities cannot express: the card geometry, the gradient
+   ground and the two pill recipes. */
 
 .hero {
-  background: var(--color-shell-dark);
+  /* The inset banner card: 24px gutter on mobile, 48px on desktop, 32px
+     corners (docs/design/telekom.md §5 "Hero"). */
+  margin: var(--space-4) var(--space-4) 0;
+  border-radius: 32px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 90% at 100% 0%, rgb(226 0 116 / 55%) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 70% at 85% 100%, rgb(226 0 116 / 28%) 0%, transparent 65%),
+    var(--color-shell-hero);
   color: var(--color-text-inverse);
 }
 
 .hero__eyebrow {
   font-size: var(--type-helper);
-  color: var(--color-brand-accent);
+  color: #ffbddf;
 }
 
 /* The colour is not inherited: src/styles/primitives.css sets every heading
-   to --color-text-primary, which is navy on this navy ground. */
+   to --color-text-primary, which is black on this black ground. */
 .hero__title {
   font-size: var(--type-hero-mobile);
   line-height: var(--line-height-heading);
@@ -38,11 +45,9 @@
   overflow-wrap: anywhere;
 }
 
-/* Both CTAs are the yettel .btn box: portal-font-bold 16/24, 12px 24px
-   padding, 24px pill (docs/design/yettel.md §5). The primary is
-   .btn--primary-inverse, the lime "Megnézem" pill on home-1920.png; the
-   secondary is .btn-outline-lime, yettel's outlined button on a navy
-   ground. */
+/* Both CTAs are the telekom.hu pill: 16/24 bold, 12px 24px padding,
+   999px radius (docs/design/telekom.md §5 "Pill button"). The primary is
+   the magenta fill, the secondary the white hairline pill on black. */
 .hero__cta,
 .hero__cta-secondary {
   font-family: var(--font-family-bold);
@@ -58,7 +63,7 @@
   padding: 12px var(--space-6);
   border: 0;
   background: var(--color-brand-accent);
-  color: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 
 .hero__cta:hover {
@@ -69,32 +74,34 @@
   /* 1px off each padding edge keeps the outlined box at 48px too. */
   padding: 11px 23px;
   background: transparent;
-  color: var(--color-brand-accent);
-  border: 1px solid var(--color-brand-accent);
+  color: var(--color-text-inverse);
+  border: 1px solid var(--color-text-inverse);
 }
 
 .hero__cta-secondary:hover {
-  background: var(--color-brand-accent);
+  background: var(--color-text-inverse);
   color: var(--color-text-primary);
 }
 
-/* Both pills are lime on the navy hero, so neither a navy nor a lime ring
-   reads against them; white is the one that does (docs/design/yettel.md §9,
-   the same exception the primitive's is-secondary-on-dark takes). */
+/* The pills sit on black, so neither a black ring nor a magenta one reads
+   against them; white is the one that does (docs/design/telekom.md §6). */
 .hero__cta:focus-visible,
 .hero__cta-secondary:focus-visible {
   outline: 2px solid var(--color-text-inverse);
   outline-offset: 2px;
 }
 
+/* The shortcut band is a white card row under the hero, with light grey icon
+   tiles (docs/design/telekom.md §5 "Quick links"). */
 .hero-shortcuts {
-  background: var(--color-shell-dark);
-  border-top: 1px solid var(--color-text-inverse-muted);
+  margin: 0 var(--space-4);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
 }
 
 .hero-shortcuts__card {
-  color: var(--color-text-inverse);
-  border-top: 1px solid var(--color-text-inverse-muted);
+  color: var(--color-text-primary);
+  border-top: 1px solid var(--color-line);
 }
 
 .hero-shortcuts__card:first-child {
@@ -102,17 +109,17 @@
 }
 
 .hero-shortcuts__card:hover {
-  color: var(--color-brand-accent);
+  color: var(--color-accent);
 }
 
 .hero-shortcuts__card:focus-visible {
-  outline: 2px solid var(--color-focus-dark);
+  outline: 2px solid var(--color-focus-light);
   outline-offset: 2px;
 }
 
 .hero-shortcuts__icon {
-  background: var(--color-brand-accent);
-  color: var(--color-brand-ink);
+  background: var(--color-surface-section);
+  color: var(--color-accent);
 }
 
 .hero-shortcuts__icon--text {
@@ -125,7 +132,7 @@
 
 .hero-shortcuts__subtitle {
   font-size: var(--type-helper);
-  color: var(--color-text-inverse-muted);
+  color: var(--color-text-secondary);
 }
 
 @media (min-width: 720px) {
@@ -135,10 +142,20 @@
 
   .hero-shortcuts__card {
     border-top: none;
-    border-left: 1px solid var(--color-text-inverse-muted);
+    border-left: 1px solid var(--color-line);
   }
 
   .hero-shortcuts__card:first-child {
     border-left: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    margin: var(--space-6) var(--space-9) 0;
+  }
+
+  .hero-shortcuts {
+    margin: 0 var(--space-9);
   }
 }

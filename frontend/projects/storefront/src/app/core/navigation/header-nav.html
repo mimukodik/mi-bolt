@@ -14,7 +14,7 @@
       >
         <span
           aria-hidden="true"
-          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
+          class="brand__mark inline-flex items-center justify-center w-11 h-11 shrink-0"
           >M</span
         >
         <span aria-hidden="true" class="halloween-header-art bd bd-spider"
@@ -34,7 +34,7 @@
             <path class="sm-spider__mark" d="M11.3 49h3.4l-1.7 2.6 1.7 2.8h-3.4l1.7-2.8z" />
           </svg>
         </span>
-        <span class="brand__word tracking-wide">MiBolt</span>
+        <span class="brand__word">MiBolt</span>
       </a>
       <span aria-label="Demó pénztár" class="header__label uppercase tracking-wider text-sm"
         >Demó pénztár</span
@@ -60,7 +60,7 @@
         #menuTrigger
         aria-controls="mobile-drawer"
         aria-label="Menü megnyitása"
-        class="menu-trigger inline-flex items-center justify-center w-11 h-11 rounded-input border-0 bg-transparent cursor-pointer text-xl lg:hidden"
+        class="menu-trigger inline-flex items-center justify-center w-11 h-11 rounded-pill border-0 bg-transparent cursor-pointer text-xl lg:hidden"
         data-testid="menu-trigger"
         type="button"
         [attr.aria-expanded]="drawerOpen()"
@@ -75,7 +75,7 @@
       >
         <span
           aria-hidden="true"
-          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
+          class="brand__mark inline-flex items-center justify-center w-11 h-11 shrink-0"
           >M</span
         >
         <span aria-hidden="true" class="halloween-header-art bd bd-spider"
@@ -95,7 +95,7 @@
             <path class="sm-spider__mark" d="M11.3 49h3.4l-1.7 2.6 1.7 2.8h-3.4l1.7-2.8z" />
           </svg>
         </span>
-        <span class="brand__word tracking-wide">MiBolt</span>
+        <span class="brand__word">MiBolt</span>
       </a>
       <nav aria-label="Fő navigáció" class="header__nav hidden gap-4 flex-1 justify-center lg:flex">
         @for (link of navLinks(); track link.label) {
@@ -113,7 +113,7 @@
           <span class="sr-only">Keresés a telefonok között</span>
           <input
             autocomplete="off"
-            class="w-58 h-12 px-4 border-0 rounded-input"
+            class="w-58 h-12 px-4 border-0 rounded-pill"
             data-testid="header-search-input"
             inputmode="search"
             name="q"
@@ -126,7 +126,7 @@
           />
         </label>
         <a
-          class="cart relative inline-flex items-center gap-2 no-underline min-h-11 px-3 rounded-input"
+          class="cart relative inline-flex items-center gap-2 no-underline min-h-11 px-3 rounded-pill"
           data-testid="cart-link"
           routerLink="/penztar/kosar"
           [attr.aria-label]="cartLabel()"
@@ -179,7 +179,7 @@
         <span class="sr-only">Keresés a telefonok között</span>
         <input
           autocomplete="off"
-          class="w-full h-12 px-4 border-0 rounded-input"
+          class="w-full h-12 px-4 border-0 rounded-pill"
           data-testid="mobile-search-input"
           inputmode="search"
           name="q-mobile"
