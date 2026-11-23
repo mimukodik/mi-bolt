@@ -107,8 +107,7 @@ test.describe('Checkout: from the cart to the receipt', () => {
           `Törlöm: ${productName}`,
         );
         await expect(cartLine.getByText('Részösszeg')).toBeVisible();
-        // The line shows the quantity as read-only text (like yettel.hu): no
-        // number input and no stepper is rendered inside it.
+        // The cart line shows quantity as read-only text.
         await expect(cartLine.locator('input, select, [role="spinbutton"]')).toHaveCount(0);
       });
     },

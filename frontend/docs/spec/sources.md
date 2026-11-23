@@ -112,11 +112,9 @@ https://developers.google.com/ar/develop/webxr/model-viewer
 
 Web component supporting glTF/GLB; AR exists but is explicitly excluded from this MVP.
 
-## U01 — Retired design skill (superseded by `docs/design/general-mimukodik/`)
+## U01 — Selected MiBolt storefront prototype
 
-Separately installed design skill, resolved during T00; superseded by `docs/design/general-mimukodik/`, the current design reference.
-
-User-provided normative design rules. Original raster remains unchanged and still has superseded brand text.
+The [general MiBolt prototype](../design/general-mimukodik/) selected in MIM-682 supplies the storefront visual reference, theme and sample screens.
 
 ## U02 — Uploaded Telekom reverse engineering report
 
@@ -132,4 +130,4 @@ Reports Binkies3D script domains and Corbis/jQuery; Swiper and some platform cla
 
 ## Documentation-package boundary
 
-Only the derived implementation decisions in `technology-decisions.md` are required for execution. The raw operator research, original uploaded ZIPs, original design skill and historical generation logs are intentionally omitted. No claim is made that those omitted files exist under docs/. This document retains source identities for attribution.
+Use the selected prototype for storefront design and `technology-decisions.md` for the implementation decisions derived from operator research. The raw research, uploaded ZIPs and historical generation logs were omitted. This document retains source identities for attribution.

@@ -382,7 +382,7 @@ backend ones, see [`backend/README.md`](backend/README.md).
   design and execution documentation.
 - [`frontend/docs/api/README.md`](frontend/docs/api/README.md) — SDK
   generation and fixtures.
-- [`frontend/docs/design/README.md`](frontend/docs/design/README.md) — the
-  yettel design reference.
+- [Storefront design prototype](frontend/docs/design/general-mimukodik/) — the
+  selected MiBolt design and its reference screens.
 - [`contracts/commerce/openapi.yaml`](contracts/commerce/openapi.yaml) —
   the shared API contract.

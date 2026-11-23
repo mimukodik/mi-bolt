@@ -496,7 +496,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `removeRequested:string`.
 
-**Functions:** Media/title/exact variant/line price (no separate unit price, like yettel.hu's cart; owner, 2026-09-22), the quantity as read-only text and remove; emit intent only, no optimistic overwrite.
+**Functions:** Media/title/exact variant/line price (line total only, owner decision on 2026-09-22), read-only quantity and the remove action. Emit the remove intent and wait for the authoritative cart state.
 
 **Required states:** default,pending,focus.
 

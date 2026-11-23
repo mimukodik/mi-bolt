@@ -6,7 +6,7 @@ These files under docs/ are a planning handoff inside the application repository
 
 `docs/design/general-mimukodik/` is the storefront’s visual reference. Use it for colour, typography, radii and component styling. The screen specification and contract define shopping behavior.
 
-Public demo UI stays Hungarian; everything else committed to this repository is English. The original reference raster still contains superseded brand text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
+Public demo UI stays Hungarian; everything else committed to this repository is English. Render MiBolt as the brand throughout the UI.
 
 ## Non-negotiable engineering boundaries
 

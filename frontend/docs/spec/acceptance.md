@@ -1,11 +1,11 @@
 # Project-wide strict acceptance criteria
 
-These are RELEASE GATES for the future Angular implementation, not results of this planning package. Every baseline task must also satisfy its own criteria and the mandatory design-skill gate.
+These are release gates for the Angular storefront. Each task also needs to meet its own acceptance criteria. Use the selected MiBolt prototype for visual acceptance (AC04).
 
 - [ ] **AC01** Latest stable Angular 22.x is resolved at execution, exact versions locked, supported peer dependencies verified; Angular 21/23/next/rc are rejected.
 - [ ] **AC02** The app is standalone, zoneless, client-rendered only; no SSR/prerender/hydration/server artifacts or Angular PWA worker.
 - [ ] **AC03** All authored interactive state uses signals; components use input()/output(), computed() for derived state and @if/@for/@switch with stable track keys. Signal Forms manages checkout.
-- [ ] **AC04** `docs/design/general-mimukodik/` is cited for EVERY task execution and EVERY independent verification; the earlier design-skill R01–R26 gate is retired.
+- [ ] **AC04** Use the [selected MiBolt prototype](../design/general-mimukodik/) for every task that affects storefront appearance and its independent verification.
 - [ ] **AC05** Exactly four commerce screen families exist: Home, Catalogue, Product, Purchase. Three shells: Marketing, Shop, Checkout. Purchase includes cart/contact/delivery/review/success and their error states.
 - [ ] **AC06** Every screen and relevant state uses the selected MiBolt appearance, shared tokens, Hungarian copy, responsive grid, typography and readable price hierarchy.
 - [ ] **AC07** All four families and wizard steps work at 320/390/768/1024/1440/1920 CSS px without page overflow; controls remain >=44px, including sticky mobile controls.
