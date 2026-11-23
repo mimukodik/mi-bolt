@@ -367,7 +367,7 @@ recording of what `main` already does needs no preview: the stable demo,
 **What does not count**, for any change: a file's existence or size on disk,
 or reading the diff back; a green typecheck, unit or Vitest run; an HTTP 200
 from `curl` or any other request made outside the browser; a grep of a
-stylesheet for a `frontend/docs/design/yettel.md` token or recipe value; a
+stylesheet for a `frontend/docs/design/general-mimukodik/` token or recipe value; a
 statement that the change should work, unless the structure capture and
 screenshot of step 3 and the console reading of step 4 all stand behind it.
 

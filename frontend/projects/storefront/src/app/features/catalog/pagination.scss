@@ -21,7 +21,7 @@
   min-height: 32px;
   padding: 8px 12px;
   border: 0;
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-bold);
   font-size: var(--type-helper);
   line-height: 20px;
   color: var(--color-primary);
@@ -39,7 +39,7 @@
   border: 2px solid var(--color-pager-ring);
   border-radius: 50%;
   color: var(--color-primary);
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-bold);
   font-size: 24px;
   line-height: 1;
 }

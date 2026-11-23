@@ -10,7 +10,7 @@ docs/
 ├── spec/            architecture, screens, components, tests,
 │                    acceptance and technology decisions
 ├── api/             SDK generation, fixtures
-├── design/          yettel design reference, demo images
+├── design/          storefront design reference, demo images
 └── briefs/          the archive of the earlier runner briefs
 ```
 
@@ -18,7 +18,7 @@ This is design and execution documentation, **not a finished Angular application
 
 ## Starting development
 
-This needs repository access, command execution, real subagent spawning, a browser tool and the design reference [`design/yettel.md`](design/yettel.md). The [execution rules](spec/execution-rules.md) carry the reconnaissance, the roles, the mandatory review/fix cycle, the dependency-based order, the test gates and the final handover.
+This needs repository access, command execution, real subagent spawning, a browser tool and the design reference [`design/general-mimukodik/`](design/general-mimukodik/). The [execution rules](spec/execution-rules.md) carry the reconnaissance, the roles, the mandatory review/fix cycle, the dependency-based order, the test gates and the final handover.
 
 ## What is where
 
@@ -31,7 +31,7 @@ This needs repository access, command execution, real subagent spawning, a brows
 | Mandatory execution rules | [Execution rules](spec/execution-rules.md) |
 | Technologies adopted from the research and excluded | [Decisions](spec/technology-decisions.md), [source list](spec/sources.md) |
 
-The interactive handover report (`index.html`) and the clickable prototype (`design/prototype.html`) were removed on 2026-09-22: they showed the pre-yettel plan, and the spec files under `spec/` and `design/yettel.md` are the live source.
+The interactive handover report (`index.html`) and the clickable prototype (`design/prototype.html`) were removed on 2026-09-22: they showed an earlier storefront design, and the spec files under `spec/` and `design/general-mimukodik/` are the live source.
 
 ## What was removed
 

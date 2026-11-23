@@ -71,7 +71,7 @@ SDK generator facts (`ng-openapi-gen`): a `oneOf` branch whose discriminator is 
 ## 7. Suggested source structure
 
 ```text
-# docs/design/yettel.md is the design reference; no duplicate design-skill folder in docs
+# docs/design/general-mimukodik/ is the design reference; no duplicate design-skill folder in docs
 ../contracts/commerce/openapi.yaml   single wire contract (git root)
 docs/api/fixtures/                   deterministic synthetic data
 src/main.ts                     bootstrap entry, fatal fallback

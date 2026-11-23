@@ -340,7 +340,7 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     const priceBlocks = root.querySelectorAll('app-price-block');
     expect(priceBlocks.length).toBe(1);
 
-    // Owner's decision, 2026-09-22: like yettel.hu, a cart line has no
+    // Owner's decision, 2026-09-22: a cart line has no
     // quantity control; it shows how many it holds as read-only text.
     expect(queryElement(root, 'app-quantity-control')).toBeNull();
     expect(root.querySelector('[data-testid="quantity-input"]')).toBeNull();
@@ -1066,7 +1066,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     expect(getButtonElement(root, '[data-testid="cart-clear"] button').disabled).toBe(false);
   });
 
-  it('owner 2026-09-23: the continue button on the navy summary takes the white focus ring variant', async () => {
+  it('owner 2026-09-23: the continue button on the dark summary uses the inverse focus ring variant', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
     await cartFacade.addItem(VARIANT_MOTO_256, 2);

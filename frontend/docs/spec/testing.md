@@ -84,7 +84,7 @@ Browser-driven baseline assertions are written as Playwright specs under `e2e/in
 
 For all four families plus5 purchase states:320,390,768,1024,1440,1920px; default+loading+error/empty as applicable. Add filtered drawer, variant disabled, image failure/zoom, contact invalid, review submitting/declined/expired/price changed and receipt states. Full keyboard journey includes all dialog types with focus restoration. Manual/automated checks cover contrast, names, order, sticky focus, reduced motion and200% text resizing. Axe scans supplement but do not certify WCAG compliance.
 
-Visual reference is the unchanged reference image in the separately installed skill plus its more precise written tokens/rules. Record deliberate changes: MiBolt live name replaces old raster branding, dark text corrects orange-button contrast, absent-scope commercial/marketing elements removed. Reuse screenshot dimensions and do not accept wholesale snapshot updates without review.
+Compare the running Angular storefront with the [selected MiBolt prototype](../design/general-mimukodik/) and its theme. Capture the home page, catalogue, product page and cart at the reference widths of 1920px and 390px. Use the width and state matrix above for reflow and accessibility checks. Review snapshot updates against the prototype and record deliberate differences.
 
 ## 7. Project commands
 

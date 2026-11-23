@@ -94,7 +94,7 @@ Both `e2e` and `e2e:all` serve the `development` configuration on port 4400 by d
 - [`../docs/monorepo.md`](../docs/monorepo.md) — how the repository is laid out
 - [`docs/README.md`](docs/README.md) — the MVP design and execution documentation
 - [`docs/api/README.md`](docs/api/README.md) — the API contract and mock data
-- [`docs/design/README.md`](docs/design/README.md) — the yettel design reference
+- [`docs/design/README.md`](docs/design/README.md) — the storefront design reference
 - [`projects/admin/README.md`](projects/admin/README.md) — the admin application's own commands and mock backend
 - [`specs/README.md`](specs/README.md) — the test plans directory
 - [`../backend/README.md`](../backend/README.md) — the Spring backend

@@ -15,7 +15,7 @@ Prerequisites:
   `min_version`).
 - Nothing else to install by hand: `mise install` reads the versions pinned
   under `[tools]` and installs them. The root `mise.toml` pins Node
-  `26.10.0` and Java `temurin-21.0.12+101.0.LTS`; `contracts/mise.toml` pins
+  `26.10.0` and Java `temurin-21.0.12+8.0.LTS`; `contracts/mise.toml` pins
   the contract tools.
 - Docker, for PostgreSQL (every mode below that touches the backend starts
   it in a container) and for the backend and web images used by
@@ -382,7 +382,7 @@ backend ones, see [`backend/README.md`](backend/README.md).
   design and execution documentation.
 - [`frontend/docs/api/README.md`](frontend/docs/api/README.md) — SDK
   generation and fixtures.
-- [`frontend/docs/design/README.md`](frontend/docs/design/README.md) — the
-  yettel design reference.
+- [Storefront design prototype](frontend/docs/design/general-mimukodik/) — the
+  selected MiBolt design and its reference screens.
 - [`contracts/commerce/openapi.yaml`](contracts/commerce/openapi.yaml) —
   the shared API contract.

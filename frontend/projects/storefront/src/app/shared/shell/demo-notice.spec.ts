@@ -124,7 +124,7 @@ describe('DemoNotice', () => {
     );
   });
 
-  it('MIM-216: the strip is the slim navy bar with the lime badge', () => {
+  it('MIM-216: the strip uses a dark surface and a highlighted badge', () => {
     const raw: unknown = DemoNotice;
     const cmp: unknown =
       typeof raw === 'function' && 'ɵcmp' in raw ? Reflect.get(raw, 'ɵcmp') : undefined;
@@ -150,7 +150,7 @@ describe('DemoNotice', () => {
     expect(bar).toContain('background:var(--color-shell-dark)');
     expect(bar).toContain('color:var(--color-text-inverse)');
     expect(bar).toContain('min-height:28px');
-    expect(badge).toContain('background:var(--color-brand-accent)');
+    expect(badge).toContain('background:var(--color-highlight)');
   });
 
   it('decision 16: the strip is not a live region', () => {

@@ -1,36 +1,68 @@
-/* MiBolt primitives — the three yettel faces, the page-level reset and the
-   shared focus ring. Components own their own styling via component-scoped
-   CSS referencing the tokens in tokens.css and the theme in styles.css.
-   This file is intentionally minimal: only what every primitive needs from
-   the host page. */
-
-/* The three yettel faces, docs/design/yettel.md §3. The captured CSS lists
-   woff before woff2, and the files are served from public/fonts/. */
+/* Local Latin and Latin Extended faces from mimukodik.hu. */
 @font-face {
-  font-family: 'portal-font-regular';
-  src:
-    url('/fonts/font-regular.woff') format('woff'),
-    url('/fonts/font-regular.woff2') format('woff2');
+  font-family: 'Inter Variable';
   font-style: normal;
+  font-weight: 100 900;
   font-display: swap;
+  src: url('/fonts/inter-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
-  font-family: 'portal-font-bold';
-  src:
-    url('/fonts/font-bold.woff') format('woff'),
-    url('/fonts/font-bold.woff2') format('woff2');
+  font-family: 'Inter Variable';
   font-style: normal;
+  font-weight: 100 900;
   font-display: swap;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,
+    U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: 'portal-font-light';
-  src:
-    url('/fonts/font-light.woff') format('woff'),
-    url('/fonts/font-light.woff2') format('woff2');
+  font-family: 'IBM Plex Mono';
   font-style: normal;
+  font-weight: 400;
   font-display: swap;
+  src: url('/fonts/ibm-plex-mono-latin-ext-400-normal.woff2') format('woff2');
+  unicode-range:
+    U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+  unicode-range:
+    U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,
+    U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-latin-ext-600-normal.woff2') format('woff2');
+  unicode-range:
+    U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2D7, U+2DD-2FF, U+304, U+308, U+329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-latin-600-normal.woff2') format('woff2');
+  unicode-range:
+    U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,
+    U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 *,
@@ -63,7 +95,6 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* docs/design/yettel.md §3: body{font-size:1rem;line-height:1.5}. */
 body {
   min-height: 100vh;
   font-size: 1rem;
@@ -77,9 +108,6 @@ h3,
 h4,
 h5,
 h6 {
-  /* docs/design/yettel.md §3: headings are set in the bold face, which is a
-     family of its own rather than a weight of the regular face. */
-  font-family: var(--font-family-bold);
   font-weight: var(--weight-bold);
   line-height: var(--line-height-heading);
 }
@@ -102,12 +130,8 @@ h6 {
   outline: none;
 }
 
-/* Text fields follow yettel's `.form-control` recipe (docs/design/yettel.md
-   §5 "Text field"): on focus the border turns #0069c0, with no outline and no
-   ring. An invalid field keeps its red border and shows yettel's red "!" icon
-   at its right edge; focused, it adds a soft red halo and stays red. A field
-   without a border (`border-0`, the header search boxes) keeps the outline
-   ring above, because a border colour on it would show nothing.
+/* Focus is drawn on the field border. Borderless search controls retain the
+   outline, while invalid fields indicate the error with an icon and a halo.
 
    `:focus-visible` is written twice on purpose. This is a global stylesheet,
    so Angular's emulated view encapsulation adds no `[_ngcontent-…]` attribute
@@ -129,7 +153,7 @@ input[aria-invalid='true']:not([type='checkbox']):not([type='radio']):not(.borde
 textarea[aria-invalid='true']:not(.border-0) {
   border-color: var(--color-status-error);
   padding-right: calc(1.25em + 1rem);
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23d9534f' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23d9534f' stroke='none'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23a63228' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23a63228' stroke='none'/%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right calc(0.3125em + 0.25rem) center;
   background-size: calc(0.625em + 0.5rem) calc(0.625em + 0.5rem);
@@ -161,12 +185,7 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
   border: 0;
 }
 
-/* Skeleton fade-out (docs/design/yettel.md, "Skeleton loaders and their
-   fade-out"). The `appSkeletonLeave` directive pins a leaving skeleton in
-   place and adds this class; the element goes when the transition ends.
-   600ms ease, slower than yettel's own 200ms content fade, so a skeleton that
-   leaves right after it appeared does not flicker. The reduced-motion block
-   below collapses it. */
+/* Keep a leaving skeleton over its replacement while it fades out. */
 .skeleton-leave {
   z-index: 1;
   pointer-events: none;
@@ -174,7 +193,7 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
   transition: opacity 600ms ease;
 }
 
-/* Default skelemin background does not animate when reduced motion is set. */
+/* Respect reduced motion across the storefront. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -190,9 +209,9 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
 .app-fatal {
   display: block;
   padding: var(--space-6) var(--space-4);
-  background: #fdecea;
+  background: var(--color-status-error-soft);
   color: var(--color-text-primary);
-  border: 1px solid #b3261e;
+  border: 1px solid var(--color-status-error);
 }
 
 .app-fatal__title {
@@ -217,7 +236,7 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
    last element of the shell, outside that page, so no spacer inside the page
    can clear it: at maximum scroll the rail covered the footer's only button.
    The clearance goes on the footer's own box rather than on the host, so it
-   lands inside the navy ground instead of leaving a white strip under it.
+   extends the footer background to the bottom of the page.
    --rail-height (tokens.css) is also the rail's own minimum height. The rail
    publishes its real height, message row included, as --rail-block-size
    (mobile-buy-rail.ts); --rail-height is the fallback until it has measured.
@@ -267,8 +286,7 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
 }
 
 /* A facet count carries its shimmer on an overlay that is always there, so
-   the shimmer fades in and out instead of switching (docs/design/yettel.md,
-   "Skeleton loaders and their fade-out"); it only runs while the count is
+   the shimmer fades in and out. It only runs while the count is
    busy, and the component stylesheets fade the count's text the same way. */
 .facet-count {
   position: relative;

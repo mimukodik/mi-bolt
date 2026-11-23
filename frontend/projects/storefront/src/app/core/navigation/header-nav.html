@@ -113,7 +113,7 @@
           <span class="sr-only">Keresés a telefonok között</span>
           <input
             autocomplete="off"
-            class="w-58 h-12 px-4 border-0 rounded-input"
+            class="w-58 h-12 px-4 border-0"
             data-testid="header-search-input"
             inputmode="search"
             name="q"
@@ -154,7 +154,7 @@
           @if (cartFacade.itemCount() > 0) {
             <span
               aria-hidden="true"
-              class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4 rounded-full"
+              class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4"
               data-testid="cart-badge"
             >
               {{ cartFacade.itemCount() }}
@@ -162,7 +162,7 @@
           } @else {
             <span
               aria-hidden="true"
-              class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4 rounded-full"
+              class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4"
               data-testid="cart-badge"
               >0</span
             >
@@ -179,7 +179,7 @@
         <span class="sr-only">Keresés a telefonok között</span>
         <input
           autocomplete="off"
-          class="w-full h-12 px-4 border-0 rounded-input"
+          class="w-full h-12 px-4 border-0"
           data-testid="mobile-search-input"
           inputmode="search"
           name="q-mobile"

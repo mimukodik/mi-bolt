@@ -199,7 +199,7 @@ function hasStyles(val: unknown): val is ComponentWithStyles {
   return Array.isArray(cmp.styles);
 }
 
-describe('MIM-233: variant chips follow the yettel.hu device page', () => {
+describe('MIM-233: variant chip states and spacing', () => {
   function ruleBody(css: string, selectorStart: string): string {
     const start = css.indexOf(selectorStart);
     if (start === -1) throw new Error(`No rule starting with ${selectorStart}`);
@@ -208,7 +208,7 @@ describe('MIM-233: variant chips follow the yettel.hu device page', () => {
     return css.slice(open + 1, close);
   }
 
-  it('the selected chip ring is navy, not lime', () => {
+  it('the selected chip has an ink border', () => {
     if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
     const css = VariantSelector.ɵcmp.styles.join('\n');
     const selected = ruleBody(css, '.option.is-selected');
@@ -222,14 +222,14 @@ describe('MIM-233: variant chips follow the yettel.hu device page', () => {
     expect(ruleBody(css, '.option[')).toContain('line-height: 24px');
   });
 
-  it('a focused chip uses the input-focus blue outline, not the navy of the selected ring', () => {
+  it('a focused chip uses the input focus outline', () => {
     if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
     const css = VariantSelector.ɵcmp.styles.join('\n');
     const focused = ruleBody(css, ':focus-visible');
     expect(focused).toContain('outline-color: var(--%NS%color-focus-input)');
   });
 
-  it('the group label sits 12px above its chips and a following group starts 22px below the chips, as on yettel.hu', () => {
+  it('the group label sits 12px above its chips and a following group starts 22px below the chips', () => {
     if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
     const css = VariantSelector.ɵcmp.styles.join('\n');
     expect(ruleBody(css, '.legend[')).toContain('margin-bottom: 12px');

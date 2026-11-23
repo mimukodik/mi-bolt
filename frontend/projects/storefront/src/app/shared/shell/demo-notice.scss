@@ -21,13 +21,14 @@
   justify-content: center;
   height: 16px;
   padding: 0 var(--space-2);
-  background: var(--color-brand-accent);
+  background: var(--color-highlight);
   color: var(--color-brand-ink);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   font-size: 10px;
   line-height: 16px;
   letter-spacing: 0.06em;
   border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
 }
 
 .demo-notice__text {
@@ -35,9 +36,7 @@
   min-width: 0;
 }
 
-/* yettel's warning is a dark-on-yellow pair, .alert-warning{background-color:
-   #ffd500;color:#332b00} (docs/design/yettel.md §9), so the memory and reset
-   strips share the yellow ground with #332b00 text and an inverted badge. */
+/* Memory and reset notices share the warning palette. */
 .demo-notice--memory,
 .demo-notice--reset {
   background: var(--color-status-warning);

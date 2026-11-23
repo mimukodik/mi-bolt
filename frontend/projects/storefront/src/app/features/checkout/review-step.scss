@@ -93,10 +93,6 @@
   cursor: pointer;
 }
 
-/* The price-change notice wears the warning colours (MIM-240): yettel's
-   .alert-warning #332b00 text (docs/design/yettel.md §9) on the
-   --color-status-warning-soft ground, with no border and no left bar, the
-   way the §5 Alert dropped them (§8, "Review step"). */
 .price-change {
   background: var(--color-status-warning-soft);
   color: var(--color-status-warning-text);

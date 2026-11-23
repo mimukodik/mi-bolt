@@ -1,54 +1,37 @@
-/* MiBolt Button primitive — docs/design/yettel.md §5 and §9 button recipes.
-   The invariant box and type (inline-flex, 12px 24px padding, 16/24) are
-   Tailwind utilities on the template; this sheet holds what utilities cannot
-   express: the variant colours behind the .is-* state classes, the states,
-   and the spinner. */
-
 .root {
   min-height: var(--button-height);
   min-width: var(--button-height);
   border: 0;
   border-radius: var(--button-radius);
-  font-family: var(--font-family-bold);
-  color: var(--color-primary);
-  background: var(--color-accent);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-inverse);
+  background: var(--color-primary);
   transition:
     background-color var(--motion-fast) ease,
     border-color var(--motion-fast) ease,
     color var(--motion-fast) ease;
 }
 
-/* The two outlined variants carry a 1px border, so each padding edge loses
-   the same pixel and the box stays the 48px .btn box (§5). */
 .root.is-secondary,
 .root.is-secondary-on-dark {
   border: 1px solid;
   padding: 11px 23px;
 }
 
-/* secondary — the outlined navy button (.btn-outline-navy) */
 .root.is-secondary {
   color: var(--color-primary);
   background: var(--color-surface);
   border-color: var(--color-primary);
 }
 
-/* secondary on dark — .btn-outline-lime, yettel's outlined button for a navy
-   ground: lime text and hairline on a transparent fill */
 .root.is-secondary-on-dark {
-  color: var(--color-accent);
+  color: var(--color-highlight);
   background: transparent;
-  border-color: var(--color-accent);
-}
-
-/* navy — the filled .btn--primary, white on #002340 */
-.root.is-navy {
-  color: var(--color-text-inverse);
-  background: var(--color-primary);
+  border-color: var(--color-highlight);
 }
 
 .root:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: var(--color-primary-hover);
 }
 
 .root.is-secondary:hover:not(:disabled) {
@@ -57,36 +40,30 @@
 
 .root.is-secondary-on-dark:hover:not(:disabled) {
   color: var(--color-primary);
-  background: var(--color-accent);
-}
-
-.root.is-navy:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--color-highlight);
 }
 
 .root:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* The pill sits on a navy surface, where both the navy ring and a lime one
-   (the pill's own colour) disappear; white is the only ring that reads there
-   (docs/design/yettel.md §9). */
 .root.is-secondary-on-dark:focus-visible {
   outline-color: var(--color-text-inverse);
 }
 
-/* primary on dark — the lime pill on a navy surface (the product page's buy
-   box, the cart summary): the base lime fill and hover, with the same white
-   ring. */
+.root.is-primary-on-dark {
+  color: var(--color-primary);
+  background: var(--color-highlight);
+}
+
+.root.is-primary-on-dark:hover:not(:disabled) {
+  background: var(--color-highlight-hover);
+}
+
 .root.is-primary-on-dark:focus-visible {
   outline-color: var(--color-text-inverse);
 }
 
-/* Disabled: a dashed outline on a transparent fill, never a paler twin
-   of the enabled button (owner's ask; docs/design/yettel.md records the
-   departure from .btn--primary[disabled]). The 2px edge takes 2px off
-   each padding side, so the box stays 48px. A button busy with its own
-   request (aria-busy) keeps its variant look and shows the spinner. */
 .root:disabled:not([aria-busy]) {
   padding: 10px 22px;
   border: 2px dashed var(--color-disabled-border);

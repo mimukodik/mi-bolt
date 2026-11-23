@@ -41,12 +41,7 @@ returns to the shop with another full page load and a GET.
   `frontend/projects/storefront/src/styles/tokens.css`. The header of that
   file (`frontend/projects/demo-payment/src/styles.css`, "The numeric scales below
   are the shop's reference scales") takes the
-  shop's numeric scales and a few of its colours (white, the error red, the
-  demo banner's warning pair) from `frontend/docs/design/yettel.md` §2 and
-  §9, and keeps the palette and the typeface deliberately its own.
-  Entry C6 of the conflict register in `mibolt-frontend-code-standards`
-  records the design-scope question this raises; this skill does not settle
-  it.
+  shop's numeric scales. The payment page defines its own palette and typeface.
 
 ## 2. `PaymentPage` states
 

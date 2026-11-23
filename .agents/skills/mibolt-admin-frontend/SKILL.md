@@ -245,17 +245,7 @@ Each line names a rule and where it is written or enforced; the owner carries th
   tool's documentation for the installed major version, with the URL beside the claim, and never
   by a throwaway experiment; `mibolt-frontend-code-standards` ("Framework questions") says where
   to read and what counts as measuring this repository instead.
-- **The design reference is an open question.** `mibolt-shop-frontend` ("Design authority")
-  makes `frontend/docs/design/yettel.md` the design reference for every rendered surface, and
-  `frontend/docs/design/yettel.md` ("Purpose and provenance") calls that document "the mandatory
-  design reference for the MiBolt frontend", yet it never mentions the admin, while
-  `frontend/projects/admin/README.md` ("Angular Material with the") and
-  `frontend/projects/admin/README.md` ("Tailwind utilities only, without Preflight") describe
-  Angular Material with the `azure-blue` theme and Tailwind utilities, which is what the admin's
-  code uses. Which of the two governs an admin style value is the user's to settle, and this skill
-  does not settle it. A change that needs a new style value puts that choice to the user, naming
-  both sources. `mibolt-frontend-code-standards` records the same open question as entry C6 of its
-  conflict register, which also names a third, pre-implementation source.
+- **Admin styling** uses Angular Material and Tailwind as described in `frontend/projects/admin/README.md`.
 - **End-to-end tests.** The admin has no Playwright spec, and the web server that
   `frontend/playwright.config.ts` ("const webServer") starts serves the storefront, with
   demo-payment's build beside it on the CI static server, and never the admin; the conventions file

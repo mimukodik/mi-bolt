@@ -91,10 +91,7 @@ export interface ProductVm {
    *  never an error state on its own — a failed request renders no
    *  section rather than blocking the product. */
   readonly related: readonly CatalogItem[];
-  /** True while the related request for the loaded product runs, so
-   *  the strip can show its card skeletons (docs/design/yettel.md,
-   *  "Product card skeleton"). False before the product loads, after
-   *  the related request answers or fails, and on a route change. */
+  /* Keep related product loading independent so the strip can show its skeletons. */
   readonly relatedLoading: boolean;
 }
 

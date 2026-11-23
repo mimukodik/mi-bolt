@@ -10,9 +10,6 @@
   display: block;
 }
 
-/* Option rows on yettel's variant chip, scaled to a row (docs/design/yettel.md
-   §8, "Delivery step: option rows, pickup note and summary"): white, a 1px
-   inset ring, a 2px navy inset ring and a bold title when selected. */
 .option {
   background: var(--color-surface-light);
   box-shadow: 0 0 0 1px var(--color-line-thumb) inset;

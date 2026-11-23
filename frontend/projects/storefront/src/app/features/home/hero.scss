@@ -1,54 +1,40 @@
-/* hero.scss — the navy hero and the shortcut band under it.
-   The box, the flex and grid layout, the spacing and the weights are
-   Tailwind utilities on hero.html; this sheet holds what utilities cannot
-   express: the alias colour and type tokens, the two CTA recipes
-   (docs/design/yettel.md §5) and the white focus ring those two take on a
-   navy ground (§9). Mobile and desktop share one column; from 720px the
-   three shortcut cards form their own row on the navy band
-   (docs/design/yettel.md §9, line 724). */
-
 .hero {
-  background: var(--color-shell-dark);
-  color: var(--color-text-inverse);
+  background: color-mix(in srgb, var(--color-surface), var(--color-surface-alt));
+  color: var(--color-text-primary);
 }
 
 .hero__eyebrow {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
   font-size: var(--type-helper);
-  color: var(--color-brand-accent);
+  color: var(--color-text-primary);
 }
 
-/* The colour is not inherited: src/styles/primitives.css sets every heading
-   to --color-text-primary, which is navy on this navy ground. */
 .hero__title {
   font-size: var(--type-hero-mobile);
   line-height: var(--line-height-heading);
-  color: var(--color-text-inverse);
+  color: var(--color-text-primary);
   overflow-wrap: anywhere;
   hyphens: auto;
 }
 
 .hero__title-accent {
-  color: var(--color-brand-accent);
+  color: var(--color-text-primary);
 }
 
 .hero__message {
   font-size: var(--type-body);
   line-height: var(--line-height-body);
-  color: var(--color-text-inverse-muted);
+  color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
 
-/* Both CTAs are the yettel .btn box: portal-font-bold 16/24, 12px 24px
-   padding, 24px pill (docs/design/yettel.md §5). The primary is
-   .btn--primary-inverse, the lime "Megnézem" pill on home-1920.png; the
-   secondary is .btn-outline-lime, yettel's outlined button on a navy
-   ground. */
 .hero__cta,
 .hero__cta-secondary {
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-semibold);
   font-size: var(--type-body);
   line-height: 24px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-action);
   transition:
     background-color var(--motion-fast) ease,
     color var(--motion-fast) ease;
@@ -57,44 +43,43 @@
 .hero__cta {
   padding: 12px var(--space-6);
   border: 0;
-  background: var(--color-brand-accent);
+  background: var(--color-highlight);
   color: var(--color-text-primary);
+  box-shadow: inset 0 0 0 1px var(--color-focus-light);
 }
 
 .hero__cta:hover {
-  background: var(--color-brand-accent-hover);
+  background: var(--color-highlight-hover);
 }
 
 .hero__cta-secondary {
   /* 1px off each padding edge keeps the outlined box at 48px too. */
   padding: 11px 23px;
   background: transparent;
-  color: var(--color-brand-accent);
-  border: 1px solid var(--color-brand-accent);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-line-strong);
 }
 
 .hero__cta-secondary:hover {
-  background: var(--color-brand-accent);
+  background: var(--color-surface);
+  border-color: var(--color-primary);
   color: var(--color-text-primary);
 }
 
-/* Both pills are lime on the navy hero, so neither a navy nor a lime ring
-   reads against them; white is the one that does (docs/design/yettel.md §9,
-   the same exception the primitive's is-secondary-on-dark takes). */
 .hero__cta:focus-visible,
 .hero__cta-secondary:focus-visible {
-  outline: 2px solid var(--color-text-inverse);
+  outline: 2px solid var(--color-focus-light);
   outline-offset: 2px;
 }
 
 .hero-shortcuts {
   background: var(--color-shell-dark);
-  border-top: 1px solid var(--color-text-inverse-muted);
+  border-top: 1px solid var(--color-line);
 }
 
 .hero-shortcuts__card {
   color: var(--color-text-inverse);
-  border-top: 1px solid var(--color-text-inverse-muted);
+  border-top: 1px solid var(--color-line-strong);
 }
 
 .hero-shortcuts__card:first-child {
@@ -102,7 +87,7 @@
 }
 
 .hero-shortcuts__card:hover {
-  color: var(--color-brand-accent);
+  color: var(--color-highlight);
 }
 
 .hero-shortcuts__card:focus-visible {
@@ -111,8 +96,8 @@
 }
 
 .hero-shortcuts__icon {
-  background: var(--color-brand-accent);
-  color: var(--color-brand-ink);
+  background: var(--color-primary-hover);
+  color: var(--color-highlight);
 }
 
 .hero-shortcuts__icon--text {
@@ -135,7 +120,7 @@
 
   .hero-shortcuts__card {
     border-top: none;
-    border-left: 1px solid var(--color-text-inverse-muted);
+    border-left: 1px solid var(--color-line-strong);
   }
 
   .hero-shortcuts__card:first-child {

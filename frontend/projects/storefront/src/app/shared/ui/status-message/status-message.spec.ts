@@ -162,11 +162,6 @@ describe('StatusMessage primitive', () => {
       // background-color actually differing — is therefore not observable
       // here, so this asserts the structural proxy the toast's fix turns on:
       // the dismiss button must not carry `is-secondary-on-dark` (now the
-      // navy-on-lime primary-inverse recipe, which is meant for the navy
-      // shell surfaces and not for this light `.root` background) and must
-      // instead carry `is-secondary` (white background, navy text and border
-      // — #002340 on #ffffff is 16.3:1, computed from the yettel hex values
-      // in the @theme block of src/styles.css).
       expect(btn.classList.contains('is-secondary-on-dark')).toBe(false);
       expect(btn.classList.contains('is-secondary')).toBe(true);
     },
@@ -191,7 +186,7 @@ describe('StatusMessage primitive', () => {
     expect(actions).toContain('margin-left:auto');
   });
 
-  it('the alert is a flat yettel information box: no border and no left bar (checkout facelift)', () => {
+  it('the alert is a flat information box without a border', () => {
     const css = componentCss();
     const root = css.slice(css.indexOf('.root{'), css.indexOf('}', css.indexOf('.root{')));
     expect(root).toContain('border:0');

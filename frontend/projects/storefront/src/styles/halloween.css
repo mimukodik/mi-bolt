@@ -1,22 +1,18 @@
 /* BOLT-6 purple/orange campaign, scoped to the storefront shell. */
 .halloween {
-  --sm-navy: #002340;
-  --sm-surface: #fff;
-  --sm-font: var(--font-family);
-  --sm-font-bold: var(--font-family-bold);
-  --pm-frame: #8b5cf6;
-  --pm-glow: #8b5cf644;
-  --pm-price: #7c3aed;
+  --pm-frame: var(--color-text-muted);
+  --pm-glow: transparent;
+  --pm-price: var(--color-primary);
   --pm-accent: #ff7a1a;
-  --pm-bar-bg: #2e1065;
-  --pm-bar-hover: #3b1a80;
-  --pm-bar-fg: #fff;
-  --pm-bar-border: #8b5cf6;
+  --pm-bar-bg: var(--color-primary);
+  --pm-bar-hover: var(--color-primary-hover);
+  --pm-bar-fg: var(--color-surface);
+  --pm-bar-border: var(--color-highlight);
   --pm-bar-icon: #ff7a1a;
   --pm-bar-face: #2e1065;
   --pm-bar-stem: #8b5cf6;
-  --pm-badge-bg: #ff7a1a;
-  --pm-badge-fg: #2e1065;
+  --pm-badge-bg: var(--color-primary);
+  --pm-badge-fg: var(--color-highlight);
   --bd-t: 1100ms;
 }
 .halloween-scenery,
@@ -53,7 +49,7 @@
 }
 .halloween .sm-bar-host {
   padding: 0;
-  background: var(--sm-surface);
+  background: var(--color-surface);
 }
 .halloween .sm .sm-bar {
   display: flex;
@@ -70,7 +66,7 @@
   border-radius: 0;
   background: var(--pm-bar-bg);
   color: var(--pm-bar-fg);
-  font-family: var(--sm-font-bold);
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
   text-align: left;
@@ -155,10 +151,10 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px 4px 7px;
-  border-radius: 8px;
+  border-radius: var(--radius-badge);
   background: var(--pm-badge-bg);
   color: var(--pm-badge-fg);
-  font-family: var(--sm-font-bold);
+  font-family: var(--font-sans);
   font-size: 12px;
   line-height: 16px;
   letter-spacing: 0.02em;
@@ -420,8 +416,8 @@
   padding: 4px 12px;
   border-radius: 3px;
   background: var(--pm-accent);
-  color: var(--pm-badge-fg);
-  font-family: var(--sm-font-bold);
+  color: var(--color-primary);
+  font-family: var(--font-sans);
   font-size: 10px;
   line-height: 11px;
   letter-spacing: 0.07em;
@@ -866,7 +862,7 @@
   font-weight: 700;
 }
 .halloween.bd-wait .cart__badge.bd-pk-badge {
-  background-color: var(--sm-navy);
+  background-color: var(--color-primary);
   color: #fff;
 }
 .halloween .cart__badge.bd-pk-badge::before {
@@ -1238,20 +1234,13 @@
   align-self: flex-start;
   width: fit-content;
   padding: 4px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-badge);
   background: var(--pm-badge-bg);
   color: var(--pm-badge-fg);
-  font-family: var(--font-family-bold);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
   font-size: 12px;
   line-height: 16px;
-}
-.halloween .prices--promotion {
-  background: #fff;
-  color: #002340;
-}
-.halloween .prices--promotion app-price-block {
-  --color-text-inverse: #002340;
-  --color-text-inverse-muted: #526575;
 }
 .halloween app-price-block .root.promotional :is(.amount, .currency, .promotion-copy) {
   color: var(--pm-price);

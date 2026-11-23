@@ -1,6 +1,6 @@
 # Component ownership and communication contracts
 
-Every component execution and verification cites `docs/design/yettel.md`, the design reference. Public inputs use input()/input.required(); intents use output(). Private local changes use signal(); derived view-models use computed(). Signal Forms fields are the deliberate parent-owned two-way binding exception. No presentation component knows the SDK or repository.
+Every component execution and verification cites `docs/design/general-mimukodik/`, the design reference. Public inputs use input()/input.required(); intents use output(). Private local changes use signal(); derived view-models use computed(). Signal Forms fields are the deliberate parent-owned two-way binding exception. No presentation component knows the SDK or repository.
 
 ## Shared types
 
@@ -241,7 +241,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `none`.
 
-**Functions:** Live H1 and primary catalogue router link, secondary demo-explainer link; artwork is decorative illustration only.
+**Functions:** Live H1, primary catalogue router link and secondary demo-explainer link.
 
 **Required states:** default,focus; price/selection N/A.
 
@@ -496,7 +496,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `removeRequested:string`.
 
-**Functions:** Media/title/exact variant/line price (no separate unit price, like yettel.hu's cart; owner, 2026-09-22), the quantity as read-only text and remove; emit intent only, no optimistic overwrite.
+**Functions:** Media/title/exact variant/line price (line total only, owner decision on 2026-09-22), read-only quantity and the remove action. Emit the remove intent and wait for the authoritative cart state.
 
 **Required states:** default,pending,focus.
 
@@ -640,7 +640,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 ## Shared focus styling
 
-The two :focus-visible rules in src/styles/primitives.css own the focus ring: one for text-like controls (input, select, textarea) and one for everything else. A component overrides the shared rule only when the standard lime ring would be unreadable on its surface — a lime-on-lime button on the accent strip, a lime-on-navy CTA on a hero band — and the override names that case in a comment beside it.
+The two `:focus-visible` rules in `src/styles/primitives.css` own the shared focus indicator. One serves text-like controls and the other serves other focus targets. Components on dark surfaces may use the inverse outline to keep focus visible.
 
 
 ## Example: precise signal input/output boundary

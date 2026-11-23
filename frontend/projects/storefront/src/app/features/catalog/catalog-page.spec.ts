@@ -445,7 +445,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     // FIX-60 moved the grid rules out of CatalogPage into AsyncContent,
     // which now owns the `[data-testid="catalog-grid"]` element.
     // The 3-column breakpoint is 1024 px
-    // to match the new filter sidebar width (docs/design/yettel.md §5).
+    // to match the new filter sidebar width.
     const css = getComponentStyles(AsyncContent).join('\n');
     expect(css).toMatch(/min-width:\s*1024px/);
     // Three columns: grid-template-columns repeat(3, ...) inside the desktop media block.
@@ -1341,22 +1341,18 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
    * focus ring anywhere and had to tab from the top of the document
    * again — WCAG 2.4.3 (Focus Order) and 2.4.7 (Focus Visible).
    *
-   * It is NOT the FIX-25 cause. These buttons are not disabled by an
-   * in-flight request: `controlsDisabled()` is false throughout, and
-   * FIX-25 already took `isRefreshing()` off this binding. They are
-   * disabled by its other half — `currentPage() >= totalPages()` —
-   * which is correct, because the last page really has no next page.
-   * So the native `disabled` the design skill's component table asks
-   * for stays, and what changes is where focus goes: the click hands
-   * it to the `x / y` page indicator before the button can be
-   * disabled under it.
+   * The boundary conditions disable Previous at `page() <= 1` and
+   * Next at `page() >= totalPages()`. The shared `disabled()` input is
+   * false in these tests. At either boundary, the click focuses the
+   * numbered button for the target page before the Previous or Next
+   * button becomes disabled.
    *
    * jsdom does not implement the HTML focus fixup rule (jsdom#3029,
    * jsdom#2931): a disabled element keeps `document.activeElement`
    * pointing at it, so the `<body>` half of the defect cannot be
    * reproduced here. The half that can be, and that these tests
    * assert, is identical in both environments — focus ends on the
-   * page indicator. Before the fix it ends on the disabled button in
+   * numbered page button. Before the fix it ends on the disabled button in
    * jsdom and on `<body>` in Chrome, and both fail that assertion.
    */
 

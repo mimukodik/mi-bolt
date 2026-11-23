@@ -58,7 +58,7 @@
 
 .summary[data-inverse] .title {
   color: var(--color-text-inverse);
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-bold);
   font-size: var(--type-nav);
   line-height: var(--leading-nav);
 }
@@ -72,7 +72,7 @@
 
 /* The price block's row layout spreads label and amount apart
    (price-block.scss, data-layout='row'); its host is inline, so it
-   takes the full row here, like yettel.hu's summary rows. */
+   takes up the full summary row. */
 .summary[data-inverse] .row > app-price-block {
   display: block;
   width: 100%;
@@ -92,4 +92,10 @@
 
 .summary[data-inverse] .placeholder {
   text-align: right;
+}
+
+@media (max-width: 639px) {
+  .summary[data-inverse] .placeholder {
+    letter-spacing: -0.025em;
+  }
 }

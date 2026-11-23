@@ -3796,5 +3796,4 @@ components:
         sizeBytes:
           type: integer
           minimum: 1
-x-design-skill: mi-bolt-design
 x-money-unit: integer whole HUF

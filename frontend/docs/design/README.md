@@ -1,7 +1,12 @@
-# Design references and local demo images
+# MiBolt storefront design
 
-The clickable HTML prototype (`prototype.html`) was removed on 2026-09-22 together with the handover report: it showed the orange, pre-yettel design. The live design authority is `yettel.md` with the captured source under `yettel/`.
+[general-mimukodik](general-mimukodik/) is the selected visual reference for the
+home page, catalogue, product page and cart. Open the prototype at
+[1920px and 390px](general-mimukodik/README.md) to compare the desktop and mobile
+layouts. Its [theme stylesheet](general-mimukodik/theme.css) records the
+paper and ink palette, green accent, typography and corner treatments.
 
-Exact geometry and responsive behaviour: [screens.md](../spec/screens.md). Component responsibilities: [components.md](../spec/components.md). The visual language is now driven by the captured yettel.hu source under [`yettel/`](yettel/) and the [`yettel.md`](yettel.md) reference; this is the design authority every later frontend brief and browser check cites. `yettel/` holds the list page, four device pages, the home page, the `portal.css` stylesheet and the three `portal-font-*` faces captured on 2026-09-20. `yettel.md` defines the colour tokens, typography ramp, radii, the button, card, filter, header and gallery recipes with the selectors they came from, and the list- and device-page feature inventories against what the MiBolt backend serves. The earlier orange prototype and the `mi-bolt-design` skill are retired. Screenshots of the captured pages at Full HD (1920x1080) and mobile (390x844) sit under `yettel/screenshots/`; the comparison against the Angular build sits in the browser pass in `.claude/rules/browser-verification.md`.
-
-`assets/products/` holds the WebP versions of four original, fictional device illustrations together with their editable SVG sources. They are not real product photos. During T10 only the WebP files that are needed must be copied into the project's `public/assets/products/` folder, keeping the [asset manifest](asset-manifest.json) and the [asset rules](assets/README.md). No font file and no 3D model is attached.
+The Angular storefront defines the live palette and typefaces in
+[`styles.css`](../../projects/storefront/src/styles.css) and uses
+[semantic tokens](../../projects/storefront/src/styles/tokens.css) in its
+components. For shopping behavior, see the [screen specification](../spec/screens.md).

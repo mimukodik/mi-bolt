@@ -21,6 +21,10 @@ test.describe('Halloween: active campaign offers', () => {
         await expect(cards.first()).toBeVisible();
         await expect(cards.first()).toHaveClass(/card--promotion/);
         await expect(cards.first().getByTestId('reference-price')).toBeVisible();
+        const ticket = cards.first().locator('.sm-deco--ticket');
+        await expect(ticket).toBeVisible();
+        await expect(ticket).toHaveCSS('background-color', 'rgb(255, 122, 26)');
+        await expect(ticket).toHaveCSS('color', 'rgb(35, 34, 28)');
       });
       await test.step('2. Reload the URL and retain the active-offer filter.', async () => {
         await page.goto(page.url());

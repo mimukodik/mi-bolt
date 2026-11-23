@@ -10,7 +10,7 @@ config_roots = ["frontend", "backend", "tools", "contracts"]
 
 [tools]
 node = "26.10.0"
-java = "temurin-21.0.12+101.0.LTS"
+java = "temurin-21.0.12+8.0.LTS"
 
 [tasks.frontend]
 description = "The three apps with ng serve and the MSW mock: storefront 4200, payment 4210, admin 4220"

@@ -225,8 +225,6 @@ initial bundle. Keep them out:
 - Templates lay out with Tailwind utility classes, and component styles read Material's system
   variables (`var(--mat-sys-...)`), as
   `frontend/projects/admin/src/app/features/login/login-page.ts` ("var(--mat-sys-error)") does.
-- Which design reference governs an admin style value is open; this skill's `SKILL.md` ("Rules
-  that bind here") states both sources.
 
 ## 9. Adding a screen
 

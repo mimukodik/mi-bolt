@@ -34,7 +34,7 @@ storefront, demo-payment and admin apps, the `core-api`, `shop-api` and
 - Area idioms, such as storefront facades, admin stores, change chains and mock handlers: `mibolt-shop-frontend` and `mibolt-admin-frontend`.
 - The generated clients, the contract, and moving code into a shared library: `mibolt-cross-package-changes`.
 - What an end-to-end spec under `frontend/e2e/` tests, and how its steps are written: outside the MiBolt skills. The lint rules that reach `frontend/e2e/` stay here, and so do `frontend/e2e/seed.spec.ts`, which is the conventions file the specs follow rather than a test, and `frontend/e2e/fixtures/`: both are ordinary code.
-- Colour, type, radius and recipe values: `frontend/docs/design/yettel.md`, the design reference (`mibolt-shop-frontend` ("Design authority")).
+- Colour, type, radius and recipe values: `frontend/docs/design/general-mimukodik/`, the design reference (`mibolt-shop-frontend` ("Design authority")).
 
 ## 2. Evidence model and where the rules live
 
@@ -172,7 +172,7 @@ Services and routes:
 ### Formatting and styles
 
 - **Prettier decides layout** (prettier: `frontend/.prettierrc`, print width 100, single quotes, `.html` parsed with the `angular` parser), and `eslint-config-prettier` switches ESLint's formatting rules off (`frontend/eslint.config.mjs`, "eslintConfigPrettier,"). `npm --prefix frontend run format` rewrites the whole workspace, so format only the files you changed, with `npx prettier --write` and their paths.
-- **Storefront component styles are `.scss` files written as CSS, three of them with Sass `//` line comments**, while the admin's theme file uses Sass `@use` (observed, and a recorded conflict). Design values come from `frontend/docs/design/yettel.md`.
+- **Storefront component styles are `.scss` files written as CSS, with Sass `//` line comments in a few files**, while the admin's theme file uses Sass `@use` (observed, and a recorded conflict). Design values come from `frontend/docs/design/general-mimukodik/`.
 
 ### Language
 
@@ -223,7 +223,7 @@ says which command compiles which project.
 ## 8. References
 
 - [references/frontend-lint-policy.md](references/frontend-lint-policy.md): which config block reaches which files, every rule's options and the config entry that sets it, the written Angular and TypeScript rules marked enforced or written only, the installed lint rules the config leaves off, the relax pass, and the suppressions in the tree. Read when fixing a specific lint error, when reviewing a diff, or when a rule's scope matters.
-- [references/conflict-register.md](references/conflict-register.md): the `as` enforcement scope, the two `Api` construction idioms, inline versus external templates, the zoneless provider, `.scss` files written as CSS with Sass line comments in three, how far the design reference reaches, the accessibility rule beside the lint preset, two checks nothing runs, inferred types beside required return types, and the `async` pipe beside subscriptions into signals, each with its sources and what is left alone. Read when code contradicts a written rule, when two idioms coexist, or before changing anything the register names.
+- [references/conflict-register.md](references/conflict-register.md): the `as` enforcement scope, the two `Api` construction idioms, inline versus external templates, the zoneless provider, `.scss` files written as CSS with Sass line comments in three, the accessibility rule beside the lint preset, two checks nothing runs, inferred types beside required return types, and the `async` pipe beside subscriptions into signals, each with its sources and what is left alone. Read when code contradicts a written rule, when two idioms coexist, or before changing anything the register names.
 
 ## 9. Keep this skill current
 

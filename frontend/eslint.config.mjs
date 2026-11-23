@@ -94,11 +94,8 @@ export default defineConfig([
       'vitest.*.config.*',
       'vitest.config.*.timestamp*',
       'tsconfig*.json',
-      // Not source: docs/ carries the yettel.hu reference captures
-      // (docs/design/yettel/**, several MB of static HTML) which the
-      // unscoped `**/*.html` block below previously tried to lint as
-      // Angular templates and stalled on. .angular/** and public/** are
-      // build/static-asset directories, none of them app source either.
+      // docs/ contains static prototype HTML under docs/design/general-mimukodik/.
+      // Keep it and the build and static-asset directories out of source lint.
       'docs/**',
       '.angular/**',
       'public/**',
@@ -141,8 +138,7 @@ export default defineConfig([
         },
       ],
       // Forbid legacy `@Input()` / `@Output()` decorators in favor of the
-      // signal-based input() / output() / model() APIs. Backed by the
-      // mi-bolt-design skill and T01-AC03.
+      // signal-based input() / output() / model() APIs.
       '@angular-eslint/prefer-signals': 'error',
       // Conventional guard / handler signatures take parameters the body
       // does not consume; the `_`-prefix is the project convention to
@@ -483,12 +479,8 @@ export default defineConfig([
     },
   },
   {
-    // Scoped to projects/storefront/src/**/*.html (not the source repo's unscoped `**/*.html`):
-    // this app's docs/ tree carries several MB of static yettel.hu
-    // reference captures and a docs/index.html, none of them Angular
-    // templates, and a repo-wide glob sent the Angular template parser
-    // into a multi-minute stall on docs/index.html (654 KB) during the
-    // MIM-209 inventory run.
+    // Apply the template rules to app sources. The static prototype and
+    // docs/index.html live in docs/ outside this scope.
     files: ['projects/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {

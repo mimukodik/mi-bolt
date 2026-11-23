@@ -848,7 +848,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(queryElement(root, '.page-header').textContent).not.toContain('Tárhely:');
   });
 
-  it('owner 2026-09-22: the add-to-cart button is the filled lime pill on the navy box', async () => {
+  it('owner 2026-09-22: the add-to-cart button is the highlighted variant on the dark buy box', async () => {
     const { root } = await createHarness();
 
     const button = queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
@@ -939,7 +939,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(fixture.componentInstance.selectedAvailability()).toBeNull();
     const root = getRootElement(fixture);
     expect(root.querySelector('[data-testid="product-stock"]')).toBeNull();
-    // PR #176: the disabled placeholder is the filled lime button with the white ring.
+    // PR #176: the disabled placeholder is the highlighted action with the inverse focus ring.
     const placeholder = queryElement(root, '.cta-desktop button');
     expect(placeholder.classList.contains('is-primary-on-dark')).toBe(true);
     expect(placeholder.classList.contains('is-secondary-on-dark')).toBe(false);
@@ -1387,8 +1387,8 @@ function hasStyles(val: unknown): val is ComponentWithStyles {
   return Array.isArray(cmp.styles);
 }
 
-describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu', () => {
-  it('the in-stock line uses the inverse text colour, not lime', () => {
+describe('MIM-233: stock on the dark buy box', () => {
+  it('the in-stock line uses the inverse text colour', () => {
     if (!hasStyles(ProductPage)) throw new Error('Expected ProductPage to have styles');
     const css = ProductPage.ɵcmp.styles.join('\n');
     const start = css.indexOf('.stock[');

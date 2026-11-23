@@ -10,9 +10,7 @@
       name="description"
     />
     <link href="favicon.ico" rel="icon" type="image/x-icon" />
-    <!-- Cover screen until the first navigation settles; App removes it after its exit animation (MIM-404).
-         Colour and type tokens per frontend/docs/design/yettel.md: #002340 (--color-primary),
-         #ffffff (--color-text-inverse), #b4ff00 (--color-accent), 'portal-font-bold'. -->
+    <!-- Cover screen until the first navigation settles (MIM-404). -->
     <style>
       #mi-bolt-splash {
         position: fixed;
@@ -23,10 +21,10 @@
         align-items: center;
         justify-content: center;
         gap: 20px;
-        background: #002340;
-        color: #ffffff;
+        background: var(--color-primary, #23221c);
+        color: var(--color-surface, #f5f2e9);
         font:
-          700 20px/1.2 'portal-font-bold',
+          700 20px/1.2 'Inter Variable',
           ui-sans-serif,
           system-ui,
           'Segoe UI',
@@ -38,15 +36,15 @@
         place-items: center;
         width: 72px;
         height: 72px;
-        border-radius: 20px;
-        background: #b4ff00;
-        color: #002340;
+        border-radius: var(--radius-action, 4px);
+        background: var(--color-highlight, #94cc0a);
+        color: var(--color-primary, #23221c);
         font-size: 40px;
         line-height: 1;
       }
       #mi-bolt-splash .splash__label {
         margin: 0;
-        color: #ffffff;
+        color: var(--color-surface, #f5f2e9);
         letter-spacing: 0.02em;
       }
       #mi-bolt-splash .splash__dots {
@@ -57,7 +55,7 @@
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        background: #b4ff00;
+        background: var(--color-highlight, #94cc0a);
         opacity: 0.3;
         animation: shop-splash-pulse 1s ease-in-out infinite;
       }

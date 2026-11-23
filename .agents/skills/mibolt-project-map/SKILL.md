@@ -136,7 +136,7 @@ Spring Boot's dependency management.
 
 | The task is about | Load |
 |---|---|
-| a storefront page, a catalogue filter, a product-page field, the cart, a checkout step, the demo-access gate, the demo payment page, shop mock data or fault scenarios, storefront styling and yettel tokens | `mibolt-shop-frontend` |
+| a storefront page, a catalogue filter, a product-page field, the cart, a checkout step, the demo-access gate, the demo payment page, shop mock data or fault scenarios, storefront styling and design tokens | `mibolt-shop-frontend` |
 | an admin screen, the product form, the product list filters, admin users, media upload, the admin session, the admin's own mocks | `mibolt-admin-frontend` |
 | an ESLint, Prettier or typecheck error under `frontend/`, whether a cast is allowed, `strict-boolean-expressions`, TypeScript naming or type guards | `mibolt-frontend-code-standards` |
 | a PMD finding, or Java style, layering, logging or null handling under `backend/` | `mibolt-backend-code-standards` |

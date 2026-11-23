@@ -8,7 +8,7 @@
  *   - Product name + variant descriptor (color name + storage bucket).
  *   - Line total through the PriceBlock primitive so the whole HUF
  *     formatting and the loading/empty states are reused.
- *   - The quantity as read-only text: like yettel.hu, a cart line has
+ *   - The quantity as read-only text: a cart line has
  *     no quantity control (owner's decision, 2026-09-22); the remove
  *     action is how a line changes.
  *   - A remove action with `aria-label` and an explicit button so
