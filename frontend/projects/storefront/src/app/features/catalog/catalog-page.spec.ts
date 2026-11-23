@@ -1346,10 +1346,8 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
    * FIX-25 already took `isRefreshing()` off this binding. They are
    * disabled by its other half — `currentPage() >= totalPages()` —
    * which is correct, because the last page really has no next page.
-   * So the native `disabled` the design skill's component table asks
-   * for stays, and what changes is where focus goes: the click hands
-   * it to the `x / y` page indicator before the button can be
-   * disabled under it.
+   * Preserve native `disabled` at the page boundary. The click moves
+   * focus to the `x / y` page indicator before the button is disabled.
    *
    * jsdom does not implement the HTML focus fixup rule (jsdom#3029,
    * jsdom#2931): a disabled element keeps `document.activeElement`
