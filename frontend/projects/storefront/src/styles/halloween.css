@@ -416,7 +416,7 @@
   padding: 4px 12px;
   border-radius: 3px;
   background: var(--pm-accent);
-  color: var(--pm-badge-fg);
+  color: var(--color-primary);
   font-family: var(--font-sans);
   font-size: 10px;
   line-height: 11px;

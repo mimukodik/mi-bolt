@@ -4,9 +4,9 @@ The request is interpreted as **homepage + catalogue + product + complete purcha
 
 ## Global geometry and visual contract
 
-Use `docs/design/general-mimukodik/` as the design reference at execution AND verification; it is not embedded in this docs package. The original raster still displays a superseded brand and placeholder commercial claims; preserve it only as source evidence. All live UI is **MiBolt**. Remove absent-scope services, social/account/newsletter controls and unverified offer promises. This is not a pixel-perfect reconstruction of raster text.
+Use the [selected MiBolt prototype](../design/general-mimukodik/) as the visual reference for implementation and verification. It records the home page, catalogue, product page and cart at desktop and phone widths. All live UI is MiBolt. Remove absent-scope services, social/account/newsletter controls and unverified offer promises.
 
-Container max1320px; gutters mobile16px, tablet24px, desktop48px minimum. Desktop 12-column alignment, gap24px, header64px. At1440px content margin60px. 4px spacing grid, mostly8px multiples. Cards8px radius, inputs/buttons6px. Body16px/1.5, support14px, metadata12px only; hero52/34px, H1 36/28px, section28/24px, card18px, price28/26px. Orange#FF6A00 with dark#171B1F button text; dark#1B2024 shell; white shopping panels, subtle#F5F6F7 sections, #A83B00 accessible orange-toned links. Product image ratio4:3 and object-fit contain.
+Use the shared storefront theme for paper surfaces, dark ink text and panels, green accent actions, and legible status colours. Use Inter for the main text and IBM Plex Mono for metadata and selected labels. Cards and most controls have square corners. The home hero actions and header search use a 4px radius. Preserve the reference layout and the 4px spacing grid. Product images use a 4:3 stage and object-fit contain.
 
 Below640px one catalogue column. 640–1023px two columns with filter drawer. 1024–1279px 264px sidebar plus2-column catalogue. >=1280px sidebar+3 columns. Home featured grid: 1/2/4 by mobile/tablet/desktop. The1280 breakpoint is an explicit content-fit exception to the baseline skill breakpoint set: three cards plus sidebar do not fit comfortably at1024px. It uses the same tokens, not a new visual language.
 
@@ -30,11 +30,11 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ## S1 — Home
 
-**Purpose:** give a clear first action and explain the simulation. Header: MiBolt brand left, a single Mobiltelefonok nav link (the home page has no menu entry of its own; decided 2026-09-22), search and cart right. Compact demo banner immediately below header. Hero charcoal, live heading “A következő mobilod. Egyszerűen.”; accent second line, two concise sentences, primary “Megnézem a telefonokat”, secondary “Hogyan működik?”. Device illustration right; do not put functionality inside an image.
+**Purpose:** Give a clear first action and explain the simulation. The demo banner sits above the header. The header has the MiBolt brand on the left, a single Mobiltelefonok nav link, and search and cart on the right. The paper-coloured hero has the heading “A következő mobilod. Egyszerűen.”, short supporting copy, primary “Megnézem a telefonokat” and secondary “Hogyan működik?”.
 
-**Desktop sequence:** 64px header → demo strip → 360–420px hero → three restrained category shortcuts → featured heading/link → four consistent cards → three how-it-works tiles → dark footer. Categories: Összes telefon, 5G készülékek, Raktáron. Featured card CTA “Részletek”. Cards keep unit price and action aligned.
+**Desktop sequence:** Demo banner, header, hero, three category shortcuts, featured heading and link, four cards, three how-it-works tiles, and dark footer. Categories are Összes telefon, 5G készülékek and Raktáron. Cards keep their unit price and action aligned.
 
-**Mobile:** readable hero text+CTA before illustration, 16px gutters, stacked shortcut rows, single-column cards, stacked tiles. No compressed desktop screenshot. Search is second header row; menu is accessible drawer. Hero artwork may intentionally crop an illustration but product cards must not crop devices.
+**Mobile:** Keep the hero text and actions readable within 16px gutters. Stack shortcut rows, product cards and how-it-works tiles. Search is the second header row. The menu is an accessible drawer. Product cards must show the whole device.
 
 **States:** skeleton featured cards; featured HTTP error+Retry while hero remains usable; image fallback; menu open/focus; CTA hover/focus; cart count changes after navigation. No promotional urgency, ratings, warranty, free shipping or newsletters are invented.
 
@@ -92,4 +92,4 @@ H1 “Elkészült a demórendelésed.” Order DEMO-000001, selected items, fina
 
 ## Required exceptional states and visual evidence
 
-All default/hover/focus/selected/disabled/loading/error/success states apply according to component contracts; read-only sections do not need fabricated hover/error states. Visual screenshots cover all main screens/checkout steps at1440 and390 and the6-width reflow matrix. Additional state boards cover filter-empty/error/loading/drawer, product-unavailable/zoom/image error, cart-empty, contact-invalid, review-submitting/declined/expired/price changed and success. The interactive prototype is a design artifact; final Angular screenshots must be re-created during T25, not mistaken for already verified implementation.
+All default, hover, focus, selected, disabled, loading, error and success states follow the component contracts. Read-only sections do not need fabricated hover or error states. Take visual evidence from the running Angular storefront. Compare the four reference views with the selected prototype at 1920px and 390px, and verify reflow at the supported widths. Cover exceptional states including the filter drawer, product unavailability, empty cart, invalid contact details, checkout errors and order success.

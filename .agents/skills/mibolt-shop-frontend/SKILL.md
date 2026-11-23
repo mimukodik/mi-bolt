@@ -208,7 +208,7 @@ Copy these when you need a pattern:
    owner's call. Take no colour, type, radius, spacing or recipe value from
    the spec: those come from `frontend/docs/design/general-mimukodik/` (Design
    authority, under Local conventions), which
-   `frontend/docs/spec/screens.md` ("as the design reference at execution AND
+   `frontend/docs/spec/screens.md` ("as the visual reference for implementation and
    verification") names too.
 3. **Check the SDK.** If the field, parameter, operation or error code is not
    in `frontend/projects/shop-api/src/generated/`, the contract changes first

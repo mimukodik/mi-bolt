@@ -7,7 +7,7 @@ These are RELEASE GATES for the future Angular implementation, not results of th
 - [ ] **AC03** All authored interactive state uses signals; components use input()/output(), computed() for derived state and @if/@for/@switch with stable track keys. Signal Forms manages checkout.
 - [ ] **AC04** `docs/design/general-mimukodik/` is cited for EVERY task execution and EVERY independent verification; the earlier design-skill R01–R26 gate is retired.
 - [ ] **AC05** Exactly four commerce screen families exist: Home, Catalogue, Product, Purchase. Three shells: Marketing, Shop, Checkout. Purchase includes cart/contact/delivery/review/success and their error states.
-- [ ] **AC06** Every screen and relevant state respects the provided semantic tokens, Hungarian copy, dark shell, orange primary actions, grid, typography and readable price hierarchy.
+- [ ] **AC06** Every screen and relevant state uses the selected MiBolt appearance, shared tokens, Hungarian copy, responsive grid, typography and readable price hierarchy.
 - [ ] **AC07** All four families and wizard steps work at 320/390/768/1024/1440/1920 CSS px without page overflow; controls remain >=44px, including sticky mobile controls.
 - [ ] **AC08** Catalogue search, all declared facets, matching-variant price, counts, all sort modes, pagination, direct URLs and browser history agree under latest-request-wins behavior.
 - [ ] **AC09** Product choice keeps media/color/storage/stock/price synchronized; unavailable combinations never silently substitute another variant; gallery works without 3D.

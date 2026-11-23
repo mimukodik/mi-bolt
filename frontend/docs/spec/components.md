@@ -241,7 +241,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `none`.
 
-**Functions:** Live H1 and primary catalogue router link, secondary demo-explainer link; artwork is decorative illustration only.
+**Functions:** Live H1, primary catalogue router link and secondary demo-explainer link.
 
 **Required states:** default,focus; price/selection N/A.
 
@@ -640,7 +640,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 ## Shared focus styling
 
-The two :focus-visible rules in src/styles/primitives.css own the focus ring: one for text-like controls (input, select, textarea) and one for everything else. A component overrides the shared rule only when the standard lime ring would be unreadable on its surface — a lime-on-lime button on the accent strip, a lime-on-navy CTA on a hero band — and the override names that case in a comment beside it.
+The two `:focus-visible` rules in `src/styles/primitives.css` own the shared focus indicator. One serves text-like controls and the other serves other focus targets. Components on dark surfaces may use the inverse outline to keep focus visible.
 
 
 ## Example: precise signal input/output boundary

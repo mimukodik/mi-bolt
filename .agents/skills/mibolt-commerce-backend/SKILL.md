@@ -296,7 +296,7 @@ A stored value adds a migration.
    against the cash-on-delivery ceiling, often through a literal such as
    `300_000`. Several copies carry only the number, so list them by name and
    by value,
-   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':(exclude,glob)**/mibolt-*/**' ':!frontend/docs/design/yettel'`,
+   `git grep -n -e '<property key>' -e '<mock constant>' -e '<old value>' -e '<old value with _ as thousands separator>' -e '<old value with a space as thousands separator>' -- ':(exclude,glob)**/mibolt-*/**' ':!frontend/docs/design/general-mimukodik'`,
    whose first exclusion keeps the MiBolt skills' own quotations of the value
    out, and set aside every hit whose number means something else: a price, a
    timeout, a length, or a longer number that contains it.
