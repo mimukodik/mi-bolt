@@ -92,6 +92,7 @@ html[data-theme='mimukodik'] {
   --color-focus-dark: #b3e334;
   --color-disabled-border: var(--color-text-muted);
   --color-disabled-text: var(--color-text-muted);
+  --radius-action: 4px;
   --radius-input: 0px;
   --radius-card: 0px;
   --radius-pill: 0px;
@@ -102,30 +103,47 @@ html[data-theme='mimukodik'] {
   --panel-accent: #94cc0a;
 }
 
-html[data-theme='mimukodik'] app-header-nav :is(.header, .mobile-search),
 html[data-theme='mimukodik'] .featured {
   background-color: var(--color-surface);
 }
 
 html[data-theme='mimukodik'] app-header-nav .header {
+  background-color: color-mix(in srgb, var(--color-surface) 90%, var(--panel-accent));
   box-shadow: inset 0 -1px var(--color-line);
 }
 
+html[data-theme='mimukodik'] app-header-nav .mobile-search {
+  background-color: transparent;
+}
+
 html[data-theme='mimukodik'] app-header-nav :is(.header__search, .mobile-search) input {
+  border-radius: var(--radius-action);
   box-shadow: inset 0 0 0 1px var(--color-line-strong);
 }
 
 html[data-theme='mimukodik'] .hero {
-  background-color: var(--color-surface);
+  background-color: color-mix(in srgb, var(--color-surface), var(--color-surface-alt));
+  --radius-pill: var(--radius-action);
   --color-text-inverse: var(--color-primary);
   --color-text-inverse-muted: var(--color-text-muted);
   --color-brand-accent: var(--color-primary);
-  --color-brand-accent-hover: var(--color-primary-hover);
 }
 
-html[data-theme='mimukodik'] .hero__cta,
+html[data-theme='mimukodik'] .hero__cta {
+  --color-brand-accent: var(--panel-accent);
+  --color-brand-accent-hover: var(--color-focus-dark);
+  color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-focus-light);
+}
+
+html[data-theme='mimukodik'] .hero__cta-secondary {
+  border-color: var(--color-line-strong);
+}
+
 html[data-theme='mimukodik'] .hero__cta-secondary:hover {
-  color: var(--color-surface);
+  background-color: var(--color-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 html[data-theme='mimukodik']

@@ -1,6 +1,6 @@
 # Mi működik
 
-A mimukodik.hu világos témájának krémpapír és tintaszínei, szögletes kártyái és gombjai, valamint Inter és IBM Plex Mono betűi. [Vizuális forrás](https://mimukodik.hu/)
+A mimukodik.hu világos témájának krémpapír és tintaszínei, szögletes kártyái, valamint Inter és IBM Plex Mono betűi. A fejléc enyhe zöld árnyalatot kapott, a főoldal elsődleges gombján hangsúlyosabb a zöld. A fejléc keresőmezője és a nyitóblokk gombjai finoman lekerekítettek. [Vizuális forrás](https://mimukodik.hu/)
 
 Nyisd meg az `index.html` fájlt a böngészőben. A `catalogue.html`, `product.html` és `cart.html` közvetlenül is megnyitható. A termék mintaoldala az Apple iPhone 18 Pro Max, a közvetlenül megnyitott kosár üres.
 
