@@ -1,0 +1,2972 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MiBolt — Mobiltelefonok</title>
+    <link rel="icon" href="favicon.ico" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="snapshot.css" />
+    <script src="prototype.js" defer></script>
+    <script src="storefront.js" defer></script>
+  </head>
+  <body data-route="/telefonok">
+    <app-root _nghost-ng-c1502630744=""
+      ><a _ngcontent-ng-c1502630744="" href="#main-content" class="skip-link">Ugrás a tartalomhoz</a
+      ><router-outlet _ngcontent-ng-c1502630744=""></router-outlet
+      ><app-shop-layout _nghost-ng-c974726567=""
+        ><app-app-shell _ngcontent-ng-c974726567="" variant="shop" _nghost-ng-c3782588569=""
+          ><app-demo-notice _ngcontent-ng-c3782588569="" _nghost-ng-c2771486655=""
+            ><aside _ngcontent-ng-c2771486655="" data-testid="demo-notice" class="demo-notice"
+              ><span _ngcontent-ng-c2771486655="" aria-hidden="true" class="demo-notice__badge"
+                >DEMÓ</span
+              ><span _ngcontent-ng-c2771486655="" class="demo-notice__text">
+                Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.
+              </span></aside
+            ></app-demo-notice
+          ><app-promotion-strip
+            _ngcontent-ng-c3782588569=""
+            class="sm sm--deco sm--desktop"
+            _nghost-ng-c4134289616=""
+          ></app-promotion-strip
+          ><app-header-nav _ngcontent-ng-c3782588569="" _nghost-ng-c1649160399=""
+            ><header
+              _ngcontent-ng-c1649160399=""
+              data-testid="main-header"
+              role="banner"
+              class="header header--default sticky top-0 z-50 w-full"
+              ><div
+                _ngcontent-ng-c1649160399=""
+                class="header__inner flex items-center gap-4 mx-auto w-full min-h-16 px-4 py-2 lg:gap-6 lg:px-12"
+                ><button
+                  _ngcontent-ng-c1649160399=""
+                  aria-controls="mobile-drawer"
+                  aria-label="Menü megnyitása"
+                  data-testid="menu-trigger"
+                  type="button"
+                  class="menu-trigger inline-flex items-center justify-center w-11 h-11 rounded-input border-0 bg-transparent cursor-pointer text-xl lg:hidden"
+                  aria-expanded="false"
+                >
+                  ☰ </button
+                ><a
+                  _ngcontent-ng-c1649160399=""
+                  aria-label="MiBolt kezdőlap"
+                  routerlink="/"
+                  class="brand inline-flex items-center gap-2 no-underline min-h-11"
+                  href="index.html"
+                  ><span
+                    _ngcontent-ng-c1649160399=""
+                    aria-hidden="true"
+                    class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
+                    >M</span
+                  ><span
+                    _ngcontent-ng-c1649160399=""
+                    aria-hidden="true"
+                    class="halloween-header-art bd bd-spider"
+                    ><svg
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      focusable="false"
+                      viewBox="0 0 26 64"
+                      class="sm-spider"
+                    >
+                      <line
+                        _ngcontent-ng-c1649160399=""
+                        x1="13"
+                        x2="13"
+                        y1="0"
+                        y2="44"
+                        class="sm-spider__thread"
+                      ></line>
+                      <g
+                        _ngcontent-ng-c1649160399=""
+                        fill="none"
+                        stroke-linecap="round"
+                        class="sm-spider__legs"
+                      >
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+                        ></path>
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+                          transform="translate(26 0) scale(-1 1)"
+                        ></path>
+                      </g>
+                      <circle
+                        _ngcontent-ng-c1649160399=""
+                        cx="13"
+                        cy="44.2"
+                        r="2.9"
+                        class="sm-spider__body"
+                      ></circle>
+                      <ellipse
+                        _ngcontent-ng-c1649160399=""
+                        cx="13"
+                        cy="51.4"
+                        rx="5.3"
+                        ry="6.5"
+                        class="sm-spider__body"
+                      ></ellipse>
+                      <path
+                        _ngcontent-ng-c1649160399=""
+                        d="M11.3 49h3.4l-1.7 2.6 1.7 2.8h-3.4l1.7-2.8z"
+                        class="sm-spider__mark"
+                      ></path></svg></span
+                  ><span _ngcontent-ng-c1649160399="" class="brand__word tracking-wide"
+                    >MiBolt</span
+                  ></a
+                ><nav
+                  _ngcontent-ng-c1649160399=""
+                  aria-label="Fő navigáció"
+                  class="header__nav hidden gap-4 flex-1 justify-center lg:flex"
+                  ><a
+                    _ngcontent-ng-c1649160399=""
+                    ariacurrentwhenactive="page"
+                    routerlinkactive="is-active"
+                    class="relative inline-flex items-center no-underline min-h-11 px-3 is-active"
+                    href="catalogue.html#/telefonok"
+                    aria-current="page"
+                    >Mobiltelefonok</a
+                  ></nav
+                ><div
+                  _ngcontent-ng-c1649160399=""
+                  class="header__actions flex items-center gap-2 ml-auto"
+                  ><label
+                    _ngcontent-ng-c1649160399=""
+                    data-testid="header-search"
+                    class="header__search hidden lg:block"
+                    ><span _ngcontent-ng-c1649160399="" class="sr-only"
+                      >Keresés a telefonok között</span
+                    ><input
+                      _ngcontent-ng-c1649160399=""
+                      autocomplete="off"
+                      data-testid="header-search-input"
+                      inputmode="search"
+                      name="q"
+                      placeholder="Keresés…"
+                      spellcheck="false"
+                      type="search"
+                      class="w-58 h-12 px-4 border-0 rounded-input" /></label
+                  ><a
+                    _ngcontent-ng-c1649160399=""
+                    data-testid="cart-link"
+                    routerlink="/penztar/kosar"
+                    class="cart relative inline-flex items-center gap-2 no-underline min-h-11 px-3 rounded-input"
+                    aria-label="Kosár megnyitása, jelenleg üres"
+                    href="cart.html"
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      class="halloween-header-art bd bd-ghost"
+                      ><svg
+                        _ngcontent-ng-c1649160399=""
+                        aria-hidden="true"
+                        focusable="false"
+                        viewBox="0 0 32 36"
+                        class="sm-ghost"
+                      >
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M3.5 34V15C3.5 7 9 2 16 2S28.5 7 28.5 15V34L24 29.6L20 34L16 29.6L12 34L8 29.6Z"
+                          class="sm-ghost__body"
+                        ></path>
+                        <ellipse
+                          _ngcontent-ng-c1649160399=""
+                          cx="11.6"
+                          cy="15"
+                          rx="2"
+                          ry="3.1"
+                          class="sm-ghost__eye"
+                        ></ellipse>
+                        <ellipse
+                          _ngcontent-ng-c1649160399=""
+                          cx="20.4"
+                          cy="15"
+                          rx="2"
+                          ry="3.1"
+                          class="sm-ghost__eye"
+                        ></ellipse>
+                        <ellipse
+                          _ngcontent-ng-c1649160399=""
+                          cx="16"
+                          cy="22.4"
+                          rx="2.3"
+                          ry="2.9"
+                          class="sm-ghost__eye"
+                        ></ellipse></svg></span
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      class="cart__icon inline-flex"
+                      ><svg
+                        _ngcontent-ng-c1649160399=""
+                        aria-hidden="true"
+                        focusable="false"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                      >
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M7 4h-2l-1 2v1h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 20h10v-2H10.4l1.1-2H18a2 2 0 0 0 1.8-1.11l3.6-6.49L22.4 7H7.21l-.94-2H7Zm3 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"
+                          fill="currentColor"
+                        ></path></svg></span
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      class="cart__label hidden text-base lg:inline"
+                      >Kosár</span
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      data-testid="cart-badge"
+                      class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4 rounded-full"
+                      >0</span
+                    ></a
+                  ></div
+                ></div
+              ><div
+                _ngcontent-ng-c1649160399=""
+                data-testid="mobile-search"
+                role="search"
+                class="mobile-search block px-4 pb-3 pt-2 lg:hidden"
+                ><label _ngcontent-ng-c1649160399="" class="mobile-search__field block"
+                  ><span _ngcontent-ng-c1649160399="" class="sr-only"
+                    >Keresés a telefonok között</span
+                  ><input
+                    _ngcontent-ng-c1649160399=""
+                    autocomplete="off"
+                    data-testid="mobile-search-input"
+                    inputmode="search"
+                    name="q-mobile"
+                    placeholder="Keresés a telefonok között…"
+                    spellcheck="false"
+                    type="search"
+                    class="w-full h-12 px-4 border-0 rounded-input" /></label></div></header></app-header-nav
+          ><main
+            _ngcontent-ng-c974726567=""
+            id="main-content"
+            tabindex="-1"
+            class="layout-main block scroll-mt-20"
+            ><router-outlet _ngcontent-ng-c974726567=""></router-outlet
+            ><app-catalog-page _nghost-ng-c1261154191="" data-layout-mode="sidebar"
+              ><section _ngcontent-ng-c1261154191="" class="catalog"
+                ><header
+                  _ngcontent-ng-c1261154191=""
+                  class="heading flex flex-col gap-2 pb-6 border-b border-[var(--color-line)]"
+                  ><h1 _ngcontent-ng-c1261154191="" class="title m-0">Mobiltelefonok</h1
+                  ><p _ngcontent-ng-c1261154191="" class="lede m-0 max-w-prose">
+                    Válaszd ki a hozzád illő készüléket a demó kínálatból – minden termék
+                    kipróbálható a pénztárig, valódi vásárlás nélkül.
+                  </p></header
+                ><div _ngcontent-ng-c1261154191="" class="layout gap-6"
+                  ><aside _ngcontent-ng-c1261154191="" data-testid="filter-sidebar" class="sidebar"
+                    ><app-filter-panel _ngcontent-ng-c1261154191="" _nghost-ng-c1793041495=""
+                      ><section
+                        _ngcontent-ng-c1793041495=""
+                        data-testid="filter-panel"
+                        class="panel flex flex-col gap-6"
+                        ><header
+                          _ngcontent-ng-c1793041495=""
+                          class="header flex items-center justify-between gap-3"
+                          ><h2 _ngcontent-ng-c1793041495="" class="title m-0">Szűrők</h2
+                          ><app-button
+                            _ngcontent-ng-c1793041495=""
+                            data-testid="filter-reset"
+                            label="Szűrők törlése"
+                            variant="secondary"
+                            _nghost-ng-c1617414299=""
+                            ><button
+                              _ngcontent-ng-c1617414299=""
+                              class="root inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-3 text-base leading-6 select-none is-secondary whitespace-nowrap"
+                              disabled=""
+                              type="button"
+                              aria-disabled="true"
+                              ><span _ngcontent-ng-c1617414299="" class="label"
+                                >Szűrők törlése</span
+                              ></button
+                            ></app-button
+                          ></header
+                        ><fieldset
+                          _ngcontent-ng-c1793041495=""
+                          data-testid="filter-group-search"
+                          class="group"
+                          ><legend _ngcontent-ng-c1793041495="" class="legend">Keresés</legend
+                          ><label _ngcontent-ng-c1793041495="" class="search block"
+                            ><span _ngcontent-ng-c1793041495="" class="sr-only"
+                              >Keresés a telefonok között</span
+                            ><input
+                              _ngcontent-ng-c1793041495=""
+                              data-testid="filter-search-input"
+                              placeholder="pl. Demo 5G"
+                              type="search"
+                              class="input" /></label></fieldset
+                        ><fieldset
+                          _ngcontent-ng-c1793041495=""
+                          data-testid="filter-group-brand"
+                          class="group"
+                          ><legend _ngcontent-ng-c1793041495="" class="legend">Gyártó</legend
+                          ><ul _ngcontent-ng-c1793041495="" role="list" class="options"
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="brand-skeleton-row"
+                              class="facet-skeleton-row skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 470px;
+                                left: 48px;
+                                width: 280px;
+                                height: 40px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="brand-skeleton-row"
+                              class="facet-skeleton-row skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 470px;
+                                left: 48px;
+                                width: 280px;
+                                height: 40px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="brand-skeleton-row"
+                              class="facet-skeleton-row skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 470px;
+                                left: 48px;
+                                width: 280px;
+                                height: 40px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="brand-skeleton-row"
+                              class="facet-skeleton-row skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 470px;
+                                left: 48px;
+                                width: 280px;
+                                height: 40px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="brand-skeleton-row"
+                              class="facet-skeleton-row skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 470px;
+                                left: 48px;
+                                width: 280px;
+                                height: 40px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-brand-apple"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Apple<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(17)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-brand-google pixel"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Google Pixel<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(4)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-brand-honor"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >HONOR<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(8)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-brand-motorola"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Motorola<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(1)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-brand-samsung"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Samsung<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(13)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ></ul
+                          ><button
+                            _ngcontent-ng-c1793041495=""
+                            data-testid="filter-brand-more"
+                            type="button"
+                            class="more"
+                            aria-expanded="false"
+                          >
+                            Még több gyártó
+                          </button></fieldset
+                        ><fieldset
+                          _ngcontent-ng-c1793041495=""
+                          data-testid="filter-group-color"
+                          class="group"
+                          ><legend _ngcontent-ng-c1793041495="" class="legend">Szín</legend
+                          ><ul _ngcontent-ng-c1793041495="" role="list" class="color-options"
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="color-skeleton-row"
+                              class="facet-skeleton-row facet-skeleton-row--chip skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 758px;
+                                left: 48px;
+                                width: 280px;
+                                height: 44px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="color-skeleton-row"
+                              class="facet-skeleton-row facet-skeleton-row--chip skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 758px;
+                                left: 48px;
+                                width: 280px;
+                                height: 44px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li
+                              _ngcontent-ng-c1793041495=""
+                              appskeletonleave=""
+                              aria-hidden="true"
+                              data-testid="color-skeleton-row"
+                              class="facet-skeleton-row facet-skeleton-row--chip skeleton-leave"
+                              style="
+                                position: absolute;
+                                top: 758px;
+                                left: 48px;
+                                width: 280px;
+                                height: 44px;
+                                margin: 0px;
+                              "
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--label"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1793041495=""
+                                class="facet-skeleton-bar facet-skeleton-bar--count"
+                              ></span></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="color-chip"
+                                aria-pressed="false"
+                                data-testid="filter-color-zold"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="color-chip__swatch"
+                                  style="background-color: rgb(124, 159, 99)"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="color-chip__label"
+                                  >Zöld<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="color-chip__count facet-count"
+                                    >&nbsp;(3)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="color-chip"
+                                aria-pressed="false"
+                                data-testid="filter-color-fekete"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="color-chip__swatch"
+                                  style="background-color: rgb(67, 67, 70)"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="color-chip__label"
+                                  >Fekete<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="color-chip__count facet-count"
+                                    >&nbsp;(35)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="color-chip"
+                                aria-pressed="false"
+                                data-testid="filter-color-burgundi"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="color-chip__swatch"
+                                  style="background-color: rgb(104, 63, 71)"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="color-chip__label"
+                                  >Burgundi<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="color-chip__count facet-count"
+                                    >&nbsp;(3)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="color-chip"
+                                aria-pressed="false"
+                                data-testid="filter-color-ezust"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="color-chip__swatch"
+                                  style="background-color: rgb(213, 213, 213)"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="color-chip__label"
+                                  >Ezüst<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="color-chip__count facet-count"
+                                    >&nbsp;(4)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="color-chip"
+                                aria-pressed="false"
+                                data-testid="filter-color-gleccserszin"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="color-chip__swatch"
+                                  style="background-color: rgb(171, 183, 199)"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="color-chip__label"
+                                  >Gleccserszín<span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="color-chip__count facet-count"
+                                    >&nbsp;(3)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ></ul
+                          ><button
+                            _ngcontent-ng-c1793041495=""
+                            data-testid="filter-color-more"
+                            type="button"
+                            class="more"
+                          >
+                            Még több szín
+                          </button></fieldset
+                        ><fieldset
+                          _ngcontent-ng-c1793041495=""
+                          data-testid="filter-group-storage"
+                          class="group"
+                          ><legend _ngcontent-ng-c1793041495="" class="legend">Tárhely</legend
+                          ><ul _ngcontent-ng-c1793041495="" role="list" class="options"
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-storage-128"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >128 GB
+                                  <span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(11)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-storage-256"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >256 GB
+                                  <span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(27)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                data-testid="filter-storage-512"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >512 GB
+                                  <span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(17)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ></ul
+                          ></fieldset
+                        ><fieldset
+                          _ngcontent-ng-c1793041495=""
+                          data-testid="filter-group-price"
+                          class="group"
+                          ><legend _ngcontent-ng-c1793041495="" class="legend"
+                            >Ár (Ft, egész szám)</legend
+                          ><div _ngcontent-ng-c1793041495="" class="price grid grid-cols-2 gap-2"
+                            ><label
+                              _ngcontent-ng-c1793041495=""
+                              class="price__field flex flex-col gap-1"
+                              ><span _ngcontent-ng-c1793041495="" class="price__label">Min.</span
+                              ><input
+                                _ngcontent-ng-c1793041495=""
+                                data-testid="filter-min-price"
+                                inputmode="numeric"
+                                min="0"
+                                step="1000"
+                                type="number"
+                                class="input"
+                                placeholder="69990" /></label
+                            ><label
+                              _ngcontent-ng-c1793041495=""
+                              class="price__field flex flex-col gap-1"
+                              ><span _ngcontent-ng-c1793041495="" class="price__label">Max.</span
+                              ><input
+                                _ngcontent-ng-c1793041495=""
+                                data-testid="filter-max-price"
+                                inputmode="numeric"
+                                min="0"
+                                step="1000"
+                                type="number"
+                                class="input"
+                                placeholder="1095990" /></label></div></fieldset
+                        ><fieldset
+                          _ngcontent-ng-c1793041495=""
+                          data-testid="filter-group-flags"
+                          class="group"
+                          ><legend _ngcontent-ng-c1793041495="" class="legend">Egyéb</legend
+                          ><ul _ngcontent-ng-c1793041495="" role="list" class="options"
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                data-testid="filter-inStock"
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Csak raktáron
+                                  <span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(55)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                data-testid="filter-is5g"
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                aria-pressed="false"
+                                ><span
+                                  _ngcontent-ng-c1793041495=""
+                                  aria-hidden="true"
+                                  class="check"
+                                ></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Csak 5G
+                                  <span
+                                    _ngcontent-ng-c1793041495=""
+                                    aria-label="találatok száma"
+                                    class="option__count facet-count"
+                                    >&nbsp;(54)</span
+                                  ></span
+                                ></button
+                              ></li
+                            ><li _ngcontent-ng-c1793041495=""
+                              ><button
+                                _ngcontent-ng-c1793041495=""
+                                data-testid="filter-activePromotion"
+                                type="button"
+                                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                                ><span _ngcontent-ng-c1793041495="" class="check"></span
+                                ><span _ngcontent-ng-c1793041495="" class="option__label"
+                                  >Aktív halloweeni ajánlatok</span
+                                ></button
+                              ></li
+                            ></ul
+                          ></fieldset
+                        ></section
+                      ></app-filter-panel
+                    ></aside
+                  ><div _ngcontent-ng-c1261154191="" class="results flex flex-col gap-5 min-w-0"
+                    ><h2
+                      _ngcontent-ng-c1261154191=""
+                      class="sr-only absolute w-px h-px overflow-hidden"
+                      >Találatok</h2
+                    ><app-catalog-toolbar _ngcontent-ng-c1261154191="" _nghost-ng-c2943874081=""
+                      ><div _ngcontent-ng-c2943874081="" class="toolbar"
+                        ><div _ngcontent-ng-c2943874081="" class="row toolbar__top"
+                          ><div
+                            _ngcontent-ng-c2943874081=""
+                            data-testid="result-count"
+                            tabindex="-1"
+                            class="result-count"
+                          >
+                            55 találat a szűrt feltételek szerint </div
+                          ><button
+                            _ngcontent-ng-c2943874081=""
+                            data-testid="filter-trigger"
+                            type="button"
+                            class="trigger"
+                            aria-controls="filter-drawer"
+                            aria-expanded="false"
+                          >
+                            Szűrők
+                          </button></div
+                        ><div _ngcontent-ng-c2943874081="" class="row toolbar__selects"
+                          ><label _ngcontent-ng-c2943874081="" class="select-field sort"
+                            ><span _ngcontent-ng-c2943874081="" class="select-field__label"
+                              >Rendezés</span
+                            ><select
+                              _ngcontent-ng-c2943874081=""
+                              data-testid="catalog-sort"
+                              class="select"
+                              ><option _ngcontent-ng-c2943874081="" value="recommended">
+                                Ajánlott sorrend </option
+                              ><option _ngcontent-ng-c2943874081="" value="newest">
+                                Legújabb elöl </option
+                              ><option _ngcontent-ng-c2943874081="" value="oldest">
+                                Legrégebbi elöl </option
+                              ><option _ngcontent-ng-c2943874081="" value="popularity">
+                                Népszerűség szerint </option
+                              ><option _ngcontent-ng-c2943874081="" value="price_asc">
+                                Ár szerint növekvő </option
+                              ><option _ngcontent-ng-c2943874081="" value="price_desc">
+                                Ár szerint csökkenő </option
+                              ><option _ngcontent-ng-c2943874081="" value="name_asc">
+                                Név szerint (A–Z) </option
+                              ><option _ngcontent-ng-c2943874081="" value="name_desc">
+                                Név szerint (Z–A)
+                              </option></select
+                            ></label
+                          ><label _ngcontent-ng-c2943874081="" class="select-field page-size"
+                            ><span _ngcontent-ng-c2943874081="" class="select-field__label"
+                              >Oldalméret</span
+                            ><select
+                              _ngcontent-ng-c2943874081=""
+                              data-testid="catalog-page-size"
+                              class="select"
+                              ><option _ngcontent-ng-c2943874081="" value="12">12 / oldal</option
+                              ><option _ngcontent-ng-c2943874081="" value="24"
+                                >24 / oldal</option
+                              ></select
+                            ></label
+                          ></div
+                        ></div
+                      ></app-catalog-toolbar
+                    ><app-applied-filters
+                      _ngcontent-ng-c1261154191=""
+                      _nghost-ng-c3270135366=""
+                    ></app-applied-filters
+                    ><app-async-content _ngcontent-ng-c1261154191="" _nghost-ng-c368950527=""
+                      ><div _ngcontent-ng-c368950527="" data-testid="catalog-grid" class="grid"
+                        ><div
+                          _ngcontent-ng-c368950527=""
+                          appskeletonleave=""
+                          data-testid="catalog-loading"
+                          class="skeleton-grid skeleton-leave"
+                          style="
+                            position: absolute;
+                            top: 400px;
+                            left: 368px;
+                            width: 849px;
+                            height: 719px;
+                            margin: 0px;
+                          "
+                          ><app-product-card-skeleton
+                            _ngcontent-ng-c368950527=""
+                            _nghost-ng-c1458998546=""
+                            ><div
+                              _ngcontent-ng-c1458998546=""
+                              data-testid="product-card-skeleton"
+                              class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar mt-auto block h-[40px] w-full rounded-full"
+                              ></span></div></app-product-card-skeleton
+                          ><app-product-card-skeleton
+                            _ngcontent-ng-c368950527=""
+                            _nghost-ng-c1458998546=""
+                            ><div
+                              _ngcontent-ng-c1458998546=""
+                              data-testid="product-card-skeleton"
+                              class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar mt-auto block h-[40px] w-full rounded-full"
+                              ></span></div></app-product-card-skeleton
+                          ><app-product-card-skeleton
+                            _ngcontent-ng-c368950527=""
+                            _nghost-ng-c1458998546=""
+                            ><div
+                              _ngcontent-ng-c1458998546=""
+                              data-testid="product-card-skeleton"
+                              class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar mt-auto block h-[40px] w-full rounded-full"
+                              ></span></div></app-product-card-skeleton
+                          ><app-product-card-skeleton
+                            _ngcontent-ng-c368950527=""
+                            _nghost-ng-c1458998546=""
+                            ><div
+                              _ngcontent-ng-c1458998546=""
+                              data-testid="product-card-skeleton"
+                              class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar mt-auto block h-[40px] w-full rounded-full"
+                              ></span></div></app-product-card-skeleton
+                          ><app-product-card-skeleton
+                            _ngcontent-ng-c368950527=""
+                            _nghost-ng-c1458998546=""
+                            ><div
+                              _ngcontent-ng-c1458998546=""
+                              data-testid="product-card-skeleton"
+                              class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar mt-auto block h-[40px] w-full rounded-full"
+                              ></span></div></app-product-card-skeleton
+                          ><app-product-card-skeleton
+                            _ngcontent-ng-c368950527=""
+                            _nghost-ng-c1458998546=""
+                            ><div
+                              _ngcontent-ng-c1458998546=""
+                              data-testid="product-card-skeleton"
+                              class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                              ></span
+                              ><span
+                                _ngcontent-ng-c1458998546=""
+                                class="bar mt-auto block h-[40px] w-full rounded-full"
+                              ></span></div></app-product-card-skeleton></div
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Motorola Edge 50 Fusion, Zöld, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/motorola-edge-50-fusion?variant=motorola-edge-50-fusion--zold--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/fc11d7e82822d30d65344733e93c62da8248b05437216747b549121318b1c6eb.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/motorola-edge-50-fusion?variant=motorola-edge-50-fusion--zold--256"
+                                  >Motorola Edge 50 Fusion</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color">Zöld</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >5000 mAh akkumulátor</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,67" pOLED kijelző</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >89&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Motorola Edge 50 Fusion részleteinek megnyitása"
+                                href="product.html#/telefonok/motorola-edge-50-fusion?variant=motorola-edge-50-fusion--zold--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Honor X7D, Fekete, 128 GB - részletek megnyitása"
+                              href="product.html#/telefonok/honor-x7d?variant=honor-x7d--fekete--128"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/e58f92af9689063ba2b7acc722e35ca7f5fb783ad1262ddb5e9795c86971742e.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/honor-x7d?variant=honor-x7d--fekete--128"
+                                  >Honor X7D</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Fekete</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >128 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >10-35W UBP - PD</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6500 mAh akkumulátor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >69&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Honor X7D részleteinek megnyitása"
+                                href="product.html#/telefonok/honor-x7d?variant=honor-x7d--fekete--128"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 18 Pro Max, Burgundi, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/849997cd17e3cc9da04148666d7af6f0417bf43f584380ebbf29ad40f2bcbec0.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Burgundi"
+                                  aria-label="Burgundi"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(104, 63, 71)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Ezüst"
+                                  aria-label="Ezüst"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(213, 213, 213)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Gleccserszín"
+                                  aria-label="Gleccserszín"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(171, 183, 199)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--256"
+                                  >Apple iPhone 18 Pro Max</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Burgundi</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >48+48+48MP kamera</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,9" képátló</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >599&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 18 Pro Max részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 18 Pro Max, Burgundi, 512 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--512"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/849997cd17e3cc9da04148666d7af6f0417bf43f584380ebbf29ad40f2bcbec0.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Burgundi"
+                                  aria-label="Burgundi"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(104, 63, 71)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Ezüst"
+                                  aria-label="Ezüst"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(213, 213, 213)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--512"
+                                  >Apple iPhone 18 Pro Max</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Burgundi</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >512 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >48+48+48MP kamera</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,9" képátló</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >699&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 18 Pro Max részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--512"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 18 Pro, Burgundi, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-18-pro?variant=apple-iphone-18-pro--burgundi--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/320d79fe07286d9da93258915d37a24642b6af457430329f90e943d538d68b32.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Burgundi"
+                                  aria-label="Burgundi"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(104, 63, 71)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="gleccserszín"
+                                  aria-label="gleccserszín"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(167, 179, 195)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-18-pro?variant=apple-iphone-18-pro--burgundi--256"
+                                  >Apple iPhone 18 Pro</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Burgundi</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >48+48+48MP kamera</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,3" képátló</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >549&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 18 Pro részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-18-pro?variant=apple-iphone-18-pro--burgundi--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 18 Pro, Ezüst, 512 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-18-pro?variant=apple-iphone-18-pro--ezust--512"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/2864154a1874c3250762e1b6994c0dd53c5266e3501a5df5098e378f29d92be1.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Ezüst"
+                                  aria-label="Ezüst"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(214, 214, 214)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="gleccserszín"
+                                  aria-label="gleccserszín"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(167, 179, 195)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-18-pro?variant=apple-iphone-18-pro--ezust--512"
+                                  >Apple iPhone 18 Pro</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Ezüst</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >512 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >48+48+48MP kamera</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,3" képátló</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >649&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 18 Pro részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-18-pro?variant=apple-iphone-18-pro--ezust--512"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Honor 600 Lite, Fekete, 128 GB - részletek megnyitása"
+                              href="product.html#/telefonok/honor-600-lite?variant=honor-600-lite--fekete--128"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/128d8d91971dce7ba407925b2250a7c9b53f6adadfd155c5cd0a287728a101cd.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Zöld"
+                                  aria-label="Zöld"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(216, 238, 220)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/honor-600-lite?variant=honor-600-lite--fekete--128"
+                                  >Honor 600 Lite</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Fekete</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >128 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >8/128GB RAM/ROM</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6520 mAh akkumulátor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >149&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Honor 600 Lite részleteinek megnyitása"
+                                href="product.html#/telefonok/honor-600-lite?variant=honor-600-lite--fekete--128"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Samsung Galaxy Z Fold8 Ultra 5G, Grafit, 512 GB - részletek megnyitása"
+                              href="product.html#/telefonok/samsung-galaxy-z-fold8-ultra-5g?variant=samsung-galaxy-z-fold8-ultra-5g--grafit--512"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/af91fa145184263d5198c01eb75c0b02a8bab55cb0148f4d7c442d951614243d.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/samsung-galaxy-z-fold8-ultra-5g?variant=samsung-galaxy-z-fold8-ultra-5g--grafit--512"
+                                  >Samsung Galaxy Z Fold8 Ultra 5G</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Grafit</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >512 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >8 magos processzor</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >5000 mAh akkumulátor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >1&nbsp;095&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Samsung Galaxy Z Fold8 Ultra 5G részleteinek megnyitása"
+                                href="product.html#/telefonok/samsung-galaxy-z-fold8-ultra-5g?variant=samsung-galaxy-z-fold8-ultra-5g--grafit--512"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Samsung Galaxy S26 FE, Grafit, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/samsung-galaxy-s26-fe?variant=samsung-galaxy-s26-fe--grafit--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/f19294e37a9fb8d09a6d4f7eb8afd74881ee3849d45bb0b34e3872e55f639c14.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/samsung-galaxy-s26-fe?variant=samsung-galaxy-s26-fe--grafit--256"
+                                  >Samsung Galaxy S26 FE</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Grafit</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >8/256GB RAM/ROM</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >50MP főkamera</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >372&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Samsung Galaxy S26 FE részleteinek megnyitása"
+                                href="product.html#/telefonok/samsung-galaxy-s26-fe?variant=samsung-galaxy-s26-fe--grafit--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 17e, Fehér, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-17e?variant=apple-iphone-17e--feher--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/03cd7ad943422e6b5c676b5d4307b6cab344ae501e54cce53e2ab1eaea2e873d.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Fehér"
+                                  aria-label="Fehér"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(255, 255, 255)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Halvány rózsaszín"
+                                  aria-label="Halvány rózsaszín, elfogyott"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(254, 238, 238)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-17e?variant=apple-iphone-17e--feher--256"
+                                  >Apple iPhone 17e</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Fehér</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >256GB tárhely</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >Apple A19 processzor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >319&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 17e részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-17e?variant=apple-iphone-17e--feher--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Samsung Galaxy A57, király szürke, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/samsung-galaxy-a57?variant=samsung-galaxy-a57--kiraly-szurke--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/16d9125db1fb522ed7f28a599bee9da602f51dbd693ec5378bfcd5faceed9b1a.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="király szürke"
+                                  aria-label="király szürke"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(89, 86, 93)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="király tengerészkék"
+                                  aria-label="király tengerészkék"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(24, 29, 38)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/samsung-galaxy-a57?variant=samsung-galaxy-a57--kiraly-szurke--256"
+                                  >Samsung Galaxy A57</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >király szürke</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >8/256GB RAM/ROM</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >5000 mAh akkumulátor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >235&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Samsung Galaxy A57 részleteinek megnyitása"
+                                href="product.html#/telefonok/samsung-galaxy-a57?variant=samsung-galaxy-a57--kiraly-szurke--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ><app-product-card _ngcontent-ng-c1261154191="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Google Pixel 11, Obszidián, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/google-pixel-11?variant=google-pixel-11--obszidian--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/3e161bc73db04216e67f462b31d8901ff96bae1bb89b8f1c0a9385ee168f11ed.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 231px;
+                                      height: 173px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/google-pixel-11?variant=google-pixel-11--obszidian--256"
+                                  >Google Pixel 11</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Obszidián</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >Google Tensor G6 processzor</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >4985 mAh akkumulátor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >471&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Google Pixel 11 részleteinek megnyitása"
+                                href="product.html#/telefonok/google-pixel-11?variant=google-pixel-11--obszidian--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ></div
+                      ></app-async-content
+                    ><app-pagination _ngcontent-ng-c1261154191="" _nghost-ng-c2853781978=""
+                      ><nav
+                        _ngcontent-ng-c2853781978=""
+                        aria-label="Lapozás"
+                        data-testid="catalog-pagination"
+                        class="pagination flex items-center justify-center gap-3 pt-4"
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          aria-label="Előző oldal"
+                          data-testid="pagination-prev"
+                          type="button"
+                          class="page page--boundary is-unavailable"
+                          disabled=""
+                          ><span _ngcontent-ng-c2853781978="" aria-hidden="true">‹</span></button
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          type="button"
+                          class="page page--number page--current"
+                          aria-current="page"
+                          aria-label="1. oldal"
+                          data-testid="pagination-current"
+                        >
+                          1 </button
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          type="button"
+                          class="page page--number"
+                          aria-label="2. oldal"
+                          data-testid="pagination-page-2"
+                        >
+                          2 </button
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          type="button"
+                          class="page page--number"
+                          aria-label="3. oldal"
+                          data-testid="pagination-page-3"
+                        >
+                          3 </button
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          type="button"
+                          class="page page--number"
+                          aria-label="4. oldal"
+                          data-testid="pagination-page-4"
+                        >
+                          4 </button
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          type="button"
+                          class="page page--number"
+                          aria-label="5. oldal"
+                          data-testid="pagination-page-5"
+                        >
+                          5 </button
+                        ><button
+                          _ngcontent-ng-c2853781978=""
+                          aria-label="Következő oldal"
+                          data-testid="pagination-next"
+                          type="button"
+                          class="page page--boundary"
+                          ><span _ngcontent-ng-c2853781978="" aria-hidden="true">›</span></button
+                        ></nav
+                      ></app-pagination
+                    ></div
+                  ></div
+                ><app-filter-drawer
+                  _ngcontent-ng-c1261154191=""
+                  id="filter-drawer"
+                  _nghost-ng-c376627607=""
+                  ><app-accessible-dialog
+                    _ngcontent-ng-c376627607=""
+                    initialfocus="first-heading"
+                    label="Szűrők"
+                    _nghost-ng-c817106955=""
+                  ></app-accessible-dialog></app-filter-drawer></section></app-catalog-page></main
+          ><app-footer-nav _ngcontent-ng-c3782588569="" _nghost-ng-c3644546217=""
+            ><footer
+              _ngcontent-ng-c3644546217=""
+              role="contentinfo"
+              class="footer px-4 py-6 sm:px-12 sm:py-8"
+              ><div
+                _ngcontent-ng-c3644546217=""
+                class="footer__inner flex flex-wrap items-center justify-between gap-4"
+                ><span
+                  _ngcontent-ng-c3644546217=""
+                  class="footer__brand font-bold tracking-[0.02em]"
+                  >MiBolt</span
+                ><p
+                  _ngcontent-ng-c3644546217=""
+                  class="footer__legal m-0 min-w-0 shrink grow basis-60"
+                >
+                  Mobilválasztás egyszerűen. Ez egy bemutató webshop: minden termék, ár és rendelés
+                  demóadat. </p
+                ><button
+                  _ngcontent-ng-c3644546217=""
+                  type="button"
+                  class="footer__cta inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center"
+                >
+                  Hogyan működik a demó?
+                </button></div
+              ></footer
+            ></app-footer-nav
+          ></app-app-shell
+        ></app-shop-layout
+      ></app-root
+    >
+    <template id="mi-bolt-fatal">
+      <div aria-live="assertive" class="app-fatal" role="alert">
+        <h1 class="app-fatal__title">A MiBolt demó indítása sikertelen</h1>
+        <p class="app-fatal__body">
+          A bemutató nem tudott elindulni. Frissítsd az oldalt, vagy ellenőrizd a böngésző konzolját
+          a részletekért.
+        </p>
+        <button class="app-fatal__retry" data-testid="fatal-retry" type="button">Újratöltés</button>
+      </div>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,2061 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MiBolt — Kezdőlap</title>
+    <link rel="icon" href="favicon.ico" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="snapshot.css" />
+    <script src="prototype.js" defer></script>
+    <script src="storefront.js" defer></script>
+  </head>
+  <body data-route="/">
+    <app-root _nghost-ng-c1502630744=""
+      ><a _ngcontent-ng-c1502630744="" href="#main-content" class="skip-link">Ugrás a tartalomhoz</a
+      ><router-outlet _ngcontent-ng-c1502630744=""></router-outlet
+      ><app-marketing-layout _nghost-ng-c628641747=""
+        ><app-app-shell _ngcontent-ng-c628641747="" variant="marketing" _nghost-ng-c3782588569=""
+          ><app-demo-notice _ngcontent-ng-c3782588569="" _nghost-ng-c2771486655=""
+            ><aside _ngcontent-ng-c2771486655="" data-testid="demo-notice" class="demo-notice"
+              ><span _ngcontent-ng-c2771486655="" aria-hidden="true" class="demo-notice__badge"
+                >DEMÓ</span
+              ><span _ngcontent-ng-c2771486655="" class="demo-notice__text">
+                Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.
+              </span></aside
+            ></app-demo-notice
+          ><app-promotion-strip
+            _ngcontent-ng-c3782588569=""
+            class="sm sm--deco sm--desktop"
+            _nghost-ng-c4134289616=""
+          ></app-promotion-strip
+          ><app-header-nav _ngcontent-ng-c3782588569="" _nghost-ng-c1649160399=""
+            ><header
+              _ngcontent-ng-c1649160399=""
+              data-testid="main-header"
+              role="banner"
+              class="header header--default sticky top-0 z-50 w-full"
+              ><div
+                _ngcontent-ng-c1649160399=""
+                class="header__inner flex items-center gap-4 mx-auto w-full min-h-16 px-4 py-2 lg:gap-6 lg:px-12"
+                ><button
+                  _ngcontent-ng-c1649160399=""
+                  aria-controls="mobile-drawer"
+                  aria-label="Menü megnyitása"
+                  data-testid="menu-trigger"
+                  type="button"
+                  class="menu-trigger inline-flex items-center justify-center w-11 h-11 rounded-input border-0 bg-transparent cursor-pointer text-xl lg:hidden"
+                  aria-expanded="false"
+                >
+                  ☰ </button
+                ><a
+                  _ngcontent-ng-c1649160399=""
+                  aria-label="MiBolt kezdőlap"
+                  routerlink="/"
+                  class="brand inline-flex items-center gap-2 no-underline min-h-11"
+                  href="index.html"
+                  ><span
+                    _ngcontent-ng-c1649160399=""
+                    aria-hidden="true"
+                    class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
+                    >M</span
+                  ><span
+                    _ngcontent-ng-c1649160399=""
+                    aria-hidden="true"
+                    class="halloween-header-art bd bd-spider"
+                    ><svg
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      focusable="false"
+                      viewBox="0 0 26 64"
+                      class="sm-spider"
+                    >
+                      <line
+                        _ngcontent-ng-c1649160399=""
+                        x1="13"
+                        x2="13"
+                        y1="0"
+                        y2="44"
+                        class="sm-spider__thread"
+                      ></line>
+                      <g
+                        _ngcontent-ng-c1649160399=""
+                        fill="none"
+                        stroke-linecap="round"
+                        class="sm-spider__legs"
+                      >
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+                        ></path>
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M10.6 47C6 42 3 43 1.5 48M10.2 49C5.5 47 2.5 49 1.5 54M10.4 51C6.4 51 3.6 54 3 59M11.2 53C8.4 55 7 58 7.2 62"
+                          transform="translate(26 0) scale(-1 1)"
+                        ></path>
+                      </g>
+                      <circle
+                        _ngcontent-ng-c1649160399=""
+                        cx="13"
+                        cy="44.2"
+                        r="2.9"
+                        class="sm-spider__body"
+                      ></circle>
+                      <ellipse
+                        _ngcontent-ng-c1649160399=""
+                        cx="13"
+                        cy="51.4"
+                        rx="5.3"
+                        ry="6.5"
+                        class="sm-spider__body"
+                      ></ellipse>
+                      <path
+                        _ngcontent-ng-c1649160399=""
+                        d="M11.3 49h3.4l-1.7 2.6 1.7 2.8h-3.4l1.7-2.8z"
+                        class="sm-spider__mark"
+                      ></path></svg></span
+                  ><span _ngcontent-ng-c1649160399="" class="brand__word tracking-wide"
+                    >MiBolt</span
+                  ></a
+                ><nav
+                  _ngcontent-ng-c1649160399=""
+                  aria-label="Fő navigáció"
+                  class="header__nav hidden gap-4 flex-1 justify-center lg:flex"
+                  ><a
+                    _ngcontent-ng-c1649160399=""
+                    ariacurrentwhenactive="page"
+                    routerlinkactive="is-active"
+                    class="relative inline-flex items-center no-underline min-h-11 px-3"
+                    href="catalogue.html#/telefonok"
+                    >Mobiltelefonok</a
+                  ></nav
+                ><div
+                  _ngcontent-ng-c1649160399=""
+                  class="header__actions flex items-center gap-2 ml-auto"
+                  ><label
+                    _ngcontent-ng-c1649160399=""
+                    data-testid="header-search"
+                    class="header__search hidden lg:block"
+                    ><span _ngcontent-ng-c1649160399="" class="sr-only"
+                      >Keresés a telefonok között</span
+                    ><input
+                      _ngcontent-ng-c1649160399=""
+                      autocomplete="off"
+                      data-testid="header-search-input"
+                      inputmode="search"
+                      name="q"
+                      placeholder="Keresés…"
+                      spellcheck="false"
+                      type="search"
+                      class="w-58 h-12 px-4 border-0 rounded-input" /></label
+                  ><a
+                    _ngcontent-ng-c1649160399=""
+                    data-testid="cart-link"
+                    routerlink="/penztar/kosar"
+                    class="cart relative inline-flex items-center gap-2 no-underline min-h-11 px-3 rounded-input"
+                    aria-label="Kosár megnyitása, jelenleg üres"
+                    href="cart.html"
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      class="halloween-header-art bd bd-ghost"
+                      ><svg
+                        _ngcontent-ng-c1649160399=""
+                        aria-hidden="true"
+                        focusable="false"
+                        viewBox="0 0 32 36"
+                        class="sm-ghost"
+                      >
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M3.5 34V15C3.5 7 9 2 16 2S28.5 7 28.5 15V34L24 29.6L20 34L16 29.6L12 34L8 29.6Z"
+                          class="sm-ghost__body"
+                        ></path>
+                        <ellipse
+                          _ngcontent-ng-c1649160399=""
+                          cx="11.6"
+                          cy="15"
+                          rx="2"
+                          ry="3.1"
+                          class="sm-ghost__eye"
+                        ></ellipse>
+                        <ellipse
+                          _ngcontent-ng-c1649160399=""
+                          cx="20.4"
+                          cy="15"
+                          rx="2"
+                          ry="3.1"
+                          class="sm-ghost__eye"
+                        ></ellipse>
+                        <ellipse
+                          _ngcontent-ng-c1649160399=""
+                          cx="16"
+                          cy="22.4"
+                          rx="2.3"
+                          ry="2.9"
+                          class="sm-ghost__eye"
+                        ></ellipse></svg></span
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      class="cart__icon inline-flex"
+                      ><svg
+                        _ngcontent-ng-c1649160399=""
+                        aria-hidden="true"
+                        focusable="false"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        width="24"
+                      >
+                        <path
+                          _ngcontent-ng-c1649160399=""
+                          d="M7 4h-2l-1 2v1h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 20h10v-2H10.4l1.1-2H18a2 2 0 0 0 1.8-1.11l3.6-6.49L22.4 7H7.21l-.94-2H7Zm3 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"
+                          fill="currentColor"
+                        ></path></svg></span
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      class="cart__label hidden text-base lg:inline"
+                      >Kosár</span
+                    ><span
+                      _ngcontent-ng-c1649160399=""
+                      aria-hidden="true"
+                      data-testid="cart-badge"
+                      class="cart__badge bd-pk-badge inline-flex items-center justify-center w-4 h-4 rounded-full"
+                      >0</span
+                    ></a
+                  ></div
+                ></div
+              ><div
+                _ngcontent-ng-c1649160399=""
+                data-testid="mobile-search"
+                role="search"
+                class="mobile-search block px-4 pb-3 pt-2 lg:hidden"
+                ><label _ngcontent-ng-c1649160399="" class="mobile-search__field block"
+                  ><span _ngcontent-ng-c1649160399="" class="sr-only"
+                    >Keresés a telefonok között</span
+                  ><input
+                    _ngcontent-ng-c1649160399=""
+                    autocomplete="off"
+                    data-testid="mobile-search-input"
+                    inputmode="search"
+                    name="q-mobile"
+                    placeholder="Keresés a telefonok között…"
+                    spellcheck="false"
+                    type="search"
+                    class="w-full h-12 px-4 border-0 rounded-input" /></label></div></header></app-header-nav
+          ><main
+            _ngcontent-ng-c628641747=""
+            id="main-content"
+            tabindex="-1"
+            class="layout-main block scroll-mt-20"
+            ><router-outlet _ngcontent-ng-c628641747=""></router-outlet
+            ><app-home-page _nghost-ng-c3913225598=""
+              ><app-hero _ngcontent-ng-c3913225598="" data-testid="hero" _nghost-ng-c499732865=""
+                ><section
+                  _ngcontent-ng-c499732865=""
+                  aria-labelledby="hero-heading"
+                  data-testid="hero-section"
+                  class="hero px-4 py-12 sm:px-6 lg:px-12 lg:py-20"
+                  ><app-halloween-scenery _ngcontent-ng-c499732865="" class="halloween-scenery"
+                    ><div aria-hidden="true" class="bd bd-layer"
+                      ><div class="bd-sky"></div
+                      ><div
+                        class="bd-stars bd-stars--a"
+                        style="
+                          background-image:
+                            radial-gradient(
+                              2.8px 2.8px at 5.1% 7.3%,
+                              rgba(255, 255, 255, 0.86) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2px 2px at 52% 31.4%,
+                              rgba(255, 255, 255, 0.66) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.7px 1.7px at 54.9% 54.1%,
+                              rgba(255, 255, 255, 0.62) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.6px 1.6px at 74.3% 39.3%,
+                              rgba(255, 255, 255, 0.72) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.4px 1.4px at 54.4% 56.3%,
+                              rgba(255, 255, 255, 0.96) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.3px 2.3px at 54.9% 46.5%,
+                              rgba(255, 255, 255, 0.98) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.5px 2.5px at 61.4% 67.5%,
+                              rgba(255, 255, 255, 0.57) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.4px 1.4px at 43.1% 4.4%,
+                              rgba(255, 255, 255, 0.9) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.4px 2.4px at 47.1% 69.2%,
+                              rgba(255, 255, 255, 0.86) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.6px 1.6px at 88% 25.6%,
+                              rgba(255, 255, 255, 0.83) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.3px 2.3px at 35% 6.1%,
+                              rgba(255, 255, 255, 0.96) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.3px 2.3px at 54.4% 60.9%,
+                              rgba(255, 255, 255, 0.96) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.7px 2.7px at 63.7% 65.4%,
+                              rgba(255, 255, 255, 0.93) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.8px 2.8px at 58.7% 70.5%,
+                              rgba(255, 255, 255, 0.8) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.1px 2.1px at 79.3% 3.4%,
+                              rgba(255, 255, 255, 0.7) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.4px 2.4px at 70.6% 41.5%,
+                              rgba(255, 255, 255, 0.99) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.9px 1.9px at 55.3% 60.6%,
+                              rgba(255, 255, 255, 0.84) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.8px 1.8px at 71.9% 41.6%,
+                              rgba(255, 255, 255, 0.66) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.7px 2.7px at 4.9% 4.7%,
+                              rgba(255, 255, 255, 0.93) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.2px 2.2px at 62% 4%,
+                              rgba(255, 255, 255, 0.82) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.7px 1.7px at 70% 72.6%,
+                              rgba(255, 255, 255, 0.99) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.2px 2.2px at 63.8% 59.3%,
+                              rgba(255, 255, 255, 0.92) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.5px 1.5px at 50.6% 42.7%,
+                              rgba(255, 255, 255, 0.73) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.3px 2.3px at 83.3% 54.5%,
+                              rgba(255, 255, 255, 1) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.7px 2.7px at 60.1% 54.6%,
+                              rgba(255, 255, 255, 0.77) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.6px 1.6px at 77.2% 62.8%,
+                              rgba(255, 255, 255, 0.8) 55%,
+                              transparent 62%
+                            );
+                        "
+                      ></div
+                      ><div
+                        class="bd-stars bd-stars--b"
+                        style="
+                          background-image:
+                            radial-gradient(
+                              2.4px 2.4px at 65.8% 61.5%,
+                              rgba(255, 255, 255, 0.57) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.4px 1.4px at 42.3% 27.2%,
+                              rgba(255, 255, 255, 0.97) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.8px 1.8px at 78.7% 49.5%,
+                              rgba(255, 255, 255, 0.88) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.4px 2.4px at 56.7% 32.5%,
+                              rgba(255, 255, 255, 0.57) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.6px 2.6px at 69.7% 56.2%,
+                              rgba(255, 255, 255, 0.68) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.5px 2.5px at 84.9% 61.3%,
+                              rgba(255, 255, 255, 0.91) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.3px 2.3px at 92% 48.9%,
+                              rgba(255, 255, 255, 0.57) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.7px 1.7px at 68.7% 22.5%,
+                              rgba(255, 255, 255, 0.85) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.5px 2.5px at 63.7% 71.8%,
+                              rgba(255, 255, 255, 0.93) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.9px 1.9px at 85.3% 26.2%,
+                              rgba(255, 255, 255, 0.72) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.3px 2.3px at 85.6% 71.2%,
+                              rgba(255, 255, 255, 0.92) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.5px 1.5px at 53.5% 30%,
+                              rgba(255, 255, 255, 0.98) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.5px 2.5px at 70.7% 70.4%,
+                              rgba(255, 255, 255, 0.67) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.6px 2.6px at 77.6% 31.6%,
+                              rgba(255, 255, 255, 0.91) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.9px 1.9px at 88.7% 36%,
+                              rgba(255, 255, 255, 0.94) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2px 2px at 53.1% 68.4%,
+                              rgba(255, 255, 255, 0.76) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.5px 1.5px at 48.3% 26.2%,
+                              rgba(255, 255, 255, 0.82) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2.1px 2.1px at 46.7% 39.1%,
+                              rgba(255, 255, 255, 0.8) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              2px 2px at 84.5% 35.5%,
+                              rgba(255, 255, 255, 0.91) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.8px 1.8px at 57.7% 11.1%,
+                              rgba(255, 255, 255, 0.63) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.3px 1.3px at 88% 28.6%,
+                              rgba(255, 255, 255, 0.7) 55%,
+                              transparent 62%
+                            ),
+                            radial-gradient(
+                              1.9px 1.9px at 60.1% 33.3%,
+                              rgba(255, 255, 255, 0.6) 55%,
+                              transparent 62%
+                            );
+                        "
+                      ></div
+                      ><div class="bd-fog bd-fog--1"></div><div class="bd-fog bd-fog--2"></div
+                      ><div class="bd-fog bd-fog--3"></div
+                      ><div class="bd-moon"
+                        ><svg
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 40 40"
+                          class="sm-moon"
+                        >
+                          <path d="M28 6.2A16 16 0 1 0 28 33.8A15 15 0 0 1 28 6.2Z"></path>
+                          <circle cx="14" cy="15" r="2.4" class="sm-moon__c"></circle>
+                          <circle cx="12" cy="25.5" r="1.6" class="sm-moon__c"></circle>
+                          <circle cx="19.6" cy="29" r="1.9" class="sm-moon__c"></circle></svg
+                        ><svg
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 16 16"
+                          class="sm-spark sm-spark--a"
+                        >
+                          <path
+                            d="M8 0C8.6 4.6 11.4 7.4 16 8C11.4 8.6 8.6 11.4 8 16C7.4 11.4 4.6 8.6 0 8C4.6 7.4 7.4 4.6 8 0Z"
+                          ></path></svg
+                        ><svg
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 16 16"
+                          class="sm-spark sm-spark--b"
+                        >
+                          <path
+                            d="M8 0C8.6 4.6 11.4 7.4 16 8C11.4 8.6 8.6 11.4 8 16C7.4 11.4 4.6 8.6 0 8C4.6 7.4 7.4 4.6 8 0Z"
+                          ></path></svg></div
+                      ><div class="bd-bat bd-bat--1" style="left: 66%; top: 66px"
+                        ><svg
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 40 20"
+                          class="sm-bat"
+                        >
+                          <g class="sm-bat__wing">
+                            <path
+                              d="M22.6 7.4C25.4 4.2 31 2.6 39 3.6C37.4 4.8 36.8 6.4 37.2 8.2C35.8 7.2 34.2 7.2 33 8.4C32.4 7 31 6.4 29.6 6.8C28.4 7.6 27.8 9 27.6 10.6C26.4 9.6 25 9.6 24 10.8Z"
+                            ></path>
+                          </g>
+                          <g transform="translate(40 0) scale(-1 1)">
+                            <g class="sm-bat__wing">
+                              <path
+                                d="M22.6 7.4C25.4 4.2 31 2.6 39 3.6C37.4 4.8 36.8 6.4 37.2 8.2C35.8 7.2 34.2 7.2 33 8.4C32.4 7 31 6.4 29.6 6.8C28.4 7.6 27.8 9 27.6 10.6C26.4 9.6 25 9.6 24 10.8Z"
+                              ></path>
+                            </g>
+                          </g>
+                          <path
+                            d="M17.4 2L19.3 4.6H20.7L22.6 2C23.2 3.8 23.2 5.4 22.6 6.6C23.6 7.4 24 8.6 24 9.8C24 12.4 22.4 14.6 20 16.6C17.6 14.6 16 12.4 16 9.8C16 8.6 16.4 7.4 17.4 6.6C16.8 5.4 16.8 3.8 17.4 2Z"
+                          ></path>
+                          <circle cx="18.9" cy="7.6" r=".8" class="sm-bat__eye"></circle>
+                          <circle cx="21.1" cy="7.6" r=".8" class="sm-bat__eye"></circle></svg></div
+                      ><div
+                        class="bd-bat bd-bat--2"
+                        style="left: 72.5%; top: 150px; width: 40px; height: 20px"
+                        ><svg
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 40 20"
+                          class="sm-bat"
+                        >
+                          <g class="sm-bat__wing">
+                            <path
+                              d="M22.6 7.4C25.4 4.2 31 2.6 39 3.6C37.4 4.8 36.8 6.4 37.2 8.2C35.8 7.2 34.2 7.2 33 8.4C32.4 7 31 6.4 29.6 6.8C28.4 7.6 27.8 9 27.6 10.6C26.4 9.6 25 9.6 24 10.8Z"
+                            ></path>
+                          </g>
+                          <g transform="translate(40 0) scale(-1 1)">
+                            <g class="sm-bat__wing">
+                              <path
+                                d="M22.6 7.4C25.4 4.2 31 2.6 39 3.6C37.4 4.8 36.8 6.4 37.2 8.2C35.8 7.2 34.2 7.2 33 8.4C32.4 7 31 6.4 29.6 6.8C28.4 7.6 27.8 9 27.6 10.6C26.4 9.6 25 9.6 24 10.8Z"
+                              ></path>
+                            </g>
+                          </g>
+                          <path
+                            d="M17.4 2L19.3 4.6H20.7L22.6 2C23.2 3.8 23.2 5.4 22.6 6.6C23.6 7.4 24 8.6 24 9.8C24 12.4 22.4 14.6 20 16.6C17.6 14.6 16 12.4 16 9.8C16 8.6 16.4 7.4 17.4 6.6C16.8 5.4 16.8 3.8 17.4 2Z"
+                          ></path>
+                          <circle cx="18.9" cy="7.6" r=".8" class="sm-bat__eye"></circle>
+                          <circle cx="21.1" cy="7.6" r=".8" class="sm-bat__eye"></circle></svg></div
+                      ><div
+                        class="bd-bat bd-bat--3"
+                        style="left: 86%; top: 38px; width: 48px; height: 24px"
+                        ><svg
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox="0 0 40 20"
+                          class="sm-bat"
+                        >
+                          <g class="sm-bat__wing">
+                            <path
+                              d="M22.6 7.4C25.4 4.2 31 2.6 39 3.6C37.4 4.8 36.8 6.4 37.2 8.2C35.8 7.2 34.2 7.2 33 8.4C32.4 7 31 6.4 29.6 6.8C28.4 7.6 27.8 9 27.6 10.6C26.4 9.6 25 9.6 24 10.8Z"
+                            ></path>
+                          </g>
+                          <g transform="translate(40 0) scale(-1 1)">
+                            <g class="sm-bat__wing">
+                              <path
+                                d="M22.6 7.4C25.4 4.2 31 2.6 39 3.6C37.4 4.8 36.8 6.4 37.2 8.2C35.8 7.2 34.2 7.2 33 8.4C32.4 7 31 6.4 29.6 6.8C28.4 7.6 27.8 9 27.6 10.6C26.4 9.6 25 9.6 24 10.8Z"
+                              ></path>
+                            </g>
+                          </g>
+                          <path
+                            d="M17.4 2L19.3 4.6H20.7L22.6 2C23.2 3.8 23.2 5.4 22.6 6.6C23.6 7.4 24 8.6 24 9.8C24 12.4 22.4 14.6 20 16.6C17.6 14.6 16 12.4 16 9.8C16 8.6 16.4 7.4 17.4 6.6C16.8 5.4 16.8 3.8 17.4 2Z"
+                          ></path>
+                          <circle cx="18.9" cy="7.6" r=".8" class="sm-bat__eye"></circle>
+                          <circle cx="21.1" cy="7.6" r=".8" class="sm-bat__eye"></circle></svg></div
+                      ><svg
+                        aria-hidden="true"
+                        preserveAspectRatio="none"
+                        viewBox="0 0 1000 26"
+                        class="bd-ground"
+                      >
+                        <path
+                          d="M0 26V14C70 7 130 10 200 15S330 20 420 13 560 6 660 12 800 20 890 13 960 8 1000 11V26Z"
+                        ></path>
+                        <path
+                          d="M0 14C70 7 130 10 200 15S330 20 420 13 560 6 660 12 800 20 890 13 960 8 1000 11"
+                        ></path></svg
+                      ><div class="bd-pk" style="left: 1.6%; bottom: 6px; width: 30px; height: 30px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8 15.4l5.6 1.8-.6-3.8zM24 15.4l-5.6 1.8.6-3.8z"></path>
+                            <path d="M8.8 22.2h14.4c-.6 3.8-3.6 6-7.2 6s-6.6-2.2-7.2-6z"></path>
+                            <rect
+                              height="3.4"
+                              width="3.2"
+                              x="14.4"
+                              y="21.6"
+                              class="bd-pk__tooth"
+                            ></rect>
+                          </g></svg></div
+                      ><div class="bd-pk" style="left: 4.6%; bottom: 5px; width: 50px; height: 50px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <circle cx="11" cy="16.4" r="2.5"></circle>
+                            <circle cx="21" cy="16.4" r="2.5"></circle>
+                            <path d="M9 22.4q7 6.6 14 0q-1.4 6.2-7 6.2t-7-6.2z"></path>
+                          </g></svg></div
+                      ><div class="bd-pk" style="left: 8.4%; bottom: 7px; width: 34px; height: 34px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8.6 17.6 12 13.8l3.4 3.8zM16.6 17.6 20 13.8l3.4 3.8z"></path>
+                            <path
+                              d="M8.4 22.2l2.6 1.4 2.4-1.6 2.6 2.4 2.6-2.4 2.4 1.6 2.6-1.4c-.8 3.2-3.8 5.4-7.6 5.4s-6.8-2.2-7.6-5.4z"
+                            ></path>
+                          </g></svg></div
+                      ><div class="bd-pk" style="left: 43%; bottom: 7px; width: 30px; height: 30px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <circle cx="11" cy="16.4" r="2.5"></circle>
+                            <circle cx="21" cy="16.4" r="2.5"></circle>
+                            <path d="M9 22.4q7 6.6 14 0q-1.4 6.2-7 6.2t-7-6.2z"></path>
+                          </g></svg></div
+                      ><div class="bd-pk" style="left: 47%; bottom: 5px; width: 42px; height: 42px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8 15.4l5.6 1.8-.6-3.8zM24 15.4l-5.6 1.8.6-3.8z"></path>
+                            <path d="M8.8 22.2h14.4c-.6 3.8-3.6 6-7.2 6s-6.6-2.2-7.2-6z"></path>
+                            <rect
+                              height="3.4"
+                              width="3.2"
+                              x="14.4"
+                              y="21.6"
+                              class="bd-pk__tooth"
+                            ></rect>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 51.6%; bottom: 4px; width: 58px; height: 58px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8.6 17.6 12 13.8l3.4 3.8zM16.6 17.6 20 13.8l3.4 3.8z"></path>
+                            <path
+                              d="M8.4 22.2l2.6 1.4 2.4-1.6 2.6 2.4 2.6-2.4 2.4 1.6 2.6-1.4c-.8 3.2-3.8 5.4-7.6 5.4s-6.8-2.2-7.6-5.4z"
+                            ></path>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 56.4%; bottom: 7px; width: 36px; height: 36px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <circle cx="11" cy="16.4" r="2.5"></circle>
+                            <circle cx="21" cy="16.4" r="2.5"></circle>
+                            <path d="M9 22.4q7 6.6 14 0q-1.4 6.2-7 6.2t-7-6.2z"></path>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 61.6%; bottom: 7px; width: 30px; height: 30px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8 15.4l5.6 1.8-.6-3.8zM24 15.4l-5.6 1.8.6-3.8z"></path>
+                            <path d="M8.8 22.2h14.4c-.6 3.8-3.6 6-7.2 6s-6.6-2.2-7.2-6z"></path>
+                            <rect
+                              height="3.4"
+                              width="3.2"
+                              x="14.4"
+                              y="21.6"
+                              class="bd-pk__tooth"
+                            ></rect>
+                          </g></svg></div
+                      ><div class="bd-pk" style="left: 68%; bottom: 6px; width: 40px; height: 40px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8.6 17.6 12 13.8l3.4 3.8zM16.6 17.6 20 13.8l3.4 3.8z"></path>
+                            <path
+                              d="M8.4 22.2l2.6 1.4 2.4-1.6 2.6 2.4 2.6-2.4 2.4 1.6 2.6-1.4c-.8 3.2-3.8 5.4-7.6 5.4s-6.8-2.2-7.6-5.4z"
+                            ></path>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 73.6%; bottom: 7px; width: 34px; height: 34px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <circle cx="11" cy="16.4" r="2.5"></circle>
+                            <circle cx="21" cy="16.4" r="2.5"></circle>
+                            <path d="M9 22.4q7 6.6 14 0q-1.4 6.2-7 6.2t-7-6.2z"></path>
+                          </g></svg></div
+                      ><div class="bd-pk" style="left: 79%; bottom: 4px; width: 60px; height: 60px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8 15.4l5.6 1.8-.6-3.8zM24 15.4l-5.6 1.8.6-3.8z"></path>
+                            <path d="M8.8 22.2h14.4c-.6 3.8-3.6 6-7.2 6s-6.6-2.2-7.2-6z"></path>
+                            <rect
+                              height="3.4"
+                              width="3.2"
+                              x="14.4"
+                              y="21.6"
+                              class="bd-pk__tooth"
+                            ></rect>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 84.4%; bottom: 6px; width: 38px; height: 38px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8.6 17.6 12 13.8l3.4 3.8zM16.6 17.6 20 13.8l3.4 3.8z"></path>
+                            <path
+                              d="M8.4 22.2l2.6 1.4 2.4-1.6 2.6 2.4 2.6-2.4 2.4 1.6 2.6-1.4c-.8 3.2-3.8 5.4-7.6 5.4s-6.8-2.2-7.6-5.4z"
+                            ></path>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 88.6%; bottom: 5px; width: 52px; height: 52px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <circle cx="11" cy="16.4" r="2.5"></circle>
+                            <circle cx="21" cy="16.4" r="2.5"></circle>
+                            <path d="M9 22.4q7 6.6 14 0q-1.4 6.2-7 6.2t-7-6.2z"></path>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 93.4%; bottom: 7px; width: 34px; height: 34px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8 15.4l5.6 1.8-.6-3.8zM24 15.4l-5.6 1.8.6-3.8z"></path>
+                            <path d="M8.8 22.2h14.4c-.6 3.8-3.6 6-7.2 6s-6.6-2.2-7.2-6z"></path>
+                            <rect
+                              height="3.4"
+                              width="3.2"
+                              x="14.4"
+                              y="21.6"
+                              class="bd-pk__tooth"
+                            ></rect>
+                          </g></svg></div
+                      ><div
+                        class="bd-pk"
+                        style="left: 96.4%; bottom: 6px; width: 42px; height: 42px"
+                        ><svg aria-hidden="true" focusable="false" viewBox="0 0 32 32">
+                          <path
+                            d="M14.6 8.2c.2-2.4 1.4-4.2 3.6-5l.9 1.7c-1.2.6-1.8 1.6-1.9 3.3z"
+                            class="bd-pk__stem"
+                          ></path>
+                          <g class="bd-pk__body">
+                            <ellipse cx="9.6" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="22.4" cy="19.2" rx="7.6" ry="9.8"></ellipse>
+                            <ellipse cx="16" cy="19.4" rx="6.6" ry="10.6"></ellipse>
+                          </g>
+                          <g class="bd-pk__face">
+                            <path d="M8.6 17.6 12 13.8l3.4 3.8zM16.6 17.6 20 13.8l3.4 3.8z"></path>
+                            <path
+                              d="M8.4 22.2l2.6 1.4 2.4-1.6 2.6 2.4 2.6-2.4 2.4 1.6 2.6-1.4c-.8 3.2-3.8 5.4-7.6 5.4s-6.8-2.2-7.6-5.4z"
+                            ></path>
+                          </g></svg></div></div></app-halloween-scenery
+                  ><div _ngcontent-ng-c499732865="" class="hero__inner flex flex-col gap-6"
+                    ><div _ngcontent-ng-c499732865="" class="hero__copy flex flex-col gap-6"
+                      ><p
+                        _ngcontent-ng-c499732865=""
+                        data-testid="hero-eyebrow"
+                        class="hero__eyebrow m-0 font-bold tracking-[0.08em] uppercase"
+                      >
+                        MiBolt · Mobiltelefonok </p
+                      ><h1
+                        _ngcontent-ng-c499732865=""
+                        data-testid="hero-heading"
+                        id="hero-heading"
+                        class="hero__title m-0 font-bold"
+                      >
+                        A következő mobilod.
+                        <span _ngcontent-ng-c499732865="" class="hero__title-accent block"
+                          >Egyszerűen.</span
+                        ></h1
+                      ><p
+                        _ngcontent-ng-c499732865=""
+                        data-testid="hero-message"
+                        class="hero__message m-0 max-w-[56ch]"
+                      >
+                        Találd meg a hozzád illő készüléket, válaszd ki a kedvenced, és próbáld ki a
+                        rendelést demó módban. </p
+                      ><div
+                        _ngcontent-ng-c499732865=""
+                        data-testid="hero-cta-row"
+                        class="hero__cta-row flex flex-wrap gap-3"
+                        ><a
+                          _ngcontent-ng-c499732865=""
+                          data-testid="hero-cta"
+                          routerlink="/telefonok"
+                          class="hero__cta inline-flex min-h-12 min-w-12 items-center justify-center no-underline"
+                          href="catalogue.html#/telefonok"
+                          >Megnézem a telefonokat</a
+                        ><a
+                          _ngcontent-ng-c499732865=""
+                          data-testid="hero-cta-secondary"
+                          fragment="how"
+                          routerlink="/"
+                          class="hero__cta-secondary inline-flex min-h-12 min-w-12 items-center justify-center no-underline"
+                          href="index.html#how"
+                          >Hogyan működik?</a
+                        ></div
+                      ></div
+                    ></div
+                  ></section
+                ><section
+                  _ngcontent-ng-c499732865=""
+                  aria-label="Kategóriák"
+                  data-testid="hero-shortcuts"
+                  class="hero-shortcuts px-4 py-5 sm:px-6 lg:px-12 lg:py-6"
+                  ><div
+                    _ngcontent-ng-c499732865=""
+                    class="hero-shortcuts__inner flex flex-col min-[720px]:flex-row"
+                    ><a
+                      _ngcontent-ng-c499732865=""
+                      data-testid="shortcut-all"
+                      routerlink="/telefonok"
+                      class="hero-shortcuts__card flex min-h-11 items-center gap-3 py-4 no-underline min-[720px]:flex-1 min-[720px]:px-6 min-[720px]:py-0 min-[720px]:first:pl-0"
+                      href="catalogue.html#/telefonok"
+                      ><span
+                        _ngcontent-ng-c499732865=""
+                        aria-hidden="true"
+                        class="hero-shortcuts__icon inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-input"
+                        ><svg
+                          _ngcontent-ng-c499732865=""
+                          focusable="false"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          width="20"
+                        >
+                          <rect
+                            _ngcontent-ng-c499732865=""
+                            fill="none"
+                            height="20"
+                            rx="2"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            width="10"
+                            x="7"
+                            y="2"
+                          ></rect>
+                          <line
+                            _ngcontent-ng-c499732865=""
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            x1="10"
+                            x2="14"
+                            y1="18"
+                            y2="18"
+                          ></line></svg></span
+                      ><span
+                        _ngcontent-ng-c499732865=""
+                        class="hero-shortcuts__text flex flex-1 flex-col gap-0.5"
+                        ><span _ngcontent-ng-c499732865="" class="hero-shortcuts__title font-bold"
+                          >Összes telefon</span
+                        ><span _ngcontent-ng-c499732865="" class="hero-shortcuts__subtitle"
+                          >Válassz a készülékek közül</span
+                        ></span
+                      ></a
+                    ><a
+                      _ngcontent-ng-c499732865=""
+                      data-testid="shortcut-5g"
+                      routerlink="/telefonok"
+                      class="hero-shortcuts__card flex min-h-11 items-center gap-3 py-4 no-underline min-[720px]:flex-1 min-[720px]:px-6 min-[720px]:py-0 min-[720px]:first:pl-0"
+                      href="catalogue.html#/telefonok?is5g=true"
+                      ><span
+                        _ngcontent-ng-c499732865=""
+                        aria-hidden="true"
+                        class="hero-shortcuts__icon hero-shortcuts__icon--text inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-input font-bold"
+                        >5G</span
+                      ><span
+                        _ngcontent-ng-c499732865=""
+                        class="hero-shortcuts__text flex flex-1 flex-col gap-0.5"
+                        ><span _ngcontent-ng-c499732865="" class="hero-shortcuts__title font-bold"
+                          >5G készülékek</span
+                        ><span _ngcontent-ng-c499732865="" class="hero-shortcuts__subtitle"
+                          >Fedezd fel a demó kínálatot</span
+                        ></span
+                      ></a
+                    ><a
+                      _ngcontent-ng-c499732865=""
+                      data-testid="shortcut-instock"
+                      routerlink="/telefonok"
+                      class="hero-shortcuts__card flex min-h-11 items-center gap-3 py-4 no-underline min-[720px]:flex-1 min-[720px]:px-6 min-[720px]:py-0 min-[720px]:first:pl-0"
+                      href="catalogue.html#/telefonok?inStock=true"
+                      ><span
+                        _ngcontent-ng-c499732865=""
+                        aria-hidden="true"
+                        class="hero-shortcuts__icon inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-input"
+                        ><svg
+                          _ngcontent-ng-c499732865=""
+                          focusable="false"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          width="20"
+                        >
+                          <rect
+                            _ngcontent-ng-c499732865=""
+                            fill="none"
+                            height="18"
+                            rx="3"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            width="18"
+                            x="3"
+                            y="3"
+                          ></rect></svg></span
+                      ><span
+                        _ngcontent-ng-c499732865=""
+                        class="hero-shortcuts__text flex flex-1 flex-col gap-0.5"
+                        ><span _ngcontent-ng-c499732865="" class="hero-shortcuts__title font-bold"
+                          >Raktáron</span
+                        ><span _ngcontent-ng-c499732865="" class="hero-shortcuts__subtitle"
+                          >Elérhető a demó készletben</span
+                        ></span
+                      ></a
+                    ></div
+                  ></section
+                ></app-hero
+              ><app-featured-products
+                _ngcontent-ng-c3913225598=""
+                data-testid="featured"
+                _nghost-ng-c453336529=""
+                ><section
+                  _ngcontent-ng-c453336529=""
+                  aria-labelledby="featured-heading"
+                  data-testid="featured-section"
+                  class="featured px-4 py-12 sm:px-6 lg:px-12 lg:py-16"
+                  ><div _ngcontent-ng-c453336529="" class="featured__inner flex flex-col gap-6"
+                    ><header
+                      _ngcontent-ng-c453336529=""
+                      class="featured__header flex flex-col gap-2 min-[720px]:flex-row min-[720px]:items-baseline min-[720px]:justify-between"
+                      ><div
+                        _ngcontent-ng-c453336529=""
+                        class="featured__heading flex flex-col gap-1"
+                        ><h2
+                          _ngcontent-ng-c453336529=""
+                          id="featured-heading"
+                          class="featured__title"
+                          >Készülékek</h2
+                        ><p _ngcontent-ng-c453336529="" class="featured__lead"
+                          >Válassz kiemelt készülékeink közül</p
+                        ></div
+                      ><a
+                        _ngcontent-ng-c453336529=""
+                        data-testid="featured-all-link"
+                        routerlink="/telefonok"
+                        class="featured__all-link inline-flex min-h-12 min-w-12 items-center justify-center self-start no-underline"
+                        href="catalogue.html#/telefonok"
+                        >Összes telefon</a
+                      ></header
+                    ><ul
+                      _ngcontent-ng-c453336529=""
+                      data-testid="featured-grid"
+                      role="list"
+                      class="featured__grid m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4"
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        appskeletonleave=""
+                        class="featured__card flex flex-col overflow-hidden skeleton-leave"
+                        data-testid="featured-card-skeleton-0"
+                        style="
+                          position: absolute;
+                          top: 813px;
+                          left: 48px;
+                          width: 274px;
+                          height: 353px;
+                          margin: 0px;
+                        "
+                        ><app-product-card-skeleton
+                          _ngcontent-ng-c453336529=""
+                          _nghost-ng-c1458998546=""
+                          ><div
+                            _ngcontent-ng-c1458998546=""
+                            data-testid="product-card-skeleton"
+                            class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar mt-auto block h-[40px] w-full rounded-full"
+                            ></span></div></app-product-card-skeleton></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        appskeletonleave=""
+                        class="featured__card flex flex-col overflow-hidden skeleton-leave"
+                        data-testid="featured-card-skeleton-1"
+                        style="
+                          position: absolute;
+                          top: 813px;
+                          left: 48px;
+                          width: 274px;
+                          height: 353px;
+                          margin: 0px;
+                        "
+                        ><app-product-card-skeleton
+                          _ngcontent-ng-c453336529=""
+                          _nghost-ng-c1458998546=""
+                          ><div
+                            _ngcontent-ng-c1458998546=""
+                            data-testid="product-card-skeleton"
+                            class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar mt-auto block h-[40px] w-full rounded-full"
+                            ></span></div></app-product-card-skeleton></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        appskeletonleave=""
+                        class="featured__card flex flex-col overflow-hidden skeleton-leave"
+                        data-testid="featured-card-skeleton-2"
+                        style="
+                          position: absolute;
+                          top: 813px;
+                          left: 48px;
+                          width: 274px;
+                          height: 353px;
+                          margin: 0px;
+                        "
+                        ><app-product-card-skeleton
+                          _ngcontent-ng-c453336529=""
+                          _nghost-ng-c1458998546=""
+                          ><div
+                            _ngcontent-ng-c1458998546=""
+                            data-testid="product-card-skeleton"
+                            class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar mt-auto block h-[40px] w-full rounded-full"
+                            ></span></div></app-product-card-skeleton></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        appskeletonleave=""
+                        class="featured__card flex flex-col overflow-hidden skeleton-leave"
+                        data-testid="featured-card-skeleton-3"
+                        style="
+                          position: absolute;
+                          top: 813px;
+                          left: 48px;
+                          width: 274px;
+                          height: 353px;
+                          margin: 0px;
+                        "
+                        ><app-product-card-skeleton
+                          _ngcontent-ng-c453336529=""
+                          _nghost-ng-c1458998546=""
+                          ><div
+                            _ngcontent-ng-c1458998546=""
+                            data-testid="product-card-skeleton"
+                            class="flex h-full flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-light) border-2 border-(--color-line-card) rounded-(--radius-control)"
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block w-full aspect-[4/3] rounded-(--radius-control)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[16px] w-[70%] rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[14px] w-1/2 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar block h-[20px] w-2/5 rounded-(--radius-badge)"
+                            ></span
+                            ><span
+                              _ngcontent-ng-c1458998546=""
+                              class="bar mt-auto block h-[40px] w-full rounded-full"
+                            ></span></div></app-product-card-skeleton></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        class="featured__card"
+                        data-testid="featured-card-motorola-edge-50-fusion"
+                        ><app-product-card _ngcontent-ng-c453336529="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Motorola Edge 50 Fusion, Zöld, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/motorola-edge-50-fusion?variant=motorola-edge-50-fusion--zold--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/fc11d7e82822d30d65344733e93c62da8248b05437216747b549121318b1c6eb.png"
+                                    loading="eager" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 238px;
+                                      height: 179px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/motorola-edge-50-fusion?variant=motorola-edge-50-fusion--zold--256"
+                                  >Motorola Edge 50 Fusion</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color">Zöld</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >5000 mAh akkumulátor</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,67" pOLED kijelző</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >89&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Motorola Edge 50 Fusion részleteinek megnyitása"
+                                href="product.html#/telefonok/motorola-edge-50-fusion?variant=motorola-edge-50-fusion--zold--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        class="featured__card"
+                        data-testid="featured-card-honor-x7d"
+                        ><app-product-card _ngcontent-ng-c453336529="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Honor X7D, Fekete, 128 GB - részletek megnyitása"
+                              href="product.html#/telefonok/honor-x7d?variant=honor-x7d--fekete--128"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/e58f92af9689063ba2b7acc722e35ca7f5fb783ad1262ddb5e9795c86971742e.png"
+                                    loading="lazy" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 238px;
+                                      height: 179px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/honor-x7d?variant=honor-x7d--fekete--128"
+                                  >Honor X7D</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Fekete</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >128 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >10-35W UBP - PD</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6500 mAh akkumulátor</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >69&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Honor X7D részleteinek megnyitása"
+                                href="product.html#/telefonok/honor-x7d?variant=honor-x7d--fekete--128"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        class="featured__card"
+                        data-testid="featured-card-apple-iphone-18-pro-max"
+                        ><app-product-card _ngcontent-ng-c453336529="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 18 Pro Max, Burgundi, 256 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--256"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/849997cd17e3cc9da04148666d7af6f0417bf43f584380ebbf29ad40f2bcbec0.png"
+                                    loading="lazy" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 238px;
+                                      height: 179px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Burgundi"
+                                  aria-label="Burgundi"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(104, 63, 71)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Ezüst"
+                                  aria-label="Ezüst"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(213, 213, 213)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Gleccserszín"
+                                  aria-label="Gleccserszín"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(171, 183, 199)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--256"
+                                  >Apple iPhone 18 Pro Max</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Burgundi</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >256 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >48+48+48MP kamera</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,9" képátló</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >599&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 18 Pro Max részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--256"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ></li
+                      ><li
+                        _ngcontent-ng-c453336529=""
+                        class="featured__card"
+                        data-testid="featured-card-apple-iphone-18-pro-max"
+                        ><app-product-card _ngcontent-ng-c453336529="" _nghost-ng-c346639724=""
+                          ><article
+                            _ngcontent-ng-c346639724=""
+                            data-testid="product-card"
+                            class="card sm-card flex flex-col gap-3"
+                            ><a
+                              _ngcontent-ng-c346639724=""
+                              class="media sm-card__media"
+                              aria-label="Apple iPhone 18 Pro Max, Burgundi, 512 GB - részletek megnyitása"
+                              href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--512"
+                              ><app-product-image
+                                _ngcontent-ng-c346639724=""
+                                aspectratio="4 / 3"
+                                data-testid="product-card-image"
+                                _nghost-ng-c1395559591=""
+                                ><div
+                                  _ngcontent-ng-c1395559591=""
+                                  class="root relative block w-full rounded overflow-hidden"
+                                  data-status="loaded"
+                                  style="aspect-ratio: 4 / 3"
+                                  ><img
+                                    _ngcontent-ng-c1395559591=""
+                                    data-testid="image-photo"
+                                    decoding="async"
+                                    class="photo object-contain"
+                                    alt=""
+                                    src="media/849997cd17e3cc9da04148666d7af6f0417bf43f584380ebbf29ad40f2bcbec0.png"
+                                    loading="lazy" /><span
+                                    _ngcontent-ng-c1395559591=""
+                                    appskeletonleave=""
+                                    aria-hidden="true"
+                                    data-testid="image-skeleton"
+                                    class="skeleton absolute inset-0 skeleton-leave"
+                                    style="
+                                      position: absolute;
+                                      top: 0px;
+                                      left: 0px;
+                                      width: 238px;
+                                      height: 179px;
+                                      margin: 0px;
+                                    "
+                                  ></span></div></app-product-image></a
+                            ><div
+                              _ngcontent-ng-c346639724=""
+                              class="body flex flex-col gap-2 flex-1"
+                              ><div
+                                _ngcontent-ng-c346639724=""
+                                aria-label="Szín"
+                                data-testid="product-card-swatches"
+                                role="group"
+                                class="swatches"
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch is-selected"
+                                  title="Burgundi"
+                                  aria-label="Burgundi"
+                                  aria-pressed="true"
+                                  style="background-color: rgb(104, 63, 71)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Ezüst"
+                                  aria-label="Ezüst"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(213, 213, 213)"
+                                ></button
+                                ><button
+                                  _ngcontent-ng-c346639724=""
+                                  data-testid="product-card-swatch"
+                                  type="button"
+                                  class="swatch"
+                                  title="Fekete"
+                                  aria-label="Fekete"
+                                  aria-pressed="false"
+                                  style="background-color: rgb(0, 0, 0)"
+                                ></button></div
+                              ><h3 _ngcontent-ng-c346639724="" class="name line-clamp-2"
+                                ><a
+                                  _ngcontent-ng-c346639724=""
+                                  class="name-link"
+                                  href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--512"
+                                  >Apple iPhone 18 Pro Max</a
+                                ></h3
+                              ><p _ngcontent-ng-c346639724="" class="variant"
+                                ><span _ngcontent-ng-c346639724="" class="variant__color"
+                                  >Burgundi</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="variant__sep"
+                                  >·</span
+                                ><span _ngcontent-ng-c346639724="" class="variant__storage"
+                                  >512 GB</span
+                                ></p
+                              ><p
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-highlights"
+                                class="highlights"
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >48+48+48MP kamera</span
+                                ><span
+                                  _ngcontent-ng-c346639724=""
+                                  aria-hidden="true"
+                                  class="highlights__sep"
+                                >
+                                  · </span
+                                ><span _ngcontent-ng-c346639724="" class="highlights__item"
+                                  >6,9" képátló</span
+                                ></p
+                              ><div _ngcontent-ng-c346639724="" class="price-row mt-auto"
+                                ><app-price-block
+                                  _ngcontent-ng-c346639724=""
+                                  label="Egyszeri készülékár"
+                                  size="md"
+                                  status="success"
+                                  _nghost-ng-c3352624848=""
+                                  ><div
+                                    _ngcontent-ng-c3352624848=""
+                                    class="root inline-flex flex-col items-start gap-1"
+                                    data-layout="stack"
+                                    data-size="md"
+                                    data-status="success"
+                                    ><span _ngcontent-ng-c3352624848="" class="label"
+                                      >Egyszeri készülékár</span
+                                    ><span
+                                      _ngcontent-ng-c3352624848=""
+                                      class="row inline-flex items-baseline"
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        data-testid="price-amount"
+                                        class="amount font-bold leading-tight tabular-nums"
+                                        >699&nbsp;990</span
+                                      ><span
+                                        _ngcontent-ng-c3352624848=""
+                                        aria-hidden="true"
+                                        class="currency ml-1"
+                                        >Ft</span
+                                      ></span
+                                    ></div
+                                  ></app-price-block
+                                ></div
+                              ></div
+                            ><div _ngcontent-ng-c346639724="" class="cta"
+                              ><a
+                                _ngcontent-ng-c346639724=""
+                                data-testid="product-card-cta"
+                                class="details"
+                                aria-label="Apple iPhone 18 Pro Max részleteinek megnyitása"
+                                href="product.html#/telefonok/apple-iphone-18-pro-max?variant=apple-iphone-18-pro-max--burgundi--512"
+                                >Megnézem</a
+                              ></div
+                            ></article
+                          ></app-product-card
+                        ></li
+                      ></ul
+                    ></div
+                  ></section
+                ></app-featured-products
+              ><app-how-demo-works
+                _ngcontent-ng-c3913225598=""
+                data-testid="how-demo-works"
+                _nghost-ng-c229034177=""
+                ><section
+                  _ngcontent-ng-c229034177=""
+                  aria-labelledby="how-heading"
+                  data-testid="how-demo-works"
+                  id="how"
+                  class="how"
+                  ><div _ngcontent-ng-c229034177="" class="how__inner"
+                    ><header _ngcontent-ng-c229034177="" class="how__header"
+                      ><h2 _ngcontent-ng-c229034177="" id="how-heading" class="how__title"
+                        >Három lépés. Egy új kedvenc.</h2
+                      ><p _ngcontent-ng-c229034177="" class="how__caption"
+                        >Így működik a demó</p
+                      ></header
+                    ><ol _ngcontent-ng-c229034177="" role="list" class="how__grid"
+                      ><li
+                        _ngcontent-ng-c229034177=""
+                        class="how__tile"
+                        data-testid="how-tile-browse"
+                        ><span _ngcontent-ng-c229034177="" aria-hidden="true" class="how__number"
+                          >01</span
+                        ><span _ngcontent-ng-c229034177="" aria-hidden="true" class="how__icon"
+                          ><svg
+                            _ngcontent-ng-c229034177=""
+                            focusable="false"
+                            height="32"
+                            viewBox="0 0 32 32"
+                            width="32"
+                          >
+                            <circle
+                              _ngcontent-ng-c229034177=""
+                              cx="14"
+                              cy="14"
+                              fill="none"
+                              r="8"
+                              stroke="currentColor"
+                              stroke-width="2"
+                            ></circle>
+                            <line
+                              _ngcontent-ng-c229034177=""
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-width="2"
+                              x1="20"
+                              x2="27"
+                              y1="20"
+                              y2="27"
+                            ></line></svg></span
+                        ><h3 _ngcontent-ng-c229034177="" class="how__tile-title"
+                          >Válaszd ki a készüléked</h3
+                        ><p _ngcontent-ng-c229034177="" class="how__tile-body"
+                          >Szűrj 5G-re, készletre vagy tárhelyre, és nézd meg a kiválasztott
+                          készülék részletes adatait.</p
+                        ></li
+                      ><li _ngcontent-ng-c229034177="" class="how__tile" data-testid="how-tile-cart"
+                        ><span _ngcontent-ng-c229034177="" aria-hidden="true" class="how__number"
+                          >02</span
+                        ><span _ngcontent-ng-c229034177="" aria-hidden="true" class="how__icon"
+                          ><svg
+                            _ngcontent-ng-c229034177=""
+                            focusable="false"
+                            height="32"
+                            viewBox="0 0 32 32"
+                            width="32"
+                          >
+                            <path
+                              _ngcontent-ng-c229034177=""
+                              d="M6 8h3l2.5 14h13l3-10H11"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                            ></path>
+                            <circle
+                              _ngcontent-ng-c229034177=""
+                              cx="14"
+                              cy="26"
+                              fill="currentColor"
+                              r="1.6"
+                            ></circle>
+                            <circle
+                              _ngcontent-ng-c229034177=""
+                              cx="23"
+                              cy="26"
+                              fill="currentColor"
+                              r="1.6"
+                            ></circle></svg></span
+                        ><h3 _ngcontent-ng-c229034177="" class="how__tile-title"
+                          >Állítsd össze a rendelést</h3
+                        ><p _ngcontent-ng-c229034177="" class="how__tile-body"
+                          >A kiválasztott variánst bármikor visszakeresheted a kosárban — a demó a
+                          munkameneted során megőrzi.</p
+                        ></li
+                      ><li
+                        _ngcontent-ng-c229034177=""
+                        class="how__tile"
+                        data-testid="how-tile-order"
+                        ><span _ngcontent-ng-c229034177="" aria-hidden="true" class="how__number"
+                          >03</span
+                        ><span _ngcontent-ng-c229034177="" aria-hidden="true" class="how__icon"
+                          ><svg
+                            _ngcontent-ng-c229034177=""
+                            focusable="false"
+                            height="32"
+                            viewBox="0 0 32 32"
+                            width="32"
+                          >
+                            <rect
+                              _ngcontent-ng-c229034177=""
+                              fill="none"
+                              height="20"
+                              rx="3"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              width="20"
+                              x="6"
+                              y="6"
+                            ></rect>
+                            <polyline
+                              _ngcontent-ng-c229034177=""
+                              fill="none"
+                              points="11,17 15,21 22,12"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                            ></polyline></svg></span
+                        ><h3 _ngcontent-ng-c229034177="" class="how__tile-title"
+                          >Próbáld végig a folyamatot</h3
+                        ><p _ngcontent-ng-c229034177="" class="how__tile-body"
+                          >A pénztár végigmegy a demó lépésein; a rendelés nem kerül valódi
+                          feldolgozásra, sem számlázásra.</p
+                        ></li
+                      ></ol
+                    ></div
+                  ></section
+                ></app-how-demo-works
+              ></app-home-page
+            ></main
+          ><app-footer-nav _ngcontent-ng-c3782588569="" _nghost-ng-c3644546217=""
+            ><footer
+              _ngcontent-ng-c3644546217=""
+              role="contentinfo"
+              class="footer px-4 py-6 sm:px-12 sm:py-8"
+              ><div
+                _ngcontent-ng-c3644546217=""
+                class="footer__inner flex flex-wrap items-center justify-between gap-4"
+                ><span
+                  _ngcontent-ng-c3644546217=""
+                  class="footer__brand font-bold tracking-[0.02em]"
+                  >MiBolt</span
+                ><p
+                  _ngcontent-ng-c3644546217=""
+                  class="footer__legal m-0 min-w-0 shrink grow basis-60"
+                >
+                  Mobilválasztás egyszerűen. Ez egy bemutató webshop: minden termék, ár és rendelés
+                  demóadat. </p
+                ><button
+                  _ngcontent-ng-c3644546217=""
+                  type="button"
+                  class="footer__cta inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center"
+                >
+                  Hogyan működik a demó?
+                </button></div
+              ></footer
+            ></app-footer-nav
+          ></app-app-shell
+        ></app-marketing-layout
+      ></app-root
+    >
+    <template id="mi-bolt-fatal">
+      <div aria-live="assertive" class="app-fatal" role="alert">
+        <h1 class="app-fatal__title">A MiBolt demó indítása sikertelen</h1>
+        <p class="app-fatal__body">
+          A bemutató nem tudott elindulni. Frissítsd az oldalt, vagy ellenőrizd a böngésző konzolját
+          a részletekért.
+        </p>
+        <button class="app-fatal__retry" data-testid="fatal-retry" type="button">Újratöltés</button>
+      </div>
+    </template>
+  </body>
+</html>
