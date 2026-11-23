@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kosár · MiBolt</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="shop.js" defer></script>
+  </head>
+  <body class="cart">
+    <a class="skip" href="#tartalom">Ugrás a tartalomra</a>
+    <header class="site-header">
+      <div class="wrap masthead">
+        <a class="wordmark" href="index.html"><span aria-hidden="true">✿</span> MiBolt</a>
+        <nav aria-label="Fő navigáció">
+          <a class="nav-home" href="index.html">Főoldal</a
+          ><a class="nav-catalogue" href="catalogue.html">Telefonok</a
+          ><a class="nav-cart" href="cart.html" aria-current="page"
+            >Kosár<span data-cart-count></span
+          ></a>
+        </nav>
+      </div>
+    </header>
+    <main id="tartalom">
+      <section class="wrap cart-main" data-basket>
+        <a class="back-link" href="catalogue.html">← Vásárlás folytatása</a>
+        <div class="page-heading"><h1>Kosár</h1></div>
+        <div class="cart-layout">
+          <ul class="cart-lines" aria-label="Kosár tételei" data-lines></ul>
+          <div class="empty-cart" data-empty-cart hidden>
+            <h2>Üres a kosarad</h2>
+            <a class="button" href="catalogue.html">Telefonok böngészése ↗</a>
+          </div>
+          <aside class="summary" data-summary hidden>
+            <h2>Összesítés</h2>
+            <dl>
+              <div>
+                <dt>Termékek</dt>
+                <dd data-subtotal></dd>
+              </div>
+              <div>
+                <dt>Szállítás</dt>
+                <dd>A pénztárban</dd>
+              </div>
+              <div class="summary-total">
+                <dt>Végösszeg</dt>
+                <dd data-total role="status"></dd>
+              </div>
+            </dl>
+            <button class="button" type="button" data-checkout>Tovább a pénztárhoz ↗</button>
+          </aside>
+        </div>
+        <noscript>A kosár kipróbálásához engedélyezd a JavaScriptet.</noscript>
+        <template id="cart-line">
+          <li class="cart-line" data-line>
+            <div class="cart-image"><img width="320" height="400" alt="" /></div>
+            <div class="cart-item">
+              <h2 data-line-name></h2>
+              <p data-line-variant></p>
+            </div>
+            <div class="cart-quantity">
+              <label
+                >Darabszám
+                <select>
+                  <option value="1">1 db</option>
+                  <option value="2">2 db</option>
+                  <option value="3">3 db</option>
+                  <option value="4">4 db</option>
+                  <option value="5">5 db</option>
+                </select>
+              </label>
+              <button type="button" class="text-button">Eltávolítás</button>
+            </div>
+            <strong class="cart-price" data-line-price></strong>
+          </li>
+        </template>
+        <dialog id="checkout-demo" aria-labelledby="checkout-demo-title">
+          <h2 id="checkout-demo-title">Demó pénztár</h2>
+          <p>A prototípus vásárlási útja itt ér véget.</p>
+          <form method="dialog"><button class="button">Vissza a kosárhoz</button></form>
+        </dialog>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <a href="index.html" class="wordmark"><span aria-hidden="true">✿</span> MiBolt</a>
+        <p>Demóáruház · Fiktív készülékek</p>
+        <a href="catalogue.html">Telefonok felfedezése ↗</a>
+      </div>
+    </footer>
+  </body>
+</html>

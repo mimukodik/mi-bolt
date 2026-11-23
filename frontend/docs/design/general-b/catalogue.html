@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telefonok · MiBolt</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="shop.js" defer></script>
+  </head>
+  <body class="catalogue">
+    <a class="skip" href="#tartalom">Ugrás a tartalomra</a>
+    <header class="site-header">
+      <div class="wrap masthead">
+        <a class="wordmark" href="index.html"><span aria-hidden="true">▰</span> MiBolt</a>
+        <nav aria-label="Fő navigáció">
+          <a class="nav-home" href="index.html">Főoldal</a
+          ><a class="nav-catalogue" href="catalogue.html" aria-current="page">Telefonok</a
+          ><a class="nav-cart" href="cart.html">Kosár<span data-cart-count></span></a>
+        </nav>
+      </div>
+    </header>
+    <main id="tartalom">
+      <section class="wrap catalogue-main">
+        <div class="page-heading"><h1>Telefonok</h1></div>
+
+        <div class="catalogue-layout">
+          <details class="filter-drawer">
+            <summary>Szűrők</summary>
+            <form data-filters class="filter-form">
+              <label>Keresés<input type="search" name="kereses" placeholder="Például Arc" /></label>
+              <label
+                >Márka<select name="marka">
+                  <option value="">Mindegyik</option>
+                  <option>Forma</option>
+                  <option>Fény</option>
+                </select></label
+              >
+              <label
+                >Szín<select name="szin">
+                  <option value="">Mindegyik</option>
+                  <option value="graphite">Grafit</option>
+                  <option value="silver">Ezüst</option>
+                </select></label
+              >
+              <label
+                >Árkategória<select name="ar">
+                  <option value="">Mindegyik</option>
+                  <option value="150">150 000 Ft alatt</option>
+                  <option value="220">150 000–220 000 Ft</option>
+                  <option value="plus">220 000 Ft felett</option>
+                </select></label
+              >
+              <button class="text-button" type="reset">Szűrők törlése</button>
+            </form>
+          </details>
+          <div class="catalogue-results">
+            <div class="list-tools">
+              <p data-result-count role="status">3 készülék</p>
+              <label
+                >Rendezés
+                <select data-sort>
+                  <option>Ajánlott</option>
+                  <option value="asc">Olcsóbb elöl</option>
+                  <option value="desc">Drágább elöl</option>
+                </select></label
+              >
+            </div>
+            <div class="catalogue-cards" data-results>
+              <article
+                class="device-card"
+                data-card
+                data-title="Forma Arc 5G"
+                data-brand="Forma"
+                data-price="189990"
+                data-finishes="graphite silver"
+              >
+                <a href="product.html?modell=arc">
+                  <div class="device-card-media">
+                    <img
+                      class=""
+                      src="assets/graphite-front.webp"
+                      width="320"
+                      height="400"
+                      alt=""
+                    />
+                  </div>
+                  <div class="device-card-name">
+                    <span>Forma</span>
+                    <h2>Arc 5G</h2>
+                  </div>
+                  <p class="device-card-spec"><span>6,4″ OLED</span><span>128–256 GB</span></p>
+                  <div class="device-card-buy">
+                    <strong>189 990 Ft</strong
+                    ><span class="device-card-arrow" aria-hidden="true">↗</span>
+                  </div>
+                </a>
+              </article>
+              <article
+                class="device-card"
+                data-card
+                data-title="Fény Beam 5G"
+                data-brand="Fény"
+                data-price="139990"
+                data-finishes="silver"
+              >
+                <a href="product.html?modell=beam">
+                  <div class="device-card-media">
+                    <img class="" src="assets/beam-front.webp" width="320" height="400" alt="" />
+                  </div>
+                  <div class="device-card-name">
+                    <span>Fény</span>
+                    <h2>Beam 5G</h2>
+                  </div>
+                  <p class="device-card-spec"><span>6,1″ OLED</span><span>128–256 GB</span></p>
+                  <div class="device-card-buy">
+                    <strong>139 990 Ft</strong
+                    ><span class="device-card-arrow" aria-hidden="true">↗</span>
+                  </div>
+                </a>
+              </article>
+              <article
+                class="device-card"
+                data-card
+                data-title="Forma Orbit 5G"
+                data-brand="Forma"
+                data-price="259990"
+                data-finishes="graphite"
+              >
+                <a href="product.html?modell=orbit">
+                  <div class="device-card-media">
+                    <img class="" src="assets/orbit-front.webp" width="320" height="400" alt="" />
+                  </div>
+                  <div class="device-card-name">
+                    <span>Forma</span>
+                    <h2>Orbit 5G</h2>
+                  </div>
+                  <p class="device-card-spec"><span>6,7″ OLED</span><span>128–256 GB</span></p>
+                  <div class="device-card-buy">
+                    <strong>259 990 Ft</strong
+                    ><span class="device-card-arrow" aria-hidden="true">↗</span>
+                  </div>
+                </a>
+              </article>
+            </div>
+            <p class="empty-note" data-no-results hidden>Nincs a szűrőknek megfelelő készülék.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <a href="index.html" class="wordmark"><span aria-hidden="true">▰</span> MiBolt</a>
+        <p>Demóáruház · Fiktív készülékek</p>
+        <a href="catalogue.html">Telefonok felfedezése ↗</a>
+      </div>
+    </footer>
+  </body>
+</html>
