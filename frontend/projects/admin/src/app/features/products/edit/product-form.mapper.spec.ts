@@ -7,10 +7,26 @@ import { seedCatalog } from '../../../../mocks/seed';
 import { toFormModel, toModelPointer, toProductInput } from './product-form.mapper';
 import type { ColorModel, ProductFormModel } from './product-form.model';
 
+/** A whole-second seed time as the admin form writes it back: UTC with a trailing Z. */
+function utcSeconds(value: string): string {
+  return new Date(value).toISOString().replace('.000Z', 'Z');
+}
+
 /** The `AdminProductInput` the contract expects for `product`, built without going through the mapper. */
 function expectedInputFrom(product: AdminProduct): AdminProductInput {
+  const promotion = product.promotion;
   return {
-    promotion: { enabled: false, text: '' },
+    promotion:
+      promotion === undefined
+        ? { enabled: false, text: '' }
+        : {
+            enabled: promotion.enabled,
+            text: promotion.text ?? '',
+            ...(promotion.startsAt === undefined
+              ? {}
+              : { startsAt: utcSeconds(promotion.startsAt) }),
+            ...(promotion.endsAt === undefined ? {} : { endsAt: utcSeconds(promotion.endsAt) }),
+          },
     slug: product.slug,
     brand: product.brand,
     name: product.name,
@@ -34,7 +50,9 @@ function expectedInputFrom(product: AdminProduct): AdminProductInput {
       storageGb: variant.storageGb,
       price: variant.price,
       stock: variant.stock,
-      clearSalePrice: true,
+      ...(variant.salePriceHuf === undefined || variant.salePriceHuf === null
+        ? { clearSalePrice: true }
+        : { salePriceHuf: variant.salePriceHuf }),
     })),
     specGroups: product.specGroups,
   };

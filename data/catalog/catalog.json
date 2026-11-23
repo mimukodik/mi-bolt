@@ -17,6 +17,12 @@
       "rank": 1,
       "popularityScore": 100,
       "featured": true,
+      "promotion": {
+        "enabled": true,
+        "text": "Ijesztően jó halloweeni ajánlat, csak október 31-ig!",
+        "startsAt": "2026-10-15T00:00:00+02:00",
+        "endsAt": "2026-11-01T00:00:00+01:00"
+      },
       "specGroups": [
         {
           "label": "Fizikai jellemzők",
@@ -282,6 +288,7 @@
           "colorCode": "zold",
           "storageGb": 256,
           "priceHuf": 89990,
+          "salePriceHuf": 75990,
           "stock": 5
         }
       ]
@@ -576,6 +583,12 @@
       "rank": 3,
       "popularityScore": 96,
       "featured": true,
+      "promotion": {
+        "enabled": true,
+        "text": "Ijesztően jó halloweeni ajánlat, csak október 31-ig!",
+        "startsAt": "2026-10-15T00:00:00+02:00",
+        "endsAt": "2026-11-01T00:00:00+01:00"
+      },
       "specGroups": [
         {
           "label": "Fizikai jellemzők",
@@ -878,6 +891,7 @@
           "colorCode": "ezust",
           "storageGb": 256,
           "priceHuf": 608990,
+          "salePriceHuf": 516990,
           "stock": 4
         },
         {
@@ -886,6 +900,7 @@
           "colorCode": "fekete",
           "storageGb": 512,
           "priceHuf": 717990,
+          "salePriceHuf": 609990,
           "stock": 11
         },
         {
@@ -894,6 +909,7 @@
           "colorCode": "fekete",
           "storageGb": 256,
           "priceHuf": 617990,
+          "salePriceHuf": 524990,
           "stock": 1
         },
         {
@@ -902,6 +918,7 @@
           "colorCode": "burgundi",
           "storageGb": 256,
           "priceHuf": 599990,
+          "salePriceHuf": 508990,
           "stock": 4
         },
         {
@@ -910,6 +927,7 @@
           "colorCode": "gleccserszin",
           "storageGb": 256,
           "priceHuf": 626990,
+          "salePriceHuf": 531990,
           "stock": 1
         },
         {
@@ -918,6 +936,7 @@
           "colorCode": "ezust",
           "storageGb": 512,
           "priceHuf": 708990,
+          "salePriceHuf": 601990,
           "stock": 11
         },
         {
@@ -926,6 +945,7 @@
           "colorCode": "burgundi",
           "storageGb": 512,
           "priceHuf": 699990,
+          "salePriceHuf": 593990,
           "stock": 12
         }
       ]
@@ -2791,6 +2811,12 @@
       "rank": 10,
       "popularityScore": 82,
       "featured": false,
+      "promotion": {
+        "enabled": true,
+        "text": "Ijesztően jó halloweeni ajánlat, csak október 31-ig!",
+        "startsAt": "2026-10-15T00:00:00+02:00",
+        "endsAt": "2026-11-01T00:00:00+01:00"
+      },
       "specGroups": [
         {
           "label": "Fizikai jellemzők",
@@ -3040,6 +3066,7 @@
           "colorCode": "obszidian",
           "storageGb": 256,
           "priceHuf": 471990,
+          "salePriceHuf": 400990,
           "stock": 8
         }
       ]
@@ -5312,6 +5339,12 @@
       "rank": 19,
       "popularityScore": 63,
       "featured": false,
+      "promotion": {
+        "enabled": true,
+        "text": "Ijesztően jó halloweeni ajánlat, csak október 31-ig!",
+        "startsAt": "2026-10-15T00:00:00+02:00",
+        "endsAt": "2026-11-01T00:00:00+01:00"
+      },
       "specGroups": [
         {
           "label": "Fizikai jellemzők",
@@ -5573,6 +5606,7 @@
           "colorCode": "fekete",
           "storageGb": 512,
           "priceHuf": 728990,
+          "salePriceHuf": 618990,
           "stock": 11
         },
         {
@@ -5581,6 +5615,7 @@
           "colorCode": "fekete",
           "storageGb": 256,
           "priceHuf": 645989,
+          "salePriceHuf": 548990,
           "stock": 12
         }
       ]
@@ -9144,6 +9179,12 @@
       "rank": 32,
       "popularityScore": 37,
       "featured": false,
+      "promotion": {
+        "enabled": true,
+        "text": "Ijesztően jó halloweeni ajánlat, csak október 31-ig!",
+        "startsAt": "2026-10-15T00:00:00+02:00",
+        "endsAt": "2026-11-01T00:00:00+01:00"
+      },
       "specGroups": [
         {
           "label": "Fizikai jellemzők",
@@ -9401,6 +9442,7 @@
           "colorCode": "fekete",
           "storageGb": 512,
           "priceHuf": 535990,
+          "salePriceHuf": 454990,
           "stock": 8
         }
       ]
@@ -12944,6 +12986,12 @@
       "rank": 45,
       "popularityScore": 10,
       "featured": false,
+      "promotion": {
+        "enabled": true,
+        "text": "Ijesztően jó halloweeni ajánlat, csak október 31-ig!",
+        "startsAt": "2026-10-15T00:00:00+02:00",
+        "endsAt": "2026-11-01T00:00:00+01:00"
+      },
       "specGroups": [
         {
           "label": "Fizikai jellemzők",
@@ -13216,6 +13264,7 @@
           "colorCode": "fekete",
           "storageGb": 512,
           "priceHuf": 437990,
+          "salePriceHuf": 371990,
           "stock": 8
         },
         {
@@ -13224,6 +13273,7 @@
           "colorCode": "kek",
           "storageGb": 512,
           "priceHuf": 437990,
+          "salePriceHuf": 371990,
           "stock": 1
         }
       ]

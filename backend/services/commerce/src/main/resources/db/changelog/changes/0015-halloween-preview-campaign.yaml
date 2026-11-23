@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0015-halloween-preview-campaign
+      author: mi-bolt
+      dbms: postgresql
+      comment: >-
+        Preview demo only, not for main: turns the decoration on from 15 October to Halloween
+        midnight (Budapest) beside the catalogue's seeded offers. PostgreSQL only, so the H2 tests
+        keep the disabled seed of decision 0025.
+      changes:
+        - sql:
+            sql: >-
+              UPDATE halloween_appearance
+              SET enabled = true,
+                  starts_at = TIMESTAMP WITH TIME ZONE '2026-10-15 00:00:00+02:00',
+                  ends_at = TIMESTAMP WITH TIME ZONE '2026-11-01 00:00:00+01:00',
+                  version = version + 1
+              WHERE id = 1
