@@ -70,4 +70,7 @@ jobs:
           name: candidate-build
           path: candidate-build/
           if-no-files-found: error
-          retention-days: 7
+          # Publish Candidate downloads this within minutes of CI and this build
+          # both completing. About 200 MB per run, so a week of runs filled the
+          # Actions storage quota and blocked every upload (2026-10-27).
+          retention-days: 1
