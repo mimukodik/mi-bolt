@@ -1,12 +1,12 @@
 .featured {
-  background: var(--color-surface-section);
+  background: var(--color-surface-light);
   color: var(--color-text-primary);
 }
 
 .featured__title {
   font-size: var(--type-section-title-mobile);
   line-height: var(--line-height-heading);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -17,14 +17,12 @@
   color: var(--color-text-secondary);
 }
 
-/* .btn-outline-navy — the yettel 48px .btn box with 1px off each padding
-   edge for the hairline (docs/design/yettel.md §5). The box itself is
-   utilities on the element: inline-flex, min-h-12, min-w-12. */
+/* The outlined link keeps the same height as the shared action buttons. */
 .featured__all-link {
   padding: 11px 23px;
   background: transparent;
   color: var(--color-brand-ink);
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-semibold);
   font-size: var(--type-body);
   line-height: 24px;
   border-radius: var(--radius-pill);
@@ -53,7 +51,7 @@
 
 .featured__error-title {
   font-size: var(--type-card-title);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   margin: 0;
 }
 

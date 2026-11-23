@@ -12,7 +12,6 @@
 
 .intro {
   margin: 0;
-  font-family: var(--font-family-light);
   font-size: var(--type-helper);
   color: var(--color-text-on-primary);
   line-height: var(--line-height-body);
@@ -29,7 +28,7 @@
 
 .legend {
   margin: 0;
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-bold);
   font-size: 14px;
   line-height: 20px;
   color: var(--color-text-on-primary);
@@ -80,10 +79,10 @@
   width: 20px;
   height: 20px;
   border: 2px solid var(--color-line);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--color-surface-light);
-  color: var(--color-accent);
-  font-family: var(--font-family-bold);
+  color: var(--color-highlight);
+  font-weight: var(--weight-bold);
   font-size: 14px;
   line-height: 1;
 }
@@ -114,7 +113,6 @@
   border: 0;
   padding: 0;
   margin-top: var(--space-1);
-  font-family: var(--font-family-light);
   font-size: 14px;
   line-height: 20px;
   color: var(--color-primary);
@@ -138,7 +136,7 @@
   min-height: 44px;
   padding: 0 12px;
   border: 2px solid var(--color-line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--color-surface-light);
   color: var(--color-text-on-primary);
   font-family: inherit;
@@ -226,10 +224,9 @@
   min-height: 48px;
   padding: 0 12px;
   border: 2px solid var(--color-line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--color-surface-light);
   color: var(--color-text-on-primary);
-  font-family: var(--font-family-light);
   font-size: 16px;
   line-height: 24px;
 }
@@ -251,4 +248,10 @@
   position: sticky;
   bottom: 0;
   background: var(--color-surface-light);
+}
+
+@media (max-width: 639px) {
+  .intro {
+    letter-spacing: -0.032em;
+  }
 }

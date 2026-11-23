@@ -1,9 +1,8 @@
-/* Token names used by the component styles. The colour, radius and font entries resolve to the yettel theme variables declared in src/styles.css; the spacing, size, typography, layout and motion entries are declared here as values. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
+/* Semantic tokens used by storefront components. */
 
 :root {
   /* color brand */
   --color-brand-accent: var(--color-accent);
-  --color-brand-accent-hover: var(--color-accent-hover);
   --color-brand-accent-soft: var(--color-surface-sky);
   --color-brand-ink: var(--color-primary);
 
@@ -11,7 +10,6 @@
   --color-surface-light: var(--color-surface);
   --color-surface-section: var(--color-surface-alt);
   --color-shell-dark: var(--color-primary);
-  --color-shell-hero: var(--color-primary);
   --color-shell-line: var(--color-primary-hover);
 
   /* color text */
@@ -23,26 +21,17 @@
   /* color border */
   --color-border-subtle: var(--color-line);
   --color-border-control: var(--color-text-muted);
-  /* Card border on the catalogue list (docs/design/yettel.md §5
-     "Product card on the list page"). */
-  --color-line-card: #f3f3f3;
-  /* Pager prev/next ring (docs/design/yettel.md §5 "Sort control and pager"). */
-  --color-pager-ring: #003f73;
-  /* Thumbnail and variant-chip ring on the device page (docs/design/yettel.md §5
-     "Gallery" and "Variant chips"). */
-  --color-line-thumb: #e5e9ec;
+  --color-line-card: var(--color-line);
+  --color-pager-ring: var(--color-primary);
+  --color-line-thumb: var(--color-line);
 
   /* color status */
   --color-status-success: var(--color-success);
-  /* Yettel's success mark: check-circle-32px.svg fills both paths #76D18B
-     (measured on yettel.hu, 2026-09-22). */
-  --color-success-mark: #76d18b;
+  --color-success-mark: var(--color-success);
   --color-status-error: var(--color-error);
   --color-status-warning: var(--color-warning);
   --color-status-warning-text: var(--color-warning-text);
   --color-status-info: var(--color-surface-sky);
-  /* Alert grounds (MIM-240): each status colour mixed onto the light surface.
-     yettel's alerts use solid grounds; these mixes are this project's own. */
   --color-status-success-soft: color-mix(
     in srgb,
     var(--color-status-success) 12%,
@@ -60,14 +49,10 @@
   );
 
   /* color focus */
-  --color-focus-light: var(--color-primary);
-  --color-focus-dark: var(--color-accent);
-  /* Border of a focused text field: yettel's `.form-control:focus`
-     (docs/design/yettel.md §5 "Text field"). */
-  --color-focus-input: #0069c0;
-  /* Halo around a focused invalid field: yettel's
-     `.form-control.is-invalid:focus` box-shadow. */
-  --color-error-halo: rgb(217 83 79 / 25%);
+  --color-focus-light: #5f8000;
+  --color-focus-dark: var(--color-highlight-hover);
+  --color-focus-input: var(--color-focus-light);
+  --color-error-halo: color-mix(in srgb, var(--color-error) 25%, transparent);
 
   /* spacing scale: 8pt rhythm, 4pt sub-step */
   --space-1: 4px;
@@ -87,31 +72,19 @@
      at 390x844, rounded up). */
   --rail-height: 5.5rem;
 
-  /* radius. --radius-card is not redeclared here: the theme variable of that
-     name is already the yettel 16px card radius, and a self-referencing
-     custom property would resolve to nothing. */
   --radius-control: var(--radius-input);
   --radius-badge: var(--radius-input);
 
   /* size */
   --size-control: 44px;
   --size-control-comfortable: 48px;
-  /* Desktop height of the header bar — .portal-header__bar{height:72px}
-     (docs/design/yettel.md §5 "Header"). */
   --size-header: 72px;
   --size-icon: 20px;
   --size-icon-large: 24px;
 
   /* typography */
   --font-family-base: var(--font-sans);
-  /* The bold and light faces are declared here rather than in the @theme
-     block: Tailwind's --font-* namespace would turn them into font-family
-     utilities named font-bold and font-light. docs/design/yettel.md §3. */
-  --font-family-bold: 'portal-font-bold', sans-serif, arial;
-  --font-family-light: 'portal-font-light', sans-serif, arial;
   --type-body: 16px;
-  /* Header menu link — .portal-header-menu__link{font-size:20px;line-height:28px}
-     (docs/design/yettel.md §5 "Header"). */
   --type-nav: 20px;
   --leading-nav: 28px;
   --type-card-title: 18px;
@@ -127,6 +100,7 @@
   --type-price-mobile: 26px;
   --weight-regular: 400;
   --weight-medium: 500;
+  --weight-semibold: 600;
   --weight-bold: 700;
   --line-height-body: 1.5;
   --line-height-heading: 1.15;
@@ -138,8 +112,6 @@
 
   /* button specifics */
   --button-radius: var(--radius-pill);
-  /* The yettel .btn box is 12px + 24px line-height + 12px = 48px
-     (docs/design/yettel.md §5 "Primary button"). */
   --button-height: var(--size-control-comfortable);
 }
 

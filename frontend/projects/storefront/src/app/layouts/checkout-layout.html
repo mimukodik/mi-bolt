@@ -15,14 +15,13 @@
           @if (isStepComplete($index)) {
             <span
               aria-hidden="true"
-              class="steps__index inline-flex items-center justify-center rounded-full font-bold"
+              class="steps__index inline-flex items-center justify-center font-bold"
               >✓</span
             >
           } @else {
-            <span
-              class="steps__index inline-flex items-center justify-center rounded-full font-bold"
-              >{{ $index + 1 }}</span
-            >
+            <span class="steps__index inline-flex items-center justify-center font-bold">{{
+              $index + 1
+            }}</span>
           }
           <span class="steps__label whitespace-nowrap"
             >{{ item.label }}

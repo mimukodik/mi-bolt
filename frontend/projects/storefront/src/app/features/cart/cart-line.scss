@@ -37,7 +37,6 @@
   padding: 0;
   min-width: 0;
   height: auto;
-  font-family: var(--font-family-light);
   font-size: var(--type-helper);
   text-decoration: underline;
   color: var(--color-text-secondary);
@@ -74,14 +73,13 @@
 }
 
 .name {
-  font-family: var(--font-family-bold);
+  font-weight: var(--weight-bold);
   font-size: var(--type-helper);
   color: var(--color-primary);
   line-height: 20px;
 }
 
 .variant {
-  font-family: var(--font-family-light);
   font-size: var(--type-helper);
   color: var(--color-text-secondary);
   line-height: 20px;

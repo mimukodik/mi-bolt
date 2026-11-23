@@ -1,10 +1,5 @@
 /* MiBolt StatusMessage primitive. The row wraps: the text keeps 12rem and grows, the close button drops under it when both do not fit (MIM-216). */
 
-/* The look is yettel's .information-box (docs/design/yettel.md §5, "Alert"):
-   no border and no left bar, an 8px radius, 16px padding and a severity
-   icon in front of the text. The info ground is yettel's sky #c4dfe9; the
-   success and error grounds are this project's --color-status-*-soft tints
-   (src/styles/tokens.css). */
 .root {
   display: flex;
   flex-wrap: wrap;

@@ -15,7 +15,7 @@ function getNativeElement(fixture: ComponentFixture<AppShell>): HTMLElement {
 }
 
 // The demo notice is the first element on the page, above the header, so
-// it scrolls away while the sticky lime bar stays (app-shell.html:1-2).
+// it scrolls away while the sticky header stays (app-shell.html:1-2).
 describe('AppShell renders the demo notice above the header', () => {
   function render(variant: 'marketing' | 'checkout'): HTMLElement {
     TestBed.configureTestingModule({

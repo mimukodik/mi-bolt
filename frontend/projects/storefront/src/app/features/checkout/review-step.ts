@@ -291,9 +291,7 @@ export class ReviewStep {
     }
   });
 
-  /** The severity the payment status wears (docs/design/yettel.md §8,
-   *  "Review step"): a confirmed payment is a success, a declined one an
-   *  error, and every other state, a missing intent included, is info. */
+  /** Status message variant for the selected payment state. */
   readonly paymentSeverity = computed<StatusSeverity>(() => {
     switch (this.paymentIntent()?.status) {
       case 'succeeded':

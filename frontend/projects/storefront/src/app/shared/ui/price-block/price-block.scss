@@ -45,7 +45,7 @@
 }
 
 .root[data-inverse] .amount {
-  color: var(--color-accent);
+  color: var(--color-inverse-price, var(--color-highlight));
 }
 
 .amount--error,
@@ -114,15 +114,15 @@
 .promotion-copy {
   font-size: var(--type-helper);
   line-height: 1.5;
-  color: #7c3aed;
+  color: var(--color-primary);
   overflow-wrap: anywhere;
 }
 .promotional .amount {
-  color: #7c3aed;
+  color: var(--color-primary);
 }
 .root[data-inverse].promotional .amount,
 .root[data-inverse] .promotion-copy {
-  color: #ffb56b;
+  color: var(--color-inverse-price, var(--color-highlight));
 }
 .root[data-inverse] .reference {
   color: var(--color-text-inverse-muted);

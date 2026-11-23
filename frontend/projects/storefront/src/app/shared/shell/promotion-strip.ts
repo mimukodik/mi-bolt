@@ -22,14 +22,14 @@ import { promotionMotion } from '../halloween/promotion-motion';
       align-items: center;
       flex-wrap: nowrap;
       gap: 8px;
-      background: #2e1065;
-      color: #fff;
+      background: var(--color-primary);
+      color: var(--color-surface);
       padding: 14px 16px;
       font-size: 15px;
       font-weight: 700;
       text-align: center;
       text-decoration: none;
-      border-bottom: 3px solid #ff7a1a;
+      border-bottom: 3px solid var(--color-highlight);
     }
     .promotion-strip > span {
       flex: none;
@@ -45,10 +45,10 @@ import { promotionMotion } from '../halloween/promotion-motion';
     .sm-pumpkin {
       width: 100%;
       height: 100%;
-      fill: #ff7a1a;
+      fill: var(--color-highlight);
     }
     .promotion-strip:hover {
-      background: #3b1a80;
+      background: var(--color-primary-hover);
     }
   `,
 })

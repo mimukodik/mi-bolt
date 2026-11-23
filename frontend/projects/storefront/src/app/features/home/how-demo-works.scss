@@ -57,10 +57,11 @@
   align-self: flex-start;
   padding: 2px var(--space-2);
   font-size: var(--type-helper);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-brand-ink);
   background: var(--color-brand-accent-soft);
   border-radius: var(--radius-badge);
+  font-family: var(--font-mono);
 }
 
 .how__grid {

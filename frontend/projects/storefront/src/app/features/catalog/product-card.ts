@@ -122,8 +122,7 @@ export class ProductCard {
 
   /** Accessible name for the "Megnézem" CTA: the product name plus what
    *  the link does, without the stock state, which the "Elfogyott"
-   *  marker says in place (the owner's decision 10, like yettel.hu's
-   *  list cards). The name link needs none: its text is the name. */
+   *  marker states on the card. The name link needs none: its text is the name. */
   readonly detailsAriaLabel = computed(() => `${this.product().name} részleteinek megnyitása`);
 
   /** Concatenated accessible name for the image link. */

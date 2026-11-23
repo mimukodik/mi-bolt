@@ -51,9 +51,6 @@ input {
 
 /* The invalid look (red border, icon, focus halo) lives in src/styles/primitives.css. */
 
-/* The error summary is yettel's flat information box (docs/design/yettel.md
-   §5, "Alert"): no border and no left bar, an 8px radius, 16px padding
-   and a 20px icon in front of the text. */
 .form-summary {
   display: flex;
   align-items: flex-start;

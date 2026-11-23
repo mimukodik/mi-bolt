@@ -14,11 +14,11 @@ A demo webshop with catalogue, variant selection, cart and simulated checkout. B
 
 ## Brand Personality
 
-Playful, bold and clear. Preserve the existing MiBolt navy/lime identity and typography; the approved Halloween campaign adds a purple/orange night scene.
+Warm paper and ink, a green accent, Inter and IBM Plex Mono, and square cards. The selected general-mimukodik prototype is the storefront reference. The Halloween campaign adds a purple and orange scene.
 
 ## Anti-references
 
-No decoration over prices, currency, names or controls. No animated catalogue swaps, replacement typography or additional commerce services.
+No decoration over prices, currency, names or controls. No animated catalogue swaps or additional commerce services.
 
 ## Design Principles
 

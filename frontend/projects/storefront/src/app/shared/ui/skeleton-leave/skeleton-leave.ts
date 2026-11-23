@@ -3,8 +3,7 @@ import { Directive } from '@angular/core';
 
 /**
  * Fades a skeleton out over the content that replaced it instead of
- * dropping it (`docs/design/yettel.md`, "Skeleton loaders and their
- * fade-out"). It goes on the root element of a skeleton that a
+ * dropping it. It goes on the root element of a skeleton that a
  * control-flow block removes, in the template that holds the block.
  * Angular calls the `animate.leave` handler before it takes the element
  * out (https://angular.dev/guide/animations#animateleave): the handler

@@ -16,8 +16,7 @@ import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
  * its first and only caller today.
  *
  * The loading branch is the catalogue's: six `ProductCardSkeleton`s in
- * the grid's own columns (`docs/design/yettel.md`, "Product card
- * skeleton"). Its count and shape are baked in rather than projected, so
+ * the grid's own columns. Its count and shape are baked in rather than projected, so
  * a caller whose loading state is not a six-slot product card grid (the
  * product page's four-slot related strip, say) cannot use this component
  * as it stands: the loading presentation would have to become a

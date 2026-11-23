@@ -54,7 +54,7 @@ export class OrderSummary {
    *  server would accept. */
   readonly serverTotal = input<Money | null>(null);
 
-  /** Navy card look for the cart page; the review step leaves it off. */
+  /** Dark summary panel for the cart page; the review step leaves it off. */
   readonly inverse = input(false);
 
   /** Inverse forces a row layout (label left, amount right) on every

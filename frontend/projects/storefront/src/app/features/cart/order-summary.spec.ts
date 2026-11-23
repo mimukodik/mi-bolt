@@ -94,7 +94,7 @@ describe('OrderSummary', () => {
     expect(paymentFeeRoot?.getAttribute('data-size')).toBe('md');
   });
 
-  it('titles the inverse card "Összesen", like yettel.hu (owner 2026-09-23)', () => {
+  it('titles the inverse card "Összesen"', () => {
     const { fixture, host } = setup();
     host.inverse.set(true);
     fixture.detectChanges();

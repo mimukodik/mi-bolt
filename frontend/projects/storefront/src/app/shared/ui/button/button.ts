@@ -3,18 +3,6 @@ import { Component, input, output } from '@angular/core';
 /**
  * MiBolt Button primitive.
  *
- * Variants follow docs/design/yettel.md §5 and §9:
- * - `primary`   — navy on lime `.btn--primary-inverse` (single prominent CTA
- *   per unit); the lime pill is yettel's CTA on every captured screen.
- * - `primaryOnDark` — the same lime pill on a navy surface (the product
- *   page's buy box, the cart summary), where the focus ring has to be white
- *   rather than navy.
- * - `secondary` — the outlined navy `.btn-outline-navy` on white (restrained).
- * - `secondaryOnDark` — the outlined lime `.btn-outline-lime` for navy shell
- *   surfaces, where the focus ring has to be white rather than navy.
- * - `navy` — the filled navy `.btn--primary`, white on `#002340`; the
- *   "Belépés" pill on the lime bar in home-1920.png.
- *
  * State contracts (where applicable):
  * - default, hover, focus-visible, active, disabled, loading.
  * - The native `aria-busy` and the visual loading state share one source of truth:
@@ -30,7 +18,7 @@ import { Component, input, output } from '@angular/core';
   styleUrl: './button.scss',
 })
 export class Button {
-  readonly variant = input<'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark' | 'navy'>(
+  readonly variant = input<'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark'>(
     'primary',
   );
   readonly label = input.required<string>();

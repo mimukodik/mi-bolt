@@ -793,7 +793,7 @@ describe('SuccessStep', () => {
     expect(ensureCartSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('SP-21 the success mark is yettel check-circle: 32px, two filled paths, no stroke', async () => {
+  it('SP-21 the success mark is a 32px check inside an outlined circle', async () => {
     await seedCompleteCashDraft();
     const placed = await placeCodOrder();
 
@@ -803,10 +803,8 @@ describe('SuccessStep', () => {
     expect(check?.getAttribute('viewBox')).toBe('0 0 32 32');
     expect(check?.getAttribute('width')).toBe('32');
     expect(check?.getAttribute('height')).toBe('32');
-    const paths = Array.from(check?.querySelectorAll('path') ?? []);
-    expect(paths).toHaveLength(2);
-    expect(paths.every((p) => p.getAttribute('fill') === 'currentColor')).toBe(true);
-    expect(check?.querySelector('[stroke]')).toBeNull();
+    expect(check?.querySelector('circle')?.getAttribute('stroke')).toBe('currentColor');
+    expect(check?.querySelector('path')?.getAttribute('stroke')).toBe('currentColor');
     expect(check?.parentElement?.classList.contains('success-title')).toBe(true);
   });
 

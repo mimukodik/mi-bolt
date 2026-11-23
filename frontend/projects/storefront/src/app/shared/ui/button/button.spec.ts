@@ -19,7 +19,7 @@ import { Button } from './button';
   `,
 })
 class HostComponent {
-  readonly variant = signal<'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark' | 'navy'>(
+  readonly variant = signal<'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark'>(
     'primary',
   );
   readonly label = signal('Kosárba teszem');
@@ -52,7 +52,8 @@ function normaliseComponentCss(css: string): string {
     .replaceAll('%NS%', '')
     .replace(/\[[^\]]*\]/g, '')
     .replace(/\s+/g, ' ')
-    .replace(/\s*([{}:;,])\s*/g, '$1');
+    .replace(/\s*([{}:;,])\s*/g, '$1')
+    .trim();
 }
 
 /** The declaration block of one rule of the normalised sheet. Asserting on the
@@ -100,8 +101,8 @@ function isAsciiWhitespace(ch: string): boolean {
 }
 
 /** The declarations of one rule, as whole `prop:value` strings. A substring
- * match is not enough for a colour: `color:var(--color-accent)` also matches
- * inside `border-color:var(--color-accent)`, so dropping the `color` line
+ * match is not enough for a colour: `color:var(--color-highlight)` also matches
+ * inside `border-color:var(--color-highlight)`, so dropping the `color` line
  * leaves such an assertion green. */
 function declarations(css: string, selector: string): string[] {
   return ruleBody(css, selector)
@@ -200,16 +201,7 @@ describe('Button primitive', () => {
     expect(btn?.classList.contains('is-primary')).toBe(false);
   });
 
-  it('applies the filled-navy variant when configured', () => {
-    const { fixture, host, root } = setup();
-    host.variant.set('navy');
-    fixture.detectChanges();
-    const btn = root.querySelector<HTMLButtonElement>('button');
-    expect(btn?.classList.contains('is-navy')).toBe(true);
-    expect(btn?.classList.contains('is-primary')).toBe(false);
-  });
-
-  it('applies the lime variant for a navy surface with a white focus ring (owner 2026-09-22)', () => {
+  it('applies the highlighted variant on a dark surface', () => {
     const { fixture, host, root } = setup();
     host.variant.set('primaryOnDark');
     fixture.detectChanges();
@@ -227,7 +219,7 @@ describe('Button primitive', () => {
     expect(css).toContain(':focus-visible');
   });
 
-  it('wires the yettel button recipe into its stylesheet (docs/design/yettel.md §5, §9)', () => {
+  it('styles button variants for the storefront palette', () => {
     if (!hasComponentStyles(Button)) {
       throw new Error('Expected Button component styles');
     }
@@ -237,55 +229,40 @@ describe('Button primitive', () => {
     // structural characters with them, so the declaration pairs below match
     // the source's inner spacing (`1px solid`, not `1pxsolid`).
     const css = normaliseComponentCss(Button.ɵcmp.styles.join('\n'));
-    // primary: the .btn--primary-inverse recipe, navy #002340 on lime
-    // #b4ff00 — the lime pill is yettel's CTA on every captured screen.
     const primary = declarations(css, '.root');
-    expect(primary).toContain('color:var(--color-primary)');
-    expect(primary).toContain('background:var(--color-accent)');
-    // the 24px pill radius (§4), the 48px box (12 + 24 + 12) and the bold
-    // face, reached through the token that is not a Tailwind theme variable
-    // so `font-bold` keeps its weight. A filled .btn carries `border:0`.
+    expect(primary).toContain('color:var(--color-text-inverse)');
+    expect(primary).toContain('background:var(--color-primary)');
     expect(primary).toContain('border-radius:var(--button-radius)');
     expect(primary).toContain('min-height:var(--button-height)');
     expect(primary).toContain('border:0');
-    expect(primary).toContain('font-family:var(--font-family-bold)');
-    // hover: #c5ff64.
+    expect(primary).toContain('font-weight:var(--weight-semibold)');
     expect(declarations(css, '.root:hover:not(:disabled)')).toContain(
-      'background:var(--color-accent-hover)',
+      'background:var(--color-primary-hover)',
     );
     // the two outlined variants take the hairline out of the padding, so
     // their box is the same 48px as the filled ones.
     const outlined = declarations(css, '.root.is-secondary,.root.is-secondary-on-dark');
     expect(outlined).toContain('border:1px solid');
     expect(outlined).toContain('padding:11px 23px');
-    // secondary: the navy outline on white (.btn-outline-navy).
     const secondary = declarations(css, '.root.is-secondary');
     expect(secondary).toContain('color:var(--color-primary)');
     expect(secondary).toContain('background:var(--color-surface)');
     expect(secondary).toContain('border-color:var(--color-primary)');
-    // secondary-on-dark: .btn-outline-lime — lime text and hairline on a
-    // transparent fill, with the white ring the navy ground needs.
     const onDark = declarations(css, '.root.is-secondary-on-dark');
-    expect(onDark).toContain('color:var(--color-accent)');
+    expect(onDark).toContain('color:var(--color-highlight)');
     expect(onDark).toContain('background:transparent');
-    expect(onDark).toContain('border-color:var(--color-accent)');
+    expect(onDark).toContain('border-color:var(--color-highlight)');
     expect(declarations(css, '.root.is-secondary-on-dark:hover:not(:disabled)')).toContain(
-      'background:var(--color-accent)',
+      'background:var(--color-highlight)',
     );
     expect(declarations(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
       'outline-color:var(--color-text-inverse)',
     );
-    // primary-on-dark: the lime pill on a navy surface keeps the base
-    // lime fill and takes the same white ring.
+    expect(declarations(css, '.root.is-primary-on-dark')).toContain(
+      'background:var(--color-highlight)',
+    );
     expect(declarations(css, '.root.is-primary-on-dark:focus-visible')).toContain(
       'outline-color:var(--color-text-inverse)',
-    );
-    // navy: the filled .btn--primary, white on #002340, hover #01385e.
-    const navy = declarations(css, '.root.is-navy');
-    expect(navy).toContain('color:var(--color-text-inverse)');
-    expect(navy).toContain('background:var(--color-primary)');
-    expect(declarations(css, '.root.is-navy:hover:not(:disabled)')).toContain(
-      'background:var(--color-primary-hover)',
     );
     // disabled: a dashed outline on a transparent fill, readable grey
     // text; a busy button (aria-busy) is excluded and keeps its variant.
@@ -300,11 +277,6 @@ describe('Button primitive', () => {
       expect(rule).toContain('border-color:var(--color-disabled-on-dark-border)');
       expect(rule).toContain('color:var(--color-disabled-on-dark-text)');
     }
-    // the old grey-pill rule is gone: ruleBody throws for a selector
-    // with no rule (button.spec.ts:66-72).
-    expect(() => declarations(css, '.root:disabled')).toThrow();
-    // the retired orange palette is gone from this primitive.
-    expect(css).not.toContain('color-brand-accent');
   });
 
   it('adds w-full to the root when block is set (MIM-211)', () => {

@@ -112,9 +112,9 @@ https://developers.google.com/ar/develop/webxr/model-viewer
 
 Web component supporting glTF/GLB; AR exists but is explicitly excluded from this MVP.
 
-## U01 — Retired design skill (superseded by `docs/design/yettel.md`)
+## U01 — Retired design skill (superseded by `docs/design/general-mimukodik/`)
 
-Separately installed design skill, resolved during T00; superseded by `docs/design/yettel.md`, the current design reference.
+Separately installed design skill, resolved during T00; superseded by `docs/design/general-mimukodik/`, the current design reference.
 
 User-provided normative design rules. Original raster remains unchanged and still has superseded brand text.
 

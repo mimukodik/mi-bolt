@@ -1,18 +1,4 @@
-/**
- * MIM-423 — the demo sign-in page at `/belepes`.
- *
- * One password field and one Belépés button, with nothing of the shop
- * behind it: the page is the gate, so it carries no header, no footer and
- * no `ShopLayout`. The design is `frontend/docs/design/yettel.md`'s
- * recipes assembled for a surface yettel itself does not have — the
- * `.container-sm` card width and the `.modal-content` radius and shadow
- * (§4), the navy `.btn--primary` pill (§5), and the storefront header's own
- * brand mark, so the page reads as MiBolt before the shop opens.
- *
- * On success the visitor goes to `vissza` when that is a safe same-origin
- * path, and to the home page otherwise. Deliberately not here: showing the
- * password, a username field, a sign-out.
- */
+/** Entry point for visitors who need a demo access session. */
 
 import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import type { WritableSignal } from '@angular/core';

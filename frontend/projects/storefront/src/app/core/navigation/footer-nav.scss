@@ -2,11 +2,6 @@
   display: block;
 }
 
-/* .portal-footer{border-top:0;background-color:#002340}
-   (docs/design/yettel.md §5 "Footer"), with white text on the navy ground
-   (§9 "Text colour is decided per surface"). The box and the spacing are
-   Tailwind utilities on footer-nav.html; this sheet holds the colours and
-   the .btn-outline-lime recipe. */
 .footer {
   background: var(--color-shell-dark);
   color: var(--color-text-inverse);
@@ -23,29 +18,26 @@
   font-size: var(--type-helper);
 }
 
-/* .btn-outline-lime on the navy footer — the yettel .btn box
-   (portal-font-bold 16/24, 12px 24px, 24px pill; docs/design/yettel.md §5),
-   with 1px off each padding edge for the hairline so it stays 48px. */
+/* The outline takes one pixel from each padding edge to keep the button height. */
 .footer__cta {
   padding: 11px 23px;
   background: transparent;
-  color: var(--color-brand-accent);
-  font-family: var(--font-family-bold);
+  color: var(--color-highlight);
+  font-weight: var(--weight-bold);
   font-size: var(--type-body);
   line-height: 24px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--color-brand-accent);
+  border: 1px solid var(--color-highlight);
   transition:
     background-color var(--motion-fast) ease,
     color var(--motion-fast) ease;
 }
 
 .footer__cta:hover {
-  background: var(--color-brand-accent);
+  background: var(--color-highlight);
   color: var(--color-text-primary);
 }
 
-/* Lime on a navy ground: only a white ring reads there (§9). */
 .footer__cta:focus-visible {
   outline: 2px solid var(--color-text-inverse);
   outline-offset: 2px;

@@ -15,7 +15,6 @@ file and the rule goes into section 5 of `SKILL.md`.
 - C3. Inline templates preferred, external templates in use
 - C4. The zoneless provider, explicit in two apps and omitted in one
 - C5. `.scss` files written as CSS, with Sass line comments in three
-- C6. How far the design reference reaches
 - C7. The accessibility rule beside the template accessibility lint rules
 - C8. Two checks that exist and that nothing runs
 - C9. Inferred types preferred, return types required
@@ -52,13 +51,6 @@ file and the rule goes into section 5 of `SKILL.md`.
 - **Observed**: the `.scss` files under `frontend/projects/storefront/`, none using `@use`, `@import`, `@mixin`, `@include`, `@forward` or a `$variable:` declaration (`git grep`). Three of them carry Sass's `//` line comments, which CSS does not have (https://sass-lang.com/documentation/syntax/comments/, https://www.w3.org/TR/css-syntax-3/): `frontend/projects/storefront/src/app/features/catalog/filter-drawer.scss` ("// A count being re-fetched"), `frontend/projects/storefront/src/app/features/catalog/filter-panel.scss` ("// A count being re-fetched"), `frontend/projects/storefront/src/app/layouts/checkout-layout.scss` ("// This <main> is projected") and `frontend/projects/storefront/src/app/layouts/checkout-layout.scss` ("// The last item has no connector"). The one other `.scss`, `frontend/projects/admin/src/material-theme.scss`, uses Sass (`@use '@angular/material' as mat;` at `frontend/projects/admin/src/material-theme.scss` ("@use '@angular/material' as mat;")).
 - **Unknown**: whether Sass features are meant to be available in the storefront's files. angular.dev says the CLI "supports CSS imports and all major CSS preprocessors" (https://angular.dev/reference/configs/workspace-config#extra-build-and-test-options), but no page found in angular.dev's version 22 documentation says which preprocessor a component stylesheet's extension selects, so nothing here asserts that rule.
 - **Left alone**: the file names and the existing comments. Introducing any other Sass feature into a storefront `.scss` file, such as `@use`, a mixin or a `$` variable, is a decision to raise, not a style choice.
-
-## C6. How far the design reference reaches
-
-- **Written**: the project makes `frontend/docs/design/yettel.md` the design reference for every rendered surface (`mibolt-shop-frontend` ("Design authority")), and the document calls itself "the mandatory design reference for the MiBolt frontend" (`frontend/docs/design/yettel.md`, "the mandatory design reference for the MiBolt frontend"). It never mentions the admin app or demo-payment (`git grep`, 0 hits).
-- **Observed**: the admin is styled with Angular Material's `azure-blue` theme and Tailwind utilities without Preflight (`frontend/projects/admin/README.md`, "Angular Material with the", `frontend/projects/admin/README.md`, "Tailwind utilities only"). Demo-payment's stylesheet takes the shop's spacing, radii and a few colours from the design reference and records that its palette and typeface are deliberately not the shop's (`frontend/projects/demo-payment/src/styles.css`, "The palette and the typeface are deliberately NOT the shop's").
-- **A third source**: `frontend/docs/spec/architecture.md` ("no Angular Material visual theme") says "no Angular Material visual theme", in a document whose status line calls it an implementation-ready design rather than an implemented application (`frontend/docs/spec/architecture.md`, "Status: implementation-ready design").
-- **Left alone**: no decision is recorded; the admin's styling itself belongs to `mibolt-admin-frontend`.
 
 ## C7. The accessibility rule beside the template accessibility lint rules
 

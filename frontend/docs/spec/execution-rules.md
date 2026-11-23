@@ -4,7 +4,7 @@ These files under docs/ are a planning handoff inside the application repository
 
 ## Design authority
 
-`docs/design/yettel.md` is the design reference for every implementation and every verification or review of a rendered surface: it carries the colour tokens, typography, radii and recipes captured from yettel.hu under `docs/design/yettel/`, and the feature inventories against the backend contract. Cite it for each value used or checked; a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there before use. The earlier design skill and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20, and the task packets that cited them were deleted with `docs/tasks/`.
+`docs/design/general-mimukodik/` is the storefront’s visual reference. Use it for colour, typography, radii and component styling. The screen specification and contract define shopping behavior.
 
 Public demo UI stays Hungarian; everything else committed to this repository is English. The original reference raster still contains superseded brand text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
 

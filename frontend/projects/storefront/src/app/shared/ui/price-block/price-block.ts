@@ -59,7 +59,7 @@ export class PriceBlock {
   readonly size = input<'md' | 'lg'>('lg');
   /** Row puts the label left and the amount right on one line. */
   readonly layout = input<'stack' | 'row'>('stack');
-  /** Inverse colours for a navy card: white label, lime amount. */
+  /** Palette for a price on a dark panel. */
   readonly inverse = input(false);
   /** False where the row already names the amount (a `<dt>` or an option
    *  title beside it), so the label is not printed twice. */
