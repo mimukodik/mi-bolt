@@ -15,7 +15,7 @@ Prerequisites:
   `min_version`).
 - Nothing else to install by hand: `mise install` reads the versions pinned
   under `[tools]` and installs them. The root `mise.toml` pins Node
-  `26.10.0` and Java `temurin-21.0.12+101.0.LTS`; `contracts/mise.toml` pins
+  `26.10.0` and Java `temurin-21.0.12+8.0.LTS`; `contracts/mise.toml` pins
   the contract tools.
 - Docker, for PostgreSQL (every mode below that touches the backend starts
   it in a container) and for the backend and web images used by
