@@ -7,7 +7,9 @@ tracked paths and Git file modes selected by the frontend/backend rules in
 code validates those rules against its expected set, so a changed filter
 cannot silently omit build inputs. Docker Bake reads `deploy/compose.yaml`
 and exports two Docker archives. The build run retains `build.json` and the
-archives as a `candidate-build` Actions artifact for seven days.
+archives as a `candidate-build` Actions artifact for one day: Publish Candidate
+reads it within minutes, and a rerun of CI after that day needs a rerun of this
+build too.
 It runs the focused candidate and chart checks before building. Bake runs from
 `deploy/`, so the Compose file's `../` contexts resolve inside the checkout.
 
